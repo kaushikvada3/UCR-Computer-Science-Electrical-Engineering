@@ -1,0 +1,19 @@
+digraph G3 {
+
+  // nodes
+  a [label="key=4, in=4"];
+  b [label="key=2, in=2"];
+  c [label="key=6, in=6"];
+  d [label="key=1, in=1"];
+  e [label="key=3, in=3"]; 
+  f [label="key=5, in=5"];
+  g [label="key=7, in=7"];
+
+  // edges    
+  a -> b; 
+  a -> c;
+  b -> d;
+  b -> e; 
+  c -> f;
+  c -> g;
+}
