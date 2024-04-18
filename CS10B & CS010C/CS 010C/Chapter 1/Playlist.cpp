@@ -3,10 +3,10 @@
 using namespace std;
 
 //constructors
-//default constructor -- initialize all variables
+//default constructor -- initialize all variables with default values
 PlaylistNode::PlaylistNode():uniqueID("none"), songName("none"), artistName("none"), songLength(0), nextNodePtr(0){}
 
-//constructor with 4 parameters
+//constructor with 4 parameters initialization
 PlaylistNode::PlaylistNode(string inputID, string inputSongName, string inputArtistName, int inputSongLength)
 :uniqueID(inputID), songName(inputSongName), artistName(inputArtistName), songLength(inputSongLength), nextNodePtr(0){}
 
@@ -17,57 +17,73 @@ void PlaylistNode::InsertAfter(PlaylistNode *input){
     input->SetNext(temp);
 }
 
-//setnext sets input as the next node
-void PlaylistNode::SetNext(PlaylistNode *input){
-    nextNodePtr = input;
+//member function to set the next node in linked list
+void PlaylistNode::SetNext(PlaylistNode *input)
+{
+    nextNodePtr = input; // Assigns the input pointer to `nextNodePtr`
 }
 
-//accessors
-string PlaylistNode::GetID() const{
-    return uniqueID;
+// Getter function to retrieve the unique ID of the song
+string PlaylistNode::GetID() const
+{
+    return uniqueID; // Returns the unique ID for the specific playlist node
 }
 
-string PlaylistNode::GetSongName() const{
-    return songName;
+// Getter function to retrieve the name of the song
+string PlaylistNode::GetSongName() const
+{
+    return songName; // Returns the name of the song stored in this node
 }
 
-string PlaylistNode::GetArtistName() const{
-    return artistName;
-}
-int PlaylistNode::GetSongLength() const{
-    return songLength;
-}
-
-PlaylistNode* PlaylistNode::GetNext() const{
-    return nextNodePtr;
+// Getter function to get the artist name of the song
+string PlaylistNode::GetArtistName() const
+{
+    return artistName; // Returns the artist's name associated with the song in this node
 }
 
-PlaylistNode::~PlaylistNode() {
-    PlaylistNode* current = this;
-    while (current != nullptr) {
-        PlaylistNode* next = current->nextNodePtr;
-        delete current;
-        current = next;
+// Getter function to get the length of the song in seconds
+int PlaylistNode::GetSongLength() const
+{
+    return songLength; // Returns the length of the song (in seconds)
+}
+
+// Getter function to retrieve the pointer to the next node in the list
+PlaylistNode *PlaylistNode::GetNext() const
+{
+    return nextNodePtr; // Returns a pointer to the next node in the playlist linked list
+}
+
+// Destructor for the `PlaylistNode` class
+PlaylistNode::~PlaylistNode()
+{
+    PlaylistNode *current = this; // Starts with the current node
+    while (current != nullptr)
+    {                                              // Traverses the list and deletes all nodes starting from `this`
+        PlaylistNode *next = current->nextNodePtr; // Temporary pointer to the next node
+        delete current;                            // Deletes the current node
+        current = next;                            // Moves to the next node
     }
 }
 
-PlaylistNode& PlaylistNode::operator=(const PlaylistNode& other) {
-    if (this != &other) {
-        uniqueID = other.uniqueID;
-        songName = other.songName;
-        artistName = other.artistName;
-        songLength = other.songLength;
-        // nextNodePtr is not changed because we're only copying content, not list structure
+// Copy assignment operator for deep copying of a playlist node
+PlaylistNode &PlaylistNode::operator=(const PlaylistNode &other)
+{
+    if (this != &other)
+    {                                  // Checks to see if it was self assgined
+        uniqueID = other.uniqueID;     // Copies the unique ID 
+        songName = other.songName;     // Copies the song name
+        artistName = other.artistName; // Copies the artist name
+        songLength = other.songLength; // Copies the song length
     }
-    return *this;
+    return *this;                      // Returns a reference to this node
 }
 
-
-//prints all four variables formatted as given using accessor functions from above
-void PlaylistNode::PrintPlaylistNode(PlaylistNode *input) {
-    cout << "Unique ID: " << input->GetID() << endl;
-    cout << "Song Name: " << input->GetSongName() << endl;
-    cout << "Artist Name: " << input->GetArtistName() << endl;
-    cout << "Song Length (in seconds): " << input->GetSongLength() << endl;
-    cout << endl;
+// Member function to print details of a node in a formatted manner
+void PlaylistNode::PrintPlaylistNode(PlaylistNode *input)
+{
+    cout << "Unique ID: " << input->GetID() << endl;                        // Prints the unique ID of the song
+    cout << "Song Name: " << input->GetSongName() << endl;                  // Prints the song's name
+    cout << "Artist Name: " << input->GetArtistName() << endl;              // Prints the artist's name
+    cout << "Song Length (in seconds): " << input->GetSongLength() << endl; // Prints the length of the song in seconds
+    cout << endl;                                                           // Adds a newline for better readability
 }

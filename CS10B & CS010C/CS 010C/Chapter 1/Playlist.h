@@ -25,8 +25,6 @@ class PlaylistNode{
     
     ~PlaylistNode();
 
-    
-
    private: 
     string uniqueID;
     string songName;

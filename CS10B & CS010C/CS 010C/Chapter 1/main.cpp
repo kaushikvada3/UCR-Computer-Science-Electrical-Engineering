@@ -7,15 +7,17 @@ void PrintMenu(string playlistName);
 
 int main()
 {
-    // variables used in all/most options
-    string playlistTitle;
-    char input = ' '; // initialize input in order to use while loop on line 23
-    PlaylistNode currPlaylist;
-    //use main to keep track of head and tail
-    PlaylistNode *head = 0;
-    PlaylistNode *tail = 0;
-    PlaylistNode *currSong = 0;
-    PlaylistNode *temp = 0;
+    string playlistTitle; // Variable to store the title of the playlist
+
+    char input = ' '; // Character variable to store user input. Initialized to ' ' (space) for use in the control flow of the program (e.g., while loops).
+
+    PlaylistNode currPlaylist; // Object of PlaylistNode to represent the current playlist. This can be used to keep track of playlist details or operations.
+
+    // Pointer variables to manage the linked list structure of the playlist:
+    PlaylistNode *head = 0;     // Pointer to the first node in the playlist linked list
+    PlaylistNode *tail = 0;     // Pointer to the last node in the playlist linked list
+    PlaylistNode *currSong = 0; // Pointer to the current song node
+    PlaylistNode *temp = 0;     // temp node pointer
 
     // user input for title
     cout << "Enter playlist's title:" << endl;
