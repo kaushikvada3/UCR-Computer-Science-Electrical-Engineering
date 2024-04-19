@@ -20,6 +20,7 @@ INPUT_LOOP:
     ADD R3, R3, #1   ; Move to the next memory location in the remote array
     ADD R4, R4, #1   ; Increment the character counter
     NOT R1, R0       ; Invert R0 to check against the sentinel
+    ADD R1, R1, #1
     ADD R1, R1, R6   ; If R1 + R6 == 0, then the sentinel has been read 
     BRz END_INPUT    ; Branch if the sentinel character is read
     BR INPUT_LOOP    ; Otherwise, continue loop
@@ -35,6 +36,7 @@ OUTPUT_LOOP:
     LDR R0, R3, #0   ; Load the character from the remote array at index (R3) into R0
     ADD R1, R0, #0   ; Copy the character to R1 to check against the sentinel
     NOT R1, R1       ; Invert R1 to check against the sentinel
+    ADD R1, R1, #1   ; part of 2's complement
     ADD R1, R1, R6   ; If R1 + R6 == 0, then the sentinel has been read
     BRz OUTPUT_DONE  ; Branch if the sentinel character is loaded
     OUT              ; Output the character to the console

@@ -20,7 +20,7 @@ INPUT_LOOP:
     STR R0, R3, #0 ; Store the character from R0 into ARRAY at index (R3)
     ADD R3, R3, #1 ; Move to the next memory location in the array
     ADD R1, R2, #-10 ; Check if 10 characters have been input
-    BRnp INPUT_LOOP ; If not, loop again
+    BRnz INPUT_LOOP ; If not, loop again
 
 ; Program completes after filling array
 HALT ; Stop the program
