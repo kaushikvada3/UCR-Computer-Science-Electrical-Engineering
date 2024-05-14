@@ -113,3 +113,4 @@ bool WordLadder::offByOne(string &word1, string &word2)
     }
     return diffChars == 1;
 }
+

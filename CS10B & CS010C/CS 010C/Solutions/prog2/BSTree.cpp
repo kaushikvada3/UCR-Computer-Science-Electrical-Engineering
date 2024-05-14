@@ -37,8 +37,8 @@ void BSTree::insert(const string &newString)
         while (compareNode != nullptr)
         {
             if (newString == compareNode->getWord()) // case 1: node has a count more than one -- decrease count
-            {/.
-            0
+            {
+            
                 compareNode->setCount((compareNode->getCount()) + 1);
                 break;
             }
@@ -61,7 +61,7 @@ void BSTree::insert(const string &newString)
                     compareNode->setRight(insertNode);
                     break;
                 }
-                else0
+                else
                 {
                     compareNode = compareNode->getRight();
                 }

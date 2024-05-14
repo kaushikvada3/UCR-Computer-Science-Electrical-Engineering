@@ -43,13 +43,14 @@ void Heap::enqueue(PrintJob *input) {
 }
 
 // removes first item from heap (removes root)
-void Heap::dequeue() {
-  if (numItems > 0) {
-    // Assign the root of the heap to a temporary variable
-    PrintJob *temp = arr[0];
+void Heap::dequeue()
+{
+  if (numItems > 0)
+  {
 
     // Shift all elements in the heap down one position
-    for (int i = 0; i < numItems - 1; i++) {
+    for (int i = 0; i < numItems - 1; i++)
+    {
       arr[i] = arr[i + 1];
     }
 
@@ -59,8 +60,8 @@ void Heap::dequeue() {
     // Trickle down the new root of the heap
     trickleDown(0);
 
-    // Return the removed element
-    return temp;
+    // the temp object is not returned and can be destroyed or handled as needed here
+    // possibly delete temp; if it needs to be de-allocated
   }
 }
 
