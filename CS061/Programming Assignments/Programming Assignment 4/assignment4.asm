@@ -26,32 +26,34 @@ Intro_Prompt
     PUTS
 						
 ; Set up flags, counters, accumulators as needed
-    LD R1, Arr_Pointer
-    LD R2, Arr_size
+   LD R1, Arr_Pointer
+   LD R2, Arr_size
 
-    AND R4, R4, #0 ; this is to clear the register to store the final result
-    AND R5, R5, #0
-    AND R6, R6, #0
-    AND R7, R7, #0 ; R7 will be used to flag negative numbers
+   AND R4, R4, #0 ; this is to clear the register to store the final result
 
-    LD R5, ASCII_NEG_SIGN ;holds the ASCII version of the 'negative' sign
-    NOT R5, R5 ;flips all the bits so it does end up becoming a negative number
-    ADD R5, R5, #1 ;adding 1 to the value to complete 2's complement procedure
+   AND R5, R5, #0
+   AND R6, R6, #0
 
-    LD R6, NewSpace
-    NOT R6, R6 ;flips all the bits
-    ADD R6, R6, #1 ;the 2's complement is done to make sure when you are using comparing, and if it matches it will add to zero
+   LD R5, ASCII_NEG_SIGN ;holds the ASCII version of the 'negative' sign
+   NOT R5, R5 ;flips all the bits so it does end up becoming a negative number
+   ADD R5, R5, #1 ;adding 1 to the value to complete 2's complement procedure
 
-    AND R3, R3, #0 ;R3 will be used to check the input
+   LD R6, NewSpace
+   NOT R6, R6 ;flips all the bits
+   ADD R6, R6, #1 ;the 2's complement is done to make sure when you are using comparing, and if it matches it will add to zero
+
+   AND R3, R3, #0 ;R3 will be used to check the input
 
 ; Get first character, test for '\n', '+', '-', digit/non-digit 
-    GETC
-    OUT
 
-    ADD R3, R0, R5 ;always reads it into R0
-    BRz negativeSign
-    ADD R3, R3, #2
-    BRz positiveSign
+   ;input procedures
+      GETC
+      OUT
+
+      ADD R3, R0, R5 ;always reads it into R0
+      BRz negativeSign
+         ADD R3, R3, #2
+         BRz positiveSign
 					
 ; is very first character = '\n'? if so, just quit (no message)!
     AND R3, R0, #0
@@ -63,28 +65,28 @@ Intro_Prompt
 
 ; is it = '+'? if so, ignore it, go get digits
 positiveSign
-    ADD R2, R2, #-1
-    BRnp Processing_Step
+   ADD R2, R2, #-1
+     BRnp Processing_Step
 
 ; is it = '-'? if so, set neg flag, go get digits
 negativeSign
-    AND R7, R7, #0 ; clear R7
-    ADD R7, R7, #-1 ; set R7 to -1 to indicate negative number
-    ADD R2, R2, #-1
-    BRnp Processing_Step
+   STR R0, R1, #0
+   ADD R1, R1, #1
+   ADD R2, R2, #-1
+   BRnp Processing_Step
 					
 ; is it < '0'? if so, it is not a digit	- o/p error message, start over
 Greater_Than_Zero
-    LD R5, Hex_zero_val       ; Load the ASCII value for '0' into R5
-    NOT R5, R5            ; Perform 2's complement
-    ADD R5, R5, #1       
+  LD R5, Hex_zero_val       ; Load the ASCII value for '0' into R5
+  NOT R5, R5            ; Perform 2's complement
+  ADD R5, R5, #1       
 
-    ADD R5, R0, R5        ; Add R0 (input character) and R5 (-48). This subtracts '0' from the input character.
-    BRzp Greater_Than_nine; If the result is >= 0, branch to Greater_Than_nine
+  ADD R5, R0, R5        ; Add R0 (input character) and R5 (-48). This subtracts '0' from the input character.
+  BRzp Greater_Than_nine; If the result is >= 0, branch to Greater_Than_nine
   
-    LD R0, Error_Message  ; If the input character was less than '0', load the error message address into R0
-    PUTS                  ; Output the error message string
-    BRnzp Intro_Prompt    ; Branch to Intro_Prompt to restart the input prompt
+  LD R0, Error_Message  ; If the input character was less than '0', load the error message address into R0
+  PUTS                  ; Output the error message string
+  BRnzp Intro_Prompt    ; Branch to Intro_Prompt to restart the input prompt
 
 
 ; is it > '9'? if so, it is not a digit	- o/p error message, start over
@@ -118,35 +120,35 @@ Processing_Step
 ; Now get remaining digits from user in a loop (max 5), testing each to see if it is a digit, and build up number in accumulator
 
 Num_Input_Loop
-    GETC
-    OUT
+        GETC
+        OUT
         
-    AND R3, R3, #0
-    ADD R3, R6, R0
-    BRz EndInput                   ;If the input symbol's ascii code is 10(newline) end the input loop
+        AND R3, R3, #0
+        ADD R3, R6, R0
+        BRz quit                   ;If the input symbol's ascii code is 10(newline) end the input loop
         
-    LD  R5, Hex_zero_val
-    NOT R5, R5
-    ADD R5, R5, #1              ;R5 store "-48", use to check if the input is "0" or not
-
-    ADD R3, R0, R5
-    BRzp CheckDigit             ;if >'0', go check if it's >9
-    LD R0, Error_Message
-    PUTS 
-    BRnzp Intro_Prompt
-        
-    CheckDigit
-        LD  R5, Hex_nine_val
+        LD  R5, Hex_zero_val
         NOT R5, R5
-        ADD R5, R5, #1              ;R5 store "-57", use to check if the input is "9" or not
+        ADD R5, R5, #1              ;R5 store "-48", use to check if the input is "0" or not
 
         ADD R3, R0, R5
-        BRnz StoreValue            ;if it's <'9' store the value
+        BRzp label1                      ;if >'0', go check if it's >9
         LD R0, Error_Message
         PUTS 
         BRnzp Intro_Prompt
         
-    StoreValue
+        label1
+        LD  R5, Hex_nine_val
+        NOT R5, R5
+        ADD R5, R5, #1              ;R5 store "-57", use to check if the input is "0" or not
+
+        ADD R3, R0, R5
+        BRnz label_store                      ;if it's <'9' store the value
+        LD R0, Error_Message
+        PUTS 
+        BRnzp Intro_Prompt
+        
+        label_store
         STR R0, R1, #0              ;Store the input into the array
         
         LD  R5, Hex_zero_val
@@ -169,18 +171,25 @@ Num_Input_Loop
         ADD R1, R1, #1              ;move the array address to the next
         ADD R2, R2, #-1             
         BRp Num_Input_Loop
+        
+        QUIT
 
-EndInput
-    ; Check if the number was negative
-    BRzp SkipNegate ; If R7 is not negative, skip negation
-    NOT R4, R4
-    ADD R4, R4, #1
+; remember to end with a newline!
+    LD  R5, ASCII_NEG_SIGN
+    NOT R5, R5
+    ADD R5, R5, #1              ;R5 store "-45", use to check if the input is "-" or not
 
-SkipNegate
-    ; remember to end with a newline!
-    LD R0, NewSpace
-    OUT
-    BRnzp ProgramHalt
+    LD R1, Arr_Pointer
+    LDR R2, R1, #0
+    ADD R2, R2, R5
+    BRnp Insert_NewSpace                      ;if it's not negative number
+        NOT R4, R4
+        ADD R4, R4, #1
+
+    Insert_NewSpace    
+        LD R0, NewSpace
+        OUT
+BRnp ProgramHalt
 
 ProgramHalt				
     HALT

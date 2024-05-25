@@ -2,7 +2,7 @@
 ; Name: Kaushik Vada
 ; Email: kaushikvada3@gmail.com
 ; 
-; Lab: lab 5, ex 3
+; Lab: lab 7, ex 1
 ; Lab section: 024  
 ; TA: Karan and Cody
 ; 

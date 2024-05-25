@@ -1,6 +1,6 @@
 ;=================================================
 ; Name: Kaushik Vada
-; Email: kaushikvada3@gmail.com
+; Email: vvada002@ucr.edu
 ; 
 ; Lab: lab 5, ex 3
 ; Lab section: 024  
@@ -96,21 +96,46 @@ top_stack_addr .fill xFE00 ; DO NOT MODIFY THIS LINE OF CODE
 		LD R2, NewLine
 		NOT R2, R2
 		ADD R2, R2, #1
-		AND R5, R5, x0
+		
+		;get negative BACKSPACE
+		LD R3, Backspace
+		NOT R3, R3
+		ADD R3, R3, #1
+	
 		
 		Input_Loop
 			GETC
 			OUT
 			
-			STR R0, R1, #0
-			
 			ADD R0, R0, R2
 			BRz END_OF_LOOP
+			ADD R0, R0, #10
+			
+			
+			ADD R0, R0, R3
+			BRz BACKSPACE_CHECK
+			ADD R0, R0, #8
+			
+			STR R0, R1, #0
 			
 			ADD R1, R1, #1
 			ADD R5, R5, #1
 			
 			BR Input_Loop
+			
+			BACKSPACE_CHECK
+			;move back 1 position
+			ADD R1, R1, #-1
+			ADD R5, R5, #-1
+			
+			
+			;clear the previous charecter
+			AND R0, R0, #0
+			STR R0, R1, #0
+			
+			BR Input_Loop
+
+			
 		END_OF_LOOP
 		
 		AND R0, R0, x0
@@ -138,6 +163,7 @@ top_stack_addr .fill xFE00 ; DO NOT MODIFY THIS LINE OF CODE
 	BACKUP_R6_3200 .BLKW #1
 	BACKUP_R7_3200 .BLKW #1
 	NewLine        .FILL x000A
+	Backspace      .FILL #8
 
 .END
 
