@@ -116,11 +116,15 @@ user_string          .BLKW	  100
 .ORIG x3200
 get_user_string
 ; Backup all used registers, R7 first, using proper stack discipline
-    ST R2, backup_r2_3200    
-    ST R3, backup_r3_3200      
-    ST R5, backup_r5_3200
-    ST R6, backup_r6_3200  
     ST R7, backup_r7_3200  
+    ST R6, backup_r6_3200
+    ST R5, backup_r5_3200
+    ST R3, backup_r3_3200
+    ST R2, backup_r2_3200 
+    
+    
+    
+    
 
 ; Resture all used registers, R7 last, using proper stack discipline
 .END
