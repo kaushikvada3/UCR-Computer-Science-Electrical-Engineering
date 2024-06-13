@@ -10,13 +10,13 @@
 
 ; test harness
 .orig x3000
-            LD R6, SUB_LOAD_VALUE_ptr
-            JSRR R6                         ;return r1
+    LD R6, SUB_LOAD_VALUE_ptr
+    JSRR R6                         ;return r1
 
-			ADD R1, R1, #1
-			LD R6, SUB_PRINT_DECIMAL_ptr
-			JSRR R6
-		    
+    ADD R1, R1, #1
+    LD R6, SUB_PRINT_DECIMAL_ptr
+    JSRR R6
+    
 halt
 ;-----------------------------------------------------------------------------------------------
 ; test harness local data:
@@ -30,9 +30,6 @@ SUB_PRINT_DECIMAL_ptr   .FILL x3400
 
 ;===============================================================================================
 .end
-
-
-
 
 
 ; subroutines:
@@ -71,7 +68,7 @@ backup_r5_3200  .BLKW #1
 backup_r6_3200  .BLKW #1
 backup_r7_3200  .BLKW #1
 
-Num             .FILL #1245
+Num             .FILL #32767
 .end
 
 
