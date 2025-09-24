@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/kaushikvada/Documents/Computer Science/Github Repos/UCR-Computer-Science-Electrical-Engineering/CS061/Labs/Lab 3",
+      "program": "/Users/kaushikvada/Documents/Computer Science/Github Repos/UCR-Computer-Science-Electrical-Engineering/CS061/Labs/Lab 3/build/Debug/outDebug"
+    }
+  ]
+}
