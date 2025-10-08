@@ -1,0 +1,169 @@
+\documentclass[11pt]{article}
+
+% ---------- Packages ----------
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{parskip}           % paragraph spacing
+\usepackage{titlesec}          % custom section titles
+\usepackage{color,xcolor}      % colors
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{fancyhdr}          % headers/footers
+\usepackage{sectsty}           % section colors
+\usepackage{pdfpages}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+% ---------- Styling ----------
+\definecolor{ucrBlue}{HTML}{003DA5}
+\definecolor{darkGray}{HTML}{4D4D4D}
+\definecolor{ucrOrange}{HTML}{E58E1B}
+
+\sectionfont{\color{ucrBlue}\normalfont\Large\bfseries}
+\subsectionfont{\color{darkGray}\normalfont\large\bfseries}
+
+\titleformat{name=\section,numberless}
+  {\color{ucrOrange}\normalfont\Large\bfseries}{}{0pt}{}
+  [\color{ucrOrange}\titlerule]
+
+\newcommand{\reporttitle}{%
+  \noindent{\color{ucrBlue}\bfseries\fontsize{32}{34}\selectfont EECS 168 -- Lab 1 Report}\par\vspace{0.4em}}
+\newcommand{\infrow}[2]{%
+  \noindent\textbf{#1}\hspace{1.5em}%
+  \makebox[0pt][l]{\raisebox{0.6ex}{#2}}%
+  \leaders\hrule height 0.6pt\hfill\kern0pt%
+  \par\vspace{0.9em}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\thepage}
+
+% ---------- Document ----------
+\begin{document}
+
+% --- Exact replica mode (auto if source PDF is present) ---
+\newif\ifusefacsimile
+\IfFileExists{lab1-vvada002.pdf}{\usefacsimiletrue}{\usefacsimilefalse}
+\ifusefacsimile
+  \includepdf[pages=-]{lab1-vvada002.pdf}
+  \clearpage
+\else
+
+\reporttitle
+
+{\color{ucrOrange}\Large\bfseries Student Information}
+\color{ucrOrange}\titlerule
+\color{black}\vspace{0.6em}
+
+\infrow{Name}{Kaushik Vada}
+\infrow{SID}{862441522}
+\infrow{Section}{023}
+\infrow{ENGR ID}{vvada002}
+\infrow{UCR NetID}{vvada002}
+
+% ----------------- Content -----------------
+\section*{Introduction and Learning Summary}
+In Lab 1, I delved into the realm of full-custom CMOS design. This lab also helped me play around with Synopsis tools---Custom Compiler, PrimeWave, and PrimeSim---to design, simulate, and analyze a CMOS inverter. In this lab, I learned how to set up a project library with the 90nm SAED PDK, drawing a schematic, and transforming it into a reusable symbol. Along with that, I learned how to create a simple test bench around the symbol and utilized the Simulation and Analysis Environment (SAE) to conduct both transient and DC sweep simulations.
+
+When the simulator ran, I learned how to use Synopsis’ WaveView tool to inspect the waveforms and to use the measurement tool that is in the waveform window to find delay, rise/fall times, average current, and even frequency by simply dragging measurement boxes onto the plotted signals and reading off the values. So throughout this entire process, I actually learned valuable information, also really fun, and I also gained a lot of practical experience in navigating a complex Electronic Design Automation (EDA) workflow, in which I plan on using later in my career as a VLSI engineer. Even though this lab is a straightforward and simple lab that was only meant to get familiarized with the tools in Synopsis, I would love to find ways to create more interesting designs in the future.
+
+\section*{Inverter Schematic}
+The schematic view of my CMOS inverter is shown in Figure~1 below. The design uses complementary PMOS and NMOS transistors sized according to the 90nm SAED PDK. The PMOS transistor (M0) is connected to the supply rail VDD, and the NMOS transistor (M1) is tied to VSS. The input node VIN drives both transistor gates, while the output node VOUT is taken from the common connection between the two transistors. This implements a classic logical inversion.
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{CMOS inverter schematic (adapted from Fig. 13 in the lab manual).}
+\end{figure}
+
+\section*{Inverter Symbol}
+After verifying the transistor level schematic, I turned it into a symbol (Figure~2). It has the input VIN, output VOUT, and supply pins VDD and VSS. This abstraction makes it easier to reuse an inverter without redrawing from transistor level each time.
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.5\textwidth}{2in}}
+    \caption{Symbol representation of the inverter (adapted from Fig. 15).}
+\end{figure}
+
+\section*{Test Bench}
+To test out the inverter, I created a simple test bench (Figure~3). It uses a voltage source to drive the input with a square wave that toggles between 0 V and the supply voltage; a separate supply source provides the DC rail. This allows both transient and DC analyses to be run in a single simulation.
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{Test bench for the inverter (adapted from Fig. 18).}
+\end{figure}
+
+\section*{Simulation Results}
+\subsection*{Transient Analysis}
+The waveform (Figure~4) shows the expected inversion property---when VIN is high, VOUT is low, and vice versa.
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{Transient analysis of the inverter (adapted from Fig. 28).}
+\end{figure}
+
+\subsection*{DC Sweep Analysis}
+Next, I performed a DC sweep analysis in SAE (Figure~5).
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{DC sweep analysis of the inverter (adapted from Fig. 29).}
+\end{figure}
+
+\section*{Measurement Results}
+\subsection*{Delay Measurement (50\% to 50\%)}
+The delay box shows about 5.12 ps for the rising edge (Figure~6).
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{Delay measurement of the inverter (adapted from Fig. 33).}
+\end{figure}
+
+\subsection*{Rise/Fall Time Measurement (90\%--10\%)}
+The rise time was about 11.8 ps, and the fall time was around 7.29 ps (Figure~7).
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{Rise and fall time measurements for the inverter (adapted from Fig. 35).}
+\end{figure}
+
+\subsection*{Average Current Measurement}
+WaveView showed an average current of about -346 nA when the inverter was on (Figure~8).
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{Average current measurement of the inverter (adapted from Fig. 37).}
+\end{figure}
+
+\subsection*{Frequency Measurement}
+The tool showed a fundamental frequency of about 250 MHz (Figure~9).
+
+\begin{figure}[h!]
+    \centering
+    \fbox{\rule{0.6\textwidth}{2in}}
+    \caption{Frequency measurement for the inverter (adapted from Fig. 39).}
+\end{figure}
+
+\section*{Issues Encountered}
+The main issue was incorrect voltage values in the power supplies. After fixing this, the simulation worked correctly.
+
+\section*{Conclusion}
+This lab introduced me to custom CMOS design with Synopsis tools. I began with a simple inverter, turned it into a symbol, created a test bench, and ran transient and DC analyses. Using WaveView, I measured propagation delay, rise/fall times, average current, and frequency. These tasks helped me understand digital circuit theory and its real-world simulation results. This experience prepared me for more complex designs and timing analysis in future labs.
+
+\fi
+\end{document}

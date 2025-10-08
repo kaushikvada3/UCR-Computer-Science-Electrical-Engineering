@@ -1,0 +1,146 @@
+\documentclass[11pt]{article}
+
+% ---------- Packages ----------
+\usepackage[a4paper,margin=0.9in]{geometry}
+\usepackage{parskip}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+% ---------- Document ----------
+\begin{document}
+
+\title{CS161: Design and Architecture of Computer Systems \\[4pt]
+Expanded Notes -- Execution Example and Binary Arithmetic}
+\author{University of California, Riverside}
+\date{}
+\maketitle
+
+\section*{Overview}
+This lecture introduces how a computer actually executes programs, what is inside the machine, and how the processor coordinates computation, memory, and control. It also begins a review of binary arithmetic: how numbers are represented in base~2, how addition works, and how signed integers are encoded using two’s complement. 
+
+The material is intended as an overview. Later lectures will dive deeper into datapath design, instruction sets, and handling of corner cases.
+
+\section*{What is Inside a Computer?}
+A computer is not just a processor. It is a system composed of multiple interacting parts:
+\begin{itemize}
+  \item \textbf{Processors} (CPU, and sometimes GPU or accelerators).
+  \item \textbf{Memory (RAM)} for temporary data.
+  \item \textbf{Input/Output} devices like keyboard, mouse, monitor, network interfaces.
+  \item \textbf{Storage} such as flash drives or hard disks for permanent data.
+\end{itemize}
+
+Modern systems are evolving. For instance, flash storage is now so fast that it connects directly over PCIe rather than through slower disk interfaces.
+
+\section*{Inside a Processor}
+Within the processor, we can identify four major roles:
+\begin{itemize}
+  \item \textbf{Compute:} Units that perform arithmetic or logic (add, subtract, multiply, comparisons).
+  \item \textbf{Data Registers:} Small but very fast storage close to the compute units.
+  \item \textbf{Memory:} Much larger storage, but relatively slow.
+  \item \textbf{Control:} The logic that decides what happens next (if-statements, loops, jumps).
+\end{itemize}
+
+For example, consider the simple C program:
+\begin{verbatim}
+while (i != 2) {
+    i = i + 1;
+}
+\end{verbatim}
+To implement this, the processor must: load \texttt{i}, compare it to 2, increment it if not equal, and loop back. This requires coordination between compute and control.
+
+\section*{Walking Through Execution}
+The processor executes instructions in a cycle:
+\begin{enumerate}
+  \item Load the instruction from memory.
+  \item Decode the operation.
+  \item Identify the input data (from registers or memory).
+  \item Perform the computation.
+  \item Determine the next instruction (sequential or jump).
+\end{enumerate}
+
+For the loop example:
+\begin{enumerate}
+  \item Load \texttt{i} into a register.
+  \item Subtract 2 and check if the result is zero.
+  \item If zero, jump to exit; otherwise increment \texttt{i}.
+  \item Repeat until the condition is satisfied.
+\end{enumerate}
+
+This illustrates how high-level code becomes a sequence of simple operations on registers, controlled by conditional jumps.
+
+\section*{Binary Arithmetic Basics}
+All of these operations ultimately rely on circuits that only handle two states: on (1) and off (0). Thus, computers represent numbers in binary (base~2).
+
+Examples:
+\[
+  0_2 = 0_{10}, \quad 1_2 = 1_{10}, \quad 10_2 = 2_{10}, \quad 11_2 = 3_{10}, \quad 100_2 = 4_{10}.
+\]
+
+A binary number is evaluated by summing powers of two:
+\[
+  d c b a_2 = d \cdot 2^3 + c \cdot 2^2 + b \cdot 2^1 + a \cdot 2^0.
+\]
+
+\section*{Binary Addition}
+Addition works like in decimal: if a sum exceeds the base, a carry is generated.
+\[
+  01_2 + 01_2 = 10_2 \quad (\text{which equals } 1+1=2_{10}).
+\]
+
+With larger numbers:
+\[
+  0011_2 + 0110_2 = 1001_2 \quad (\text{3+6=9}).
+\]
+
+Each step uses three inputs: the two bits to add and a carry-in. The result is a sum bit and a carry-out. The carry-out of one column becomes the carry-in of the next.
+
+\section*{Overflow}
+With $n$ bits, only numbers from $0$ to $2^n - 1$ can be represented. Adding beyond this range produces overflow. For example, with 4 bits:
+\[
+  1011_2 + 0110_2 = 0001_2 \quad (\text{11+6=17, but 17 cannot be represented in 4 bits}).
+\]
+
+\section*{Signed Numbers: Two’s Complement}
+Unsigned numbers are straightforward, but signed numbers require a convention. The standard used in computers is \textbf{two’s complement}. 
+
+In two’s complement:
+\begin{itemize}
+  \item The most significant bit (MSB) has a negative weight.
+  \item For $n$ bits, the range is from $-2^{n-1}$ to $2^{n-1}-1$.
+  \item There is only one representation of zero ($0000\ldots_2$).
+  \item Negation is easy: invert all bits and add 1.
+\end{itemize}
+
+For example, with 4 bits:
+\[
+  1000_2 = -8_{10}, \quad 1111_2 = -1_{10}, \quad 0100_2 = 4_{10}.
+\]
+
+Example addition:
+\[
+  (-5) + 4 = 1011_2 + 0100_2 = 1111_2 = -1.
+\]
+
+Why two’s complement?
+\begin{itemize}
+  \item Addition and subtraction work seamlessly.
+  \item Only one zero exists.
+  \item Easy to detect negativity (check MSB).
+  \item Subtraction reduces to addition with the negated value.
+\end{itemize}
+
+\section*{Why This Matters}
+Understanding binary arithmetic and execution steps is fundamental for grasping what assembly instructions actually mean. When a processor executes “subtract 2,” “add 1,” or “is zero?”, it is really just manipulating binary numbers encoded in two’s complement.
+
+This lecture sets the stage: later we will explore in detail how MIPS processors implement these operations with datapaths, control logic, and pipelines.
+
+\end{document}
