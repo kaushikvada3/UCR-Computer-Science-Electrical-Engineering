@@ -1,0 +1,91 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+\begin{document}
+
+\section*{PMOS Bias Problem}
+
+\textbf{Given:} \(V_T=-1~\text{V}\), \(K_p=8~\mu\text{A}/\text{V}^2\), \(W/L=25\), \(\lambda=0\), current \(I=100~\mu\text{A}\), supply \(V_S=10~\text{V}\).\\
+Thus the device transconductance parameter
+\[
+K \equiv K_p\frac{W}{L}= 8\times 25=200~\mu\text{A}/\text{V}^2 .
+\]
+
+Let the bottom node (also the gate) be \(V_X\). Then
+\[
+V_{SG}=V_S-V_G=10-V_X, \qquad
+V_D=V_X+IR, \qquad
+V_{SD}=V_S-V_D=10-(V_X+IR)=V_{SG}-IR.
+\]
+
+\subsection*{Region condition}
+For a PMOS (with \(|V_T|=1~\text{V}\)):
+\[
+\text{saturation: } V_{SD}\ge V_{SG}-|V_T| \quad\Longleftrightarrow\quad IR\le 1~\text{V}.
+\]
+Hence the boundary is \(R=10~\text{k}\Omega\).
+\begin{itemize}
+\item \(R<10~\text{k}\Omega\): saturation.
+\item \(R>10~\text{k}\Omega\): triode.
+\end{itemize}
+
+\subsection*{Device equations (with \(\lambda=0\))}
+\begin{align*}
+\text{saturation: } & I=\tfrac12 K\,(V_{SG}-|V_T|)^2
+= \tfrac12 K\,(V_{SG}-1)^2,\\[2mm]
+\text{triode: } & I=K\!\left[(V_{SG}-|V_T|)V_{SD}-\tfrac12 V_{SD}^2\right]
+=K\!\left[(V_{SG}-1)V_{SD}-\tfrac12 V_{SD}^2\right].
+\end{align*}
+
+\subsection*{Solutions}
+\paragraph{(a) \(R=0\) (saturation)}
+\[
+100~\mu\text{A}=\tfrac12(200)\,(V_{SG}-1)^2~\mu\text{A}
+\;\Rightarrow\; (V_{SG}-1)^2=1 \Rightarrow V_{SG}=2.00~\text{V}.
+\]
+\[
+V_{SD}=V_{SG}-IR=2.00-0=2.00~\text{V}.
+\]
+
+\paragraph{(b) \(R=20~\text{k}\Omega\) (triode)}
+Here \(IR=2~\text{V}\) and \(V_{SD}=V_{SG}-2\).
+\[
+\frac{I}{K}=(V_{SG}-1)(V_{SG}-2)-\frac12(V_{SG}-2)^2
+\;\Rightarrow\; 0.5=\tfrac12 V_{SG}^2 - V_{SG}.
+\]
+Hence \(V_{SG}=2.414~\text{V}\) and \(V_{SD}=0.414~\text{V}\).
+
+\paragraph{(c) \(R=50~\text{k}\Omega\) (triode)}
+\(IR=5~\text{V}\), \(V_{SD}=V_{SG}-5\).
+Solving
+\[
+0.5=\tfrac12 V_{SG}^2 - V_{SG} + 5 - \tfrac12(5)^2
+\]
+gives \(V_{SG}=5.123~\text{V}\) and \(V_{SD}=0.123~\text{V}\).
+
+\paragraph{(d) \(R=100~\text{k}\Omega\) (triode)}
+\(IR=10~\text{V}\), \(V_{SD}=V_{SG}-10\).
+Solving
+\[
+0.5=\tfrac12 V_{SG}^2 - V_{SG} + 10 - \tfrac12(10)^2
+\]
+gives \(V_{SG}=10.055~\text{V}\) and \(V_{SD}=0.055~\text{V}\).
+
+\subsection*{Compact closed form in triode}
+With \(V_R\equiv IR\) (\(>1~\text{V}\)):
+\[
+V_{SG}=1+\sqrt{(V_R-1)^2+1},\qquad V_{SD}=V_{SG}-V_R.
+\]
+
+\subsection*{Numerical summary}
+\[
+\begin{array}{c|c|c}
+R~(\text{k}\Omega) & V_{SG}~(\text{V}) & V_{SD}~(\text{V})\\ \hline
+0 & 2.000 & 2.000\\
+20 & 2.414 & 0.414\\
+50 & 5.123 & 0.123\\
+100 & 10.055 & 0.055
+\end{array}
+\]
+
+\end{document}
