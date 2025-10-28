@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BMS Dashboard – Frontend Preview</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <div class="hud">
+      <header class="hud__header">
+        <div>
+          <p class="eyebrow">UCR EV Lab</p>
+          <h1>BMS Command Surface</h1>
+        </div>
+        <div class="status">
+          <span class="status__dot"></span>
+          <span class="status__label">Simulated Data</span>
+        </div>
+      </header>
+
+      <section class="hud__section metrics">
+        <div class="metric-card">
+          <p class="metric-card__label">Pack Voltage</p>
+          <p class="metric-card__value" data-pack-voltage>52.4 V</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Peak Temperature</p>
+          <p class="metric-card__value" data-pack-temp>31.8 °C</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Fan Speed</p>
+          <p class="metric-card__value" data-fan-speed>1 350 RPM</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Mode</p>
+          <p class="metric-card__value" data-pack-mode>Auto-Balance</p>
+        </div>
+      </section>
+
+      <section class="hud__section cell-grid">
+        <!-- Filled dynamically -->
+      </section>
+
+      <section class="hud__section timeline">
+        <div class="timeline__header">
+          <p class="eyebrow">Thermal Trend</p>
+          <p class="timeline__value" data-thermal-trend>Holding steady</p>
+        </div>
+        <div class="timeline__track">
+          <div class="timeline__cursor"></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="detail-panel" data-detail-panel>
+      <div class="detail-panel__header">
+        <div>
+          <p class="eyebrow detail-panel__eyebrow">Cell Focus</p>
+          <h2 data-cell-title>Cell 1</h2>
+        </div>
+        <button class="detail-panel__close" data-close-panel>Close</button>
+      </div>
+      <div class="detail-panel__body">
+        <div class="detail-stat">
+          <p class="detail-stat__label">Voltage</p>
+          <p class="detail-stat__value" data-cell-voltage>4.10 V</p>
+        </div>
+        <div class="detail-stat">
+          <p class="detail-stat__label">Temperature</p>
+          <p class="detail-stat__value" data-cell-temperature>32.5 °C</p>
+        </div>
+        <div class="detail-stat">
+          <p class="detail-stat__label">Delta</p>
+          <p class="detail-stat__value" data-cell-delta>+8 mV</p>
+        </div>
+        <div class="detail-panel__note">
+          Animation-only mock data. Backend not required for this preview.
+        </div>
+      </div>
+    </aside>
+
+    <script src="scene.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,189 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{array}
+\usepackage{xcolor}
+
+\geometry{margin=1in}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\titleformat{\section}{\Large\bfseries}{\thesection.}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+
+\begin{center}
+    {\Huge \textbf{Senior Design Project Report}} \\[0.3cm]
+    {\Large \textbf{Battery Management and Communication System}} \\[0.2cm]
+    \rule{0.9\linewidth}{0.5pt} \\[0.5cm]
+\end{center}
+
+\section{Overview}
+This project implements a complete Battery Management and Communication System (BMS) for a 10s1p lithium-ion battery pack using Molicel P42A cells. The design provides safe power management, precise measurement, and full isolation between high-voltage and host-computer domains. The system integrates hardware, firmware, and host-software components to support live monitoring, thermal control, and data acquisition.
+
+\section{Project Purpose and Objectives}
+\begin{itemize}
+    \item Ensure safe charging, discharging, and monitoring of a 10-cell lithium-ion battery pack.
+    \item Provide full electrical isolation for data acquisition and communication with a host computer.
+    \item Enable real-time measurement and visualization of voltage, current, and temperature.
+    \item Implement fan control and protection mechanisms to maintain system reliability.
+    \item Integrate flexible testing capability through both real and emulated battery pack modes.
+\end{itemize}
+
+\section{System Architecture}
+The full system is divided into two major domains:
+\begin{enumerate}
+    \item \textbf{Battery and Power Domain (High Voltage)} – includes battery pack, thermistors, fan, and system buses.
+    \item \textbf{Isolated Communication Domain} – includes STM32 microcontroller, isolated ADC, RTC, USB communication, and power conditioning.
+\end{enumerate}
+
+\subsection{Battery Pack Subsystem}
+\begin{itemize}
+    \item \textbf{Configuration:} 10s1p lithium-ion pack using Molicel P42A cells.
+    \item \textbf{Nominal Voltage:} 36\,V.
+    \item \textbf{Nominal Capacity:} 4.2\,Ah (151.2\,Wh total energy).
+    \item \textbf{Temperature Sensing:} NTC thermistors placed throughout the pack.
+    \item \textbf{Fan Unit:} DC cooling fan powered from pack rail for thermal regulation.
+\end{itemize}
+
+\subsection{Signal Processing and Conditioning}
+\begin{itemize}
+    \item NTC thermistor network provides analog temperature sensing via resistor dividers.
+    \item Comparator circuits monitor critical voltage and temperature thresholds.
+    \item Low-pass filters (LPF) smooth sensor data prior to ADC conversion.
+    \item Comparator outputs drive a discrete N-channel MOSFET gate driver for load control.
+\end{itemize}
+
+\subsection{System Bus}
+Two main buses interface between the high-voltage and isolated zones:
+\begin{itemize}
+    \item \textbf{System Bus +} carries sensor and measurement signals.
+    \item \textbf{System Bus –} provides return reference for analog signals.
+\end{itemize}
+
+\section{Isolated Zone for Laptop/PC Communication}
+The isolated subsystem provides complete galvanic separation between the measurement circuitry and the host computer.
+
+\subsection{Power and Isolation Components}
+\begin{itemize}
+    \item \textbf{Isolated DC/DC Converter:} Generates isolated 5\,V and 3.3\,V rails (ISO\_5V and ISO\_3V3).
+    \item \textbf{PTC Fuse:} Provides over-current protection for the isolated power supply.
+\end{itemize}
+
+\subsection{Data Acquisition}
+\begin{itemize}
+    \item \textbf{Isolated ADC (8-channel):} Samples voltage and temperature data via SPI interface.
+    \item \textbf{Low-Pass Filters:} Clean noisy analog inputs before ADC sampling.
+\end{itemize}
+
+\subsection{Microcontroller Unit (MCU)}
+\begin{itemize}
+    \item \textbf{Device:} STM32 series microcontroller.
+    \item \textbf{Interfaces:} SPI (for ADC), I\textsuperscript{2}C (for RTC), and UART (for PC communication).
+    \item \textbf{Isolation:} All digital and analog signals pass through isolation barriers.
+    \item \textbf{Tasks:}
+        \begin{itemize}
+            \item Collect and timestamp ADC data.
+            \item Execute fan control algorithms.
+            \item Forward processed data via USB to host PC.
+        \end{itemize}
+\end{itemize}
+
+\subsection{Real-Time Clock (RTC)}
+\begin{itemize}
+    \item Provides accurate timekeeping for data logging.
+    \item Interfaces to MCU via I\textsuperscript{2}C.
+\end{itemize}
+
+\subsection{USB Communication Interface}
+\begin{itemize}
+    \item \textbf{Interface:} USB-C to Laptop/PC.
+    \item \textbf{Data Path:} STM32 MCU $\rightarrow$ USB Interface $\rightarrow$ PC Application.
+    \item Enables live monitoring and control through a graphical desktop interface.
+\end{itemize}
+
+\section{Electrical Protection and Safety}
+\begin{itemize}
+    \item PTC fuse protects isolated 5V line.
+    \item Over-voltage and under-voltage comparators shut down MOSFETs in unsafe conditions.
+    \item Isolation barriers prevent any high-voltage transients from reaching the PC.
+\end{itemize}
+
+\section{Software and PC Interface}
+The system includes two software layers:
+\begin{enumerate}
+    \item \textbf{Embedded Firmware:}
+    \begin{itemize}
+        \item Handles sensor sampling, signal processing, and USB communication.
+        \item Implements fan control logic and safety interrupts.
+    \end{itemize}
+    \item \textbf{Host Computer GUI:}
+    \begin{itemize}
+        \item Displays real-time voltage, current, and temperature data.
+        \item Allows user configuration of charging, discharging, and data logging.
+        \item Communicates via USB serial link with the STM32 MCU.
+    \end{itemize}
+\end{enumerate}
+
+\section{Key Components Summary}
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{} p{3.5cm} p{9cm} @{}}
+\toprule
+\textbf{Component} & \textbf{Description / Function} \\ \midrule
+\textbf{Molicel P42A} & 21700 cell, 4.2\,Ah, 3.6\,V nominal per cell. \\
+\textbf{STM32 MCU} & Core microcontroller handling ADC sampling, data logging, and fan control. \\
+\textbf{Isolated ADC} & 8-channel ADC sampling cell voltages and thermistor readings. \\
+\textbf{Isolated DC/DC Converter} & Provides galvanic isolation and power regulation for measurement circuit. \\
+\textbf{PTC Fuse} & Protects isolated 5V rail against over-current. \\
+\textbf{Comparators} & Monitors battery parameters and controls MOSFET gate-driver signals. \\
+\textbf{LPF Networks} & Filters sensor outputs for clean ADC conversion. \\
+\textbf{NTC Thermistors} & Measure pack temperature for thermal management. \\
+\textbf{Fan} & Provides active cooling controlled by MCU logic. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{System Connectivity Summary}
+\begin{itemize}
+    \item Battery Pack $\rightarrow$ Comparator $\rightarrow$ LPF $\rightarrow$ Isolated ADC.
+    \item Isolated ADC $\rightarrow$ STM32 MCU $\rightarrow$ USB-C $\rightarrow$ Host PC.
+    \item Fan $\leftrightarrow$ MCU (Analog control and digital enable line).
+\end{itemize}
+
+\section{Symbol Legend}
+\begin{itemize}
+    \item $\rightarrow$ Single signal path.
+    \item $=N\Rightarrow$ Harness containing \textit{N} signal wires.
+    \item $\leftrightarrow$ Bidirectional signal connection.
+    \item $\approx\approx$ General signal path (no fixed direction).
+\end{itemize}
+
+\section{Development Status and Next Steps}
+\begin{itemize}
+    \item Schematic design complete.
+    \item Layout design initiated.
+    \item Firmware in early development.
+    \item CAD and block diagram revisions underway.
+    \item Upcoming tasks include integration testing, Jetson AI model interfacing, and full system calibration.
+\end{itemize}
+
+\section{Conclusion}
+This system delivers a modular, isolated, and safe approach to lithium-ion battery monitoring and communication. By separating the high-voltage sensing and host communication zones, it ensures protection and scalability for advanced applications such as AI-assisted battery health estimation on the Jetson platform.
+
+\vfill
+\begin{center}
+    \rule{0.7\linewidth}{0.4pt} \\[0.2cm]
+    \textit{End of Report}
+\end{center}
+
+\end{document}
