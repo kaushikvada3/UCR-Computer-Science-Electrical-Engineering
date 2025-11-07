@@ -1,0 +1,37 @@
+{
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk (local)",
+      "command": "latexmk",
+      "args": [
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-pdf",
+        "-outdir=./",
+        "%DOCFILE%"
+      ],
+      "env": {}
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk (local)",
+      "tools": [
+        "latexmk (local)"
+      ]
+    }
+  ],
+  "latex-workshop.latex.recipe.default": [
+    "latexmk (local)"
+  ],
+  "latex-workshop.latex.outDir": "./",
+  "latex-workshop.latex.clean.method": "glob",
+  "latex-workshop.latex.autoClean.run": "onSucceeded",
+  "latex-workshop.latex.clean.command": "latexmk",
+  "latex-workshop.latex.clean.args": [
+    "-outdir=%OUTDIR%",
+    "-c",
+    "%DOCFILE%"
+  ]
+}

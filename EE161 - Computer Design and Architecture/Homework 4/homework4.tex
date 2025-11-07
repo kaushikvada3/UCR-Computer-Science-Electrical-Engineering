@@ -1,0 +1,58 @@
+% !TEX root = homework4.tex
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{enumitem}
+
+\setlist[enumerate]{label=\textbf{(\Alph*)},leftmargin=*}
+\sisetup{round-mode=places,round-precision=2,round-pad=false}
+
+\title{EE161 Homework 4\\Processor Control and Datapath}
+\author{Kaushik Vada}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Question 1: Logic Path and Delay}
+The single-cycle datapath from the handout provides the following component delays: instruction and data memories \SI{200}{\nano\second}, the main ALU \SI{20}{\nano\second}, each adder (for $PC+4$ and the branch target) \SI{10}{\nano\second}, every multiplexer \SI{5}{\nano\second}, the sign-extension and shift-left-two blocks \SI{5}{\nano\second} each, and register-file reads or writes \SI{5}{\nano\second}. These values are used to accumulate the latency of each instruction.
+
+\subsection*{Part A}
+\begin{align*}
+  t_{\text{addi}} &= T_{\text{IM}} + T_{\text{RegR}} + T_{\text{SignExt}} + T_{\text{ALUSrc MUX}} + T_{\text{ALU}} + T_{\text{WB MUX}} + T_{\text{RegW}} \\
+                  &= \SI{200}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} + \SI{20}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} = \SI{245}{\nano\second}, \\
+  t_{\text{add}}  &= T_{\text{IM}} + T_{\text{RegR}} + T_{\text{ALUSrc MUX}} + T_{\text{ALU}} + T_{\text{WB MUX}} + T_{\text{RegW}} \\
+                  &= \SI{200}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} + \SI{20}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} = \SI{240}{\nano\second}, \\
+  t_{\text{beq}}  &= \max\bigl(T_{\text{IM}} + T_{\text{RegR}} + T_{\text{ALUSrc MUX}} + T_{\text{ALU}},\, T_{\text{IM}} + T_{\text{SignExt}} + T_{\text{ShiftL2}} + T_{\text{Branch Adder}}\bigr) + T_{\text{PC MUX}} \\
+                  &= \max\bigl(\SI{200}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} + \SI{20}{\nano\second},\, \SI{200}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} + \SI{10}{\nano\second}\bigr) + \SI{5}{\nano\second} \\
+                  &= \SI{235}{\nano\second}, \\
+  t_{\text{lw}}   &= T_{\text{IM}} + T_{\text{RegR}} + T_{\text{SignExt}} + T_{\text{ALUSrc MUX}} + T_{\text{ALU}} + T_{\text{DM}} + T_{\text{WB MUX}} + T_{\text{RegW}} \\
+                  &= \SI{200}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} + \SI{20}{\nano\second} + \SI{200}{\nano\second} + \SI{5}{\nano\second} + \SI{5}{\nano\second} = \SI{445}{\nano\second}.
+\end{align*}
+
+\subsection*{Part B}
+The slowest instruction in this set is the load word:
+\[
+t_{\text{slowest}} = t_{\text{lw}} = \SI{445}{\nano\second},
+\qquad
+f_{\max} = \frac{1}{t_{\text{slowest}}} \approx \SI{2.25}{\mega\hertz}.
+\]
+
+\section*{Question 2: Control Signals for \texttt{SW}}
+\begin{enumerate}
+  \item \textbf{RegWrite:} 0. A store does not write a register, so the register-file write port must remain disabled.
+  \item \textbf{ALUSrc:} 1. The base register is added to the sign-extended immediate to form the byte address, so the ALU must take the immediate on its second input.
+  \item \textbf{ALUOp:} 00 (the ``add'' operation). Both loads and stores use the ALU to compute an address via addition, so the control unit drives the add code for the ALU.
+  \item \textbf{MemWrite:} 1. The store instruction writes the data from register \texttt{rt} into memory, so the data-memory write enable must be asserted.
+\end{enumerate}
+
+\section*{Question 3: Adding an Unconditional Jump}
+To support the jump instruction \texttt{j}, extend the datapath as follows:
+\begin{itemize}
+  \item Form the 32-bit jump target by concatenating the upper four bits of the incremented program counter with the 26-bit immediate shifted left by two: $\{\,PC{+}4[31{:}28],\; \text{instr}[25{:}0]\ll 2\,\}$. This reuses the existing $PC+4$ adder and introduces a shift-left-two block on the 26-bit immediate.
+  \item Insert a new $2{:}1$ multiplexer on the PC input that selects between the existing next-PC value (either $PC+4$ or the branch target) and the jump target. Its select line is driven by a new control signal \texttt{Jump}.
+  \item Extend the main controller so that \texttt{Jump} is asserted when the opcode corresponds to a J-type instruction and deasserted otherwise. When \texttt{Jump}=1 the PC multiplexer forwards the jump target and suppresses branch decisions; all other control signals remain as in the existing single-cycle implementation.
+\end{itemize}
+These additions enable the processor to fetch the instruction stream sequentially, take conditional branches, or perform absolute jumps based solely on the opcode.
+
+\end{document}

@@ -1,0 +1,111 @@
+\documentclass[12pt]{article}
+
+% --- Packages ---
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{array}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+% --- Settings ---
+\sisetup{detect-all}
+\setlist[itemize]{topsep=4pt,itemsep=2pt,parsep=0pt}
+\setcounter{secnumdepth}{3}
+
+% --- Metadata ---
+\title{BMS Firmware Architecture Overview}
+\author{Kaushik Vada}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Firmware Architecture Overview}
+
+The Battery Management System (BMS) firmware is designed to ensure safe operation, continuous monitoring, and protection of the lithium-ion battery pack across multiple runtime conditions. The firmware executes within an RTOS environment to support deterministic task scheduling and timely fault-response behavior.
+
+\subsection{BMS Modes of Operation}
+
+The BMS operates in two primary power modes:
+
+\begin{itemize}
+    \item \textbf{SHIP Mode:} Low-power hibernation state intended for storage and shipping conditions. Only essential safety monitoring remains active to minimize power consumption and prevent unnecessary battery drain.
+    \item \textbf{NORMAL Mode:} Full operational state in which sensing, protection, balancing, and communication functions are active. The BMS continuously monitors pack health and reports data to the host system.
+\end{itemize}
+
+\subsection{RTOS State Machines}
+
+Under NORMAL Mode, core safety tasks execute periodically according to their timing requirements.
+
+\subsubsection{Temperature Monitoring Task (ADC Sampler)}
+
+Responsible for thermal fault protection:
+
+\begin{itemize}
+    \item Periodically samples all thermistors using the ADC
+    \item Compares each reading against configured over-temperature thresholds
+    \item On fault detection:
+    \begin{itemize}
+        \item Activate audible buzzer
+        \item Flash the LED corresponding to the overheated cell (one LED per thermistor)
+        \item Transmit alert and cell identifier to the host GUI for visualization
+    \end{itemize}
+\end{itemize}
+
+This task runs at a high frequency due to the sudden nature of thermal runaway events.
+
+\subsubsection{Overcurrent Monitor Task}
+
+Provides high-speed protection against current surges:
+
+\begin{itemize}
+    \item Samples pack current via the Coulomb Counter register in the BMS IC
+    \item Compares the value against software-defined overcurrent thresholds
+    \item On violation:
+    \begin{itemize}
+        \item Trigger buzzer and fault indication LEDs
+        \item Send alert to host GUI for user awareness
+    \end{itemize}
+\end{itemize}
+
+Like temperature monitoring, this task requires rapid execution to catch transient fault events.
+
+\subsubsection{BMS Handler Task}
+
+Overall system management and slow-timescale functions:
+
+\begin{itemize}
+    \item Schedules and executes cell balancing operations
+    \item Maintains overall state machine control and internal flags
+    \item Periodically transmits telemetry and status to the GUI
+    \item Operates based on RTOS timer interrupts or asynchronous safety triggers
+\end{itemize}
+
+Because voltage imbalance progresses slowly, this task operates at a lower rate.
+
+\subsection{System Summary}
+
+Table~\ref{tab:task_rates} summarizes major tasks and their roles in ensuring battery safety and long-term operation.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|c|p{7cm}|}
+\hline
+\textbf{Task} & \textbf{Execution Rate} & \textbf{Primary Purpose} \\
+\hline
+Temperature Monitoring & 10--100\,\si{ms} & Detect overheating early and prevent thermal runaway \\
+\hline
+Overcurrent Monitor & 10--100\,\si{ms} & Detect short circuits / excessive discharge currents \\
+\hline
+BMS Handler & 1--10\,\si{s} & Manage cell balancing and maintain long-term pack health \\
+\hline
+\end{tabular}
+\caption{RTOS task execution rates and associated safety roles.}
+\label{tab:task_rates}
+\end{table}
+
+In summary, the BMS firmware leverages its RTOS-based architecture to prioritize rapid fault detection while sustaining overall system health. Audible, visual, and digital alert paths provide both local and remote visibility into safety-critical events.
+
+\end{document}
