@@ -1,0 +1,25 @@
+{
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk-local",
+      "tools": [
+        "latexmk-local"
+      ]
+    }
+  ],
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk-local",
+      "command": "latexmk",
+      "args": [
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-pdf",
+        "-outdir=.",
+        "%DOCFILE%"
+      ]
+    }
+  ],
+  "latex-workshop.latex.autoBuild.run": "onSave"
+}

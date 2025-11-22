@@ -1,0 +1,170 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,siunitx,booktabs,enumitem}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\geometry{margin=1in}
+\setlength{\parskip}{0.75ex}
+\setlength{\parindent}{0pt}
+
+\newcommand{\hwfigure}[3]{%
+  \IfFileExists{#1}{%
+    \begin{figure}[H]
+      \centering
+      \includegraphics[width=#2]{#1}
+      \caption{#3}
+    \end{figure}
+  }{%
+    \textit{[Figure missing: run the MATLAB exporter to regenerate #1 for ``#3''].}%
+  }%
+}
+
+\begin{document}
+
+\title{EE 115 Homework 5}
+\author{Kaushik Vada}
+\date{\today}
+\maketitle
+
+\section*{Problem 1 -- Bandpass AM Chain}
+
+The message, modulator, and bandpass filter are
+\begin{align*}
+  m(t) &= \cos(2\pi t) + 2\sin(4\pi t), \\
+  u(t) &= \big(m(t) + 3\big)\cos(200\pi t), \qquad t \text{ is in ms},\\
+  H(f) &= H(-f) =
+  \begin{cases}
+    \dfrac{f-98}{4}, & 98 \le f \le 102~\text{kHz},\\[4pt]
+    1, & 102 < f \le 103~\text{kHz},\\
+    0, & \text{otherwise for }f>0,
+  \end{cases}
+\end{align*}
+so the carrier is at $f_c = 100~\text{kHz}$ and baseband frequencies are most conveniently described in $\text{kHz}$ because $t$ is expressed in milliseconds.
+
+\begin{enumerate}[label=\textbf{(\alph*)},leftmargin=1.1cm]
+  \item \textbf{Spectrum $M(f)$:} Using the Fourier transform pairs for cosine and sine,
+  \[
+    M(f) = \tfrac{1}{2}\big[\delta(f-1) + \delta(f+1)\big]
+          + \frac{1}{j}\big[\delta(f-2) - \delta(f+2)\big], \qquad f \text{ in kHz.}
+  \]
+  Thus $M(f)$ consists of impulses at $\pm1~\text{kHz}$ (height $0.5$) from the cosine term and at $\pm2~\text{kHz}$ (height $1$ with odd symmetry) from the sine term.
+  \hwfigure{figures_hw5/M_spectrum.png}{0.7\linewidth}{MATLAB magnitude spectrum $M(f)$ confirming impulses at $\pm1$ and $\pm2~\text{kHz}$.}
+
+  \item \textbf{Spectrum $U(f)$:} Multiplication by $\cos(2\pi f_c t)$ produces the usual double-sideband translation,
+  \[
+    U(f) = \tfrac{1}{2}\Big[M(f-f_c) + M(f+f_c)\Big]
+         + \tfrac{3}{2}\big[\delta(f-f_c) + \delta(f+f_c)\big].
+  \]
+  Consequently, positive-frequency lines appear at $f=\{98,99,100,101,102\}~\text{kHz}$ with weights proportional to the baseband coefficients:
+  \begin{center}
+    \begin{tabular}{ccc}
+      \toprule
+      Component & $f$ (kHz) & Time-domain amplitude \\ \midrule
+      Carrier offset & $100$ & $3$ \\
+      Cosine sidebands & $99,101$ & $0.5$ each before filtering \\
+      Sine sidebands & $98,102$ & $1$ each before filtering\\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+  (Negative frequencies have the conjugate impulses, ensuring $u(t)$ is real.)
+  \hwfigure{figures_hw5/U_spectrum.png}{0.7\linewidth}{Simulated $|U(f)|$ showing the carrier and mirrored sidebands around $100~\text{kHz}$.}
+
+  \item \textbf{Spectrum $V(f)$:} $V(f) = H(f)\,U(f)$, so only those impulses that fall inside $98$--$103~\text{kHz}$ survive, each scaled by the gain $H(f)$ at that frequency.  The surviving positive-frequency amplitudes are
+  \begin{center}
+    \begin{tabular}{cccc}
+      \toprule
+      Baseband freq. & $f$ (kHz) & $H(f)$ & Time amplitude in $v(t)$ \\ \midrule
+      Carrier (DC) & $100$ & $0.5$ & $1.5 \cos(2\pi f_c t)$ \\
+      $1~\text{kHz}$ upper & $101$ & $0.75$ & $0.375 \cos 2\pi(101\text{kHz})t$\\
+      $1~\text{kHz}$ lower & $99$ & $0.25$ & $0.125 \cos 2\pi(99\text{kHz})t$\\
+      $2~\text{kHz}$ upper & $102$ & $1$ & $\sin 2\pi(102\text{kHz})t$\\
+      $2~\text{kHz}$ lower & $98$ & $0$ & suppressed \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+  The negative-frequency impulses mirror these values.
+  \hwfigure{figures_hw5/V_spectrum.png}{0.7\linewidth}{Magnitude $|V(f)|$ displaying the unequal sideband gains after the bandpass filter.}
+
+  \item \textbf{Complex envelope of $h(t)$:} Let $\tilde{H}(f)$ denote the complex envelope (low-pass equivalent) of $h(t)$ with respect to $f_c$.  It is obtained by retaining only the positive-frequency lobe around $f_c$ and translating it to baseband:
+  \[
+    \tilde{H}(f) = 2H(f_c + f) =
+    \begin{cases}
+      0, & f < -2~\text{kHz},\\
+      1 + \dfrac{f}{2}, & -2 \le f \le 2~\text{kHz},\\[6pt]
+      2, & 2 < f \le 3~\text{kHz},\\
+      0, & f > 3~\text{kHz}.
+    \end{cases}
+  \]
+  Hence the complex-envelope magnitude is a ramp that rises from $0$ at $-2~\text{kHz}$ to $2$ at $2~\text{kHz}$, then stays at $2$ until $3~\text{kHz}$.
+  \hwfigure{figures_hw5/H_envelope_baseband.png}{0.65\linewidth}{Baseband view of the filter magnitude $\tilde{H}(f)$ obtained by shifting the passband response down by $100~\text{kHz}$.}
+
+  \item \textbf{Spectra of $v_c(t)$ and $v_s(t)$:} Writing $v(t)=v_c(t)\cos(200\pi t)-v_s(t)\sin(200\pi t)$ and using coherent detection,
+  \begin{align*}
+    v_c(t) &= 2\,\text{LPF}\{v(t)\cos(200\pi t)\}
+           = 1.5 + 0.5\cos(2\pi t) + \sin(4\pi t),\\
+    v_s(t) &= -2\,\text{LPF}\{v(t)\sin(200\pi t)\}
+           = 0.25\sin(2\pi t) - \cos(4\pi t),
+  \end{align*}
+  where the trigonometric arguments are in kHz because $t$ is measured in ms. Their spectra therefore consist of impulses at DC, $\pm1~\text{kHz}$, and $\pm2~\text{kHz}$:
+  \begin{center}
+    \begin{tabular}{cccc}
+      \toprule
+      Signal & Line freq. (kHz) & Weight & Comment \\ \midrule
+      $v_c(t)$ & $0$ & $1.5$ & residual carrier\\
+               & $\pm1$ & $0.25\,\delta(f\mp1)$ & cosine term \\
+               & $\pm2$ & $\pm\dfrac{1}{2j}\delta(f\mp2)$ & sine term \\
+      $v_s(t)$ & $\pm1$ & $\pm\dfrac{0.25}{2j}\delta(f\mp1)$ & sine term \\
+               & $\pm2$ & $0.5\,\delta(f\mp2)$ & cosine term \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+  The unequal gains on the upper and lower sidebands force a nonzero quadrature component $v_s(t)$.
+  \hwfigure{figures_hw5/Vc_spectrum.png}{0.65\linewidth}{Spectrum of $v_c(t)$ emphasizing the DC bias and attenuated $\pm1,\pm2~\text{kHz}$ lines.}
+  \hwfigure{figures_hw5/Vs_spectrum.png}{0.65\linewidth}{Spectrum of $v_s(t)$ showing the residual quadrature content generated by the asymmetric filter.}
+
+  \item \textbf{Comparison of $v_c(t)$ with $m(t)$:} Both signals are baseband, but the BPF distorts the envelope:
+  \[
+    m(t) = \cos(2\pi t) + 2\sin(4\pi t)
+    \quad\Rightarrow\quad
+    v_c(t) = 1.5 + 0.5\cos(2\pi t) + \sin(4\pi t).
+  \]
+  The carrier leak introduces a DC offset of $1.5$, the $1~\text{kHz}$ tone is attenuated by $-6~\text{dB}$, and the $2~\text{kHz}$ tone loses the lower sideband so its amplitude is halved.  Thus $v_c(t)$ is a distorted (biased and unequalized) version of $m(t)$.
+
+  \item \textbf{Spectra of $h_c(t)$ and $h_s(t)$:} Using $h(t)=h_c(t)\cos(200\pi t)-h_s(t)\sin(200\pi t)$, the in-phase and quadrature frequency responses are
+  \[
+    H_c(f) = H(f_c + f) + H(f_c - f), \qquad
+    H_s(f) = j\big[H(f_c - f) - H(f_c + f)\big],
+  \]
+  with $f$ expressed in kHz relative to baseband.  For this filter:
+  \begin{itemize}
+    \item $H_c(f) = 1$ for $|f| \le 3~\text{kHz}$ and $0$ elsewhere (a flat low-pass shape).
+    \item $H_s(f)$ is odd and purely imaginary: it equals $+j$ on $-3\le f<-2$, ramps linearly as $-j\,f/2$ over $-2\le f\le2$, equals $-j$ on $2<f\le3$, and is zero outside this band.
+  \end{itemize}
+  These sketches show that a purely real passband response still corresponds to coupled in-phase/quadrature low-pass filters whenever the upper and lower transition bands are asymmetric.
+  \hwfigure{figures_hw5/Hc_spectrum.png}{0.65\linewidth}{Numerical $|H_c(f)|$ confirming the unity-gain low-pass equivalent.}
+  \hwfigure{figures_hw5/Hs_spectrum.png}{0.65\linewidth}{Magnitude of $H_s(f)$ highlighting the odd-symmetric quadrature response.}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 2 -- RC Integrator Condition}
+
+For the RC network,
+\[
+  H(j\omega) = \frac{1}{j\omega RC}\,\frac{1}{1 + \frac{1}{j\omega RC}}
+             = \frac{1}{1 + j\omega RC}.
+\]
+To emulate the ideal integrator $\dfrac{1}{RC}\int_{-\infty}^t m(\tau)\,d\tau$, we need $H(j\omega) \approx \dfrac{1}{j\omega RC}$ over the entire message band.  That happens when the magnitude of $\dfrac{1}{j\omega RC}$ is much smaller than $1$, i.e.,
+\[
+  \left|\frac{1}{j\omega RC}\right| = \frac{1}{\omega RC} \ll 1
+  \quad\Longrightarrow\quad \omega RC \gg 1.
+\]
+Because the message spectrum is confined to $f \ge f_L$, the design rule is
+\[
+  2\pi f_L RC \gg 1
+  \quad\text{or equivalently}\quad
+  f_L \gg \frac{1}{2\pi RC}.
+\]
+Ensuring the lowest message frequency is at least a decade above $1/(2\pi RC)$ keeps the RC circuit within the $20~\text{dB/dec}$ roll-off region where it behaves like a scaled integrator.
+
+\end{document}

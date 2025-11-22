@@ -1,0 +1,72 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry}
+
+\begin{document}
+
+\title{EE 115 Homework 6 Solutions\\Kaushik Vada}
+\author{}
+\date{}
+\maketitle
+
+\section*{1.\ RL differentiator}
+\begin{align}
+H_{RL}(j2\pi f) &= \frac{j2\pi fL}{R + j2\pi fL}.
+\end{align}
+The spectrum of $u_{FM}(t)$ is confined to $f \in [f_c - W/2,\, f_c + W/2]$, so the
+largest frequency component is $f_{\max} = f_c + W/2$. For $2\pi fL \ll R$ the magnitude
+reduces to
+\[
+|H_{RL}(j2\pi f)| \approx \frac{2\pi fL}{R},
+\]
+which is linear in $f$ and therefore behaves like an ideal differentiator (scaled by $L/R$)
+over the signal band. Thus the RL network can replace the differentiator provided its corner
+frequency is well above the FM band:
+\[
+\boxed{2\pi(f_c + W/2)L \ll R \quad \text{or equivalently} \quad \frac{R}{L} \gg 2\pi(f_c + W/2)}.
+\]
+
+\section*{2.\ RLC differentiator}
+In the underdamped case $\tfrac{1}{R^2 C^2} \ll \tfrac{4}{LC}$ the poles are $p_{1,2} = -\sigma \pm j\omega_0$
+with $\omega_0 = 1/\sqrt{LC}$, so
+\[
+H_{RLC}(j2\pi f) = \frac{j2\pi f/(RC)}{-\,4\pi^2 f^2 + j\frac{2\pi f}{RC} + \frac{1}{LC}}.
+\]
+\begin{enumerate}[label = (\alph*)]
+  \item For $f \ll f_0 = \frac{1}{2\pi\sqrt{LC}}$ the denominator is dominated by $\tfrac{1}{LC}$, so
+  \[
+  |H_{RLC}(j2\pi f)| \approx \frac{2\pi fL}{R},
+  \]
+  a straight line with slope $\alpha = \tfrac{2\pi L}{R}$. Choosing the FM carrier $f_c$ in this
+  low-frequency rising region and keeping the whole band below resonance,
+  \[
+  f_c + W/2 \ll f_0,
+  \]
+  makes the curve locally linear. Around such an $f_c$,
+  \[
+  |H_{RLC}(j2\pi f)| \approx H_0 + \alpha(f - f_c), \qquad
+  H_0 = |H_{RLC}(j2\pi f_c)| \approx \alpha f_c,
+  \]
+  i.e., the magnitude behaves as $c + \alpha f$ for $|f - f_c| < W/2$. A sketch would show the
+  magnitude rising almost linearly from $0$, bending over, and peaking near $f_0$; the tangent at
+  $f = f_c$ on the rising part is the desired linear approximation.
+  \begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image.png}
+    \caption{Sketch of $|H_{RLC}(j2\pi f)|$ versus frequency, showing the linear region near $f_c$ below $f_0$.}
+  \end{figure}
+
+  \item Advantages over the RL circuit:
+  \begin{itemize}
+    \item Band-pass behavior around $f_c$ (with $f_c < f_0$) suppresses broadband noise away from
+    the FM band; the RL high-pass passes all higher-frequency noise.
+    \item The resonant gain $Q = \tfrac{1}{R}\sqrt{\tfrac{L}{C}}$ allows much larger
+    differentiator gain near $f_c$ (and a peak near $f_0$), whereas the RL magnitude is always
+    $\leq 1$. Hence the RLC gives better SNR and steeper slope for demodulation.
+  \end{itemize}
+\end{enumerate}
+
+\end{document}

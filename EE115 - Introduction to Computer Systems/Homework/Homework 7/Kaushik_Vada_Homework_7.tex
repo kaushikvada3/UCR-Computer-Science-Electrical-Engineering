@@ -1,0 +1,64 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{EE 115 Homework 7}
+\author{Kaushik Vada}
+\date{November 16, 2025}
+
+\begin{document}
+\maketitle
+
+Given
+\[
+u_{FM}(t)=A_c\cos\!\bigl(2\pi f_c t+\theta(t)\bigr),\qquad
+\theta(t)=\theta(0)+8\pi\int_0^t m(\tau)\,d\tau.
+\]
+Comparing to the standard form \(2\pi k_f\int m(\tau)\,d\tau\) shows \(k_f=4\ \text{Hz/unit}\).
+Thus the peak frequency deviation is
+\[
+\Delta f = k_f\,|m(t)|_{\max}=4\,|m(t)|_{\max},
+\]
+and Carson's rule gives the approximate FM bandwidth
+\[
+W \approx 2\bigl(\Delta f + f_{m,\max}\bigr),
+\]
+where \(f_{m,\max}\) is the highest frequency present in \(m(t)\).
+
+\begin{enumerate}
+  \item Bandwidth of \(m(t)\) is \(10\,\text{Hz}\) and \(|m(t)|_{\max}=20\).
+  \[
+  \Delta f = 4(20)=80\,\text{Hz},\qquad
+  W \approx 2(80+10)=\boxed{180\ \text{Hz}}.
+  \]
+
+  \item \(m(t)=2\cos(10\pi t)=2\cos(2\pi\cdot 5\,t)\) has \(f_{m,\max}=5\,\text{Hz}\) and \(|m(t)|_{\max}=2\).
+  \[
+  \Delta f = 4(2)=8\,\text{Hz},\quad
+  \beta=\frac{\Delta f}{f_{m,\max}}=\frac{8}{5}=1.6,\quad
+  W \approx 2(8+5)=\boxed{26\ \text{Hz}}.
+  \]
+
+  \item \(M(f)=\operatorname{rect}(f/3)\) is nonzero for \(|f|\le 3/2\), so \(f_{m,\max}=1.5\,\text{Hz}\).
+  The inverse transform is \(m(t)=3\,\operatorname{sinc}(3t)\), giving \(|m(t)|_{\max}=3\) at \(t=0\).
+  \[
+  \Delta f = 4(3)=12\,\text{Hz},\qquad
+  W \approx 2(12+1.5)=\boxed{27\ \text{Hz}}.
+  \]
+
+  \item \(m(t)=\displaystyle\int_0^t 2\cos(10\pi\tau)\,d\tau=\frac{1}{5\pi}\sin(10\pi t)\)
+  has \(f_{m,\max}=5\,\text{Hz}\) and \(|m(t)|_{\max}=\tfrac{1}{5\pi}\).
+  \[
+  \Delta f = 4\Bigl(\tfrac{1}{5\pi}\Bigr)=\tfrac{4}{5\pi}\,\text{Hz},\qquad
+  W \approx 2\!\left(\tfrac{4}{5\pi}+5\right)=\boxed{10+\tfrac{8}{5\pi}\ \text{Hz}\approx 10.51\ \text{Hz}}.
+  \]
+
+  \item \(m(t)=\dfrac{d}{dt}[2\cos(10\pi t)]=-20\pi\sin(10\pi t)\) has \(f_{m,\max}=5\,\text{Hz}\) and \(|m(t)|_{\max}=20\pi\).
+  \[
+  \Delta f = 4(20\pi)=80\pi\,\text{Hz},\qquad
+  W \approx 2(80\pi+5)=\boxed{160\pi+10\ \text{Hz}\approx 5.13\times 10^2\ \text{Hz}}.
+  \]
+\end{enumerate}
+
+\end{document}
