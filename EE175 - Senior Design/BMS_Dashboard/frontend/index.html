@@ -1,41 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BMS Dashboard – Frontend Preview</title>
-    <link
-      rel="preconnect"
-      href="https://fonts.googleapis.com"
-    />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  </head>
-  <body>
-    <canvas id="scene"></canvas>
 
-    <div class="hud">
-      <header class="hud__header">
-        <div>
-          <p class="eyebrow">UCR EV Lab</p>
-          <h1>BMS Command Surface</h1>
-        </div>
-        <div class="status">
-          <span class="status__dot"></span>
-          <span class="status__label">Simulated Data</span>
-        </div>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BMS Dashboard – Frontend Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/"
+        }
+      }
+    </script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+</head>
 
-      <section class="hud__section metrics">
+<body>
+  <canvas id="scene"></canvas>
+
+  <div class="hud">
+    <header class="hud__header">
+      <div>
+        <p class="eyebrow">UCR EV Lab</p>
+        <h1>BMS Command Surface</h1>
+      </div>
+    </header>
+
+    <!-- Left Column: Cell Grid + Metrics -->
+    <div class="left-column">
+      <section class="hud__section cell-grid glass-panel">
+        <!-- Filled dynamically -->
+      </section>
+
+      <section class="hud__section metrics glass-panel">
         <div class="metric-card">
           <p class="metric-card__label">Pack Voltage</p>
           <p class="metric-card__value" data-pack-voltage>52.4 V</p>
@@ -45,57 +47,72 @@
           <p class="metric-card__value" data-pack-temp>31.8 °C</p>
         </div>
         <div class="metric-card">
-          <p class="metric-card__label">Fan Speed</p>
-          <p class="metric-card__value" data-fan-speed>1 350 RPM</p>
+          <p class="metric-card__label">Fan 1 Speed</p>
+          <p class="metric-card__value" data-fan-speed-1>1 350 RPM</p>
         </div>
         <div class="metric-card">
-          <p class="metric-card__label">Mode</p>
-          <p class="metric-card__value" data-pack-mode>Auto-Balance</p>
+          <p class="metric-card__label">Fan 2 Speed</p>
+          <p class="metric-card__value" data-fan-speed-2>1 350 RPM</p>
         </div>
-      </section>
-
-      <section class="hud__section cell-grid">
-        <!-- Filled dynamically -->
-      </section>
-
-      <section class="hud__section timeline">
-        <div class="timeline__header">
-          <p class="eyebrow">Thermal Trend</p>
-          <p class="timeline__value" data-thermal-trend>Holding steady</p>
-        </div>
-        <div class="timeline__track">
-          <div class="timeline__cursor"></div>
+        <div class="metric-card">
+          <p class="metric-card__label">Power Mode</p>
+          <div class="mode-selector">
+            <button class="mode-btn active" data-mode="Balanced">Balanced</button>
+            <button class="mode-btn" data-mode="Low-Power">Low-Power</button>
+            <button class="mode-btn" data-mode="High-Power">High-Power</button>
+          </div>
         </div>
       </section>
     </div>
 
-    <aside class="detail-panel" data-detail-panel>
-      <div class="detail-panel__header">
-        <div>
-          <p class="eyebrow detail-panel__eyebrow">Cell Focus</p>
-          <h2 data-cell-title>Cell 1</h2>
+    <!-- Right Column: Timeline + Status -->
+    <div class="right-column">
+      <section class="hud__section timeline glass-panel">
+        <div class="timeline__header">
+          <p class="eyebrow">Live Telemetry</p>
+          <p class="timeline__value" data-thermal-trend>Streaming data</p>
         </div>
-        <button class="detail-panel__close" data-close-panel>Close</button>
-      </div>
-      <div class="detail-panel__body">
-        <div class="detail-stat">
-          <p class="detail-stat__label">Voltage</p>
-          <p class="detail-stat__value" data-cell-voltage>4.10 V</p>
+        <div class="timeline__track">
+          <div class="stream-grid"></div>
+          <div class="data-pulse" id="data-pulse"></div>
         </div>
-        <div class="detail-stat">
-          <p class="detail-stat__label">Temperature</p>
-          <p class="detail-stat__value" data-cell-temperature>32.5 °C</p>
-        </div>
-        <div class="detail-stat">
-          <p class="detail-stat__label">Delta</p>
-          <p class="detail-stat__value" data-cell-delta>+8 mV</p>
-        </div>
-        <div class="detail-panel__note">
-          Animation-only mock data. Backend not required for this preview.
-        </div>
-      </div>
-    </aside>
+      </section>
 
-    <script src="scene.js" type="module"></script>
-  </body>
+      <div class="status">
+        <span class="status__dot"></span>
+        <span class="status__label">Simulated Data</span>
+      </div>
+    </div>
+  </div>
+
+  <aside class="detail-panel glass-panel" data-detail-panel>
+    <div class="detail-panel__header">
+      <div>
+        <p class="eyebrow detail-panel__eyebrow">Cell Focus</p>
+        <h2 data-cell-title>Cell 1</h2>
+      </div>
+      <button class="detail-panel__close" data-close-panel>Close</button>
+    </div>
+    <div class="detail-panel__body">
+      <div class="detail-stat">
+        <p class="detail-stat__label">Voltage</p>
+        <p class="detail-stat__value" data-cell-voltage>4.10 V</p>
+      </div>
+      <div class="detail-stat">
+        <p class="detail-stat__label">Temperature</p>
+        <p class="detail-stat__value" data-cell-temperature>32.5 °C</p>
+      </div>
+      <div class="detail-stat">
+        <p class="detail-stat__label">Delta</p>
+        <p class="detail-stat__value" data-cell-delta>+8 mV</p>
+      </div>
+      <div class="detail-panel__note">
+        Animation-only mock data. Backend not required for this preview.
+      </div>
+    </div>
+  </aside>
+
+  <script src="scene.js" type="module"></script>
+</body>
+
 </html>
