@@ -4,7 +4,8 @@
 \usepackage{amsmath,amssymb}
 \usepackage{enumitem}
 
-\title{EE 115 Homework 8 Solutions}
+\title{EE 115 Homework 8}
+\author{Kaushik Vada}
 \date{}
 
 \begin{document}
@@ -13,13 +14,13 @@
 \begin{enumerate}
   \item \textbf{Filter output power}\\[2pt]
   For a tone $A\cos(2\pi f t)$ or $A\sin(2\pi f t)$, $P=\frac{A^{2}}{2}$. The filter scales each tone by $|H(f)|$; phases do not change the power.
-  \begin{enumerate}[label=(\alph*)]
+  \begin{enumerate}[label = (\alph*)]
     \item $x(t)=2\cos(2\pi f_{1}t)+3\sin(2\pi f_{2}t)$\\
     \[
       P_{x}=2^{2}/2+3^{2}/2=6.5,\quad 8.13~\text{dB}.
     \]
     \[
-      P_{y}=(2|H(f_{1})|)^{2}/2+(3|H(f_{2})|)^{2}/2=0.2,\quad -6.99~\text{dB}.
+      P_{y}=\frac{{(2\cdot0.1)}^{2}}{2}+\frac{{(3\cdot0.2)}^{2}}{2}=0.2,\quad -6.99~\text{dB}.
     \]
 
     \item $x(t)=2\cos(2\pi f_{2}t)+3\sin(2\pi f_{3}t)$\\
@@ -27,7 +28,7 @@
       P_{x}=6.5,\quad 8.13~\text{dB}.
     \]
     \[
-      P_{y}=(2|H(f_{2})|)^{2}/2+(3|H(f_{3})|)^{2}/2=0.08045,\quad -10.94~\text{dB}.
+      P_{y}=\frac{{(2\cdot0.2)}^{2}}{2}+\frac{{(3\cdot0.01)}^{2}}{2}=0.08045,\quad -10.94~\text{dB}.
     \]
 
     \item $x(t)=3\cos(2\pi f_{1}t)+4\sin(2\pi f_{2}t)+5\cos(2\pi f_{3}t+\pi/3)$\\
@@ -35,13 +36,13 @@
       P_{x}=3^{2}/2+4^{2}/2+5^{2}/2=25,\quad 13.98~\text{dB}.
     \]
     \[
-      P_{y}=(3|H(f_{1})|)^{2}/2+(4|H(f_{2})|)^{2}/2+(5|H(f_{3})|)^{2}/2=0.36625,\quad -4.36~\text{dB}.
+      P_{y}=\frac{{(3\cdot0.1)}^{2}}{2}+\frac{{(4\cdot0.2)}^{2}}{2}+\frac{{(5\cdot0.01)}^{2}}{2}=0.36625,\quad -4.36~\text{dB}.
     \]
   \end{enumerate}
 
   \item \textbf{Superhet receiver}\\[2pt]
   Given $f_{\text{IF}}=445~\text{kHz}$, desired $f_{\text{RF}}=990~\text{kHz}$, and $f_{\text{LO}}=f_{\text{RF}}+f_{\text{IF}}$.
-  \begin{enumerate}[label=(\alph*)]
+  \begin{enumerate}[label = (\alph*)]
     \item $f_{\text{LO}}=990~\text{kHz}+445~\text{kHz}=1.435~\text{MHz}$.
 
     \item The image that also mixes to $f_{\text{IF}}$ is at
