@@ -1,0 +1,60 @@
+% EE 115 Homework 8 - full solutions
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+
+\title{EE 115 Homework 8 Solutions}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{enumerate}
+  \item \textbf{Filter output power}\\[2pt]
+  For a tone $A\cos(2\pi f t)$ or $A\sin(2\pi f t)$, $P=\frac{A^{2}}{2}$. The filter scales each tone by $|H(f)|$; phases do not change the power.
+  \begin{enumerate}[label=(\alph*)]
+    \item $x(t)=2\cos(2\pi f_{1}t)+3\sin(2\pi f_{2}t)$\\
+    \[
+      P_{x}=2^{2}/2+3^{2}/2=6.5\;\text{(}8.13\text{ dB)}.
+    \]
+    \[
+      P_{y}=(2|H(f_{1})|)^{2}/2+(3|H(f_{2})|)^{2}/2=0.2\;\text{(}-6.99\text{ dB)}.
+    \]
+
+    \item $x(t)=2\cos(2\pi f_{2}t)+3\sin(2\pi f_{3}t)$\\
+    \[
+      P_{x}=6.5\;\text{(}8.13\text{ dB)}.
+    \]
+    \[
+      P_{y}=(2|H(f_{2})|)^{2}/2+(3|H(f_{3})|)^{2}/2=0.08045\;\text{(}-10.94\text{ dB)}.
+    \]
+
+    \item $x(t)=3\cos(2\pi f_{1}t)+4\sin(2\pi f_{2}t)+5\cos(2\pi f_{3}t+\pi/3)$\\
+    \[
+      P_{x}=3^{2}/2+4^{2}/2+5^{2}/2=25\;\text{(}13.98\text{ dB)}.
+    \]
+    \[
+      P_{y}=(3|H(f_{1})|)^{2}/2+(4|H(f_{2})|)^{2}/2+(5|H(f_{3})|)^{2}/2=0.36625\;\text{(}-4.36\text{ dB)}.
+    \]
+  \end{enumerate}
+
+  \item \textbf{Superhet receiver}\\[2pt]
+  Given $f_{\text{IF}}=445~\text{kHz}$, desired $f_{\text{RF}}=990~\text{kHz}$, and $f_{\text{LO}}=f_{\text{RF}}+f_{\text{IF}}$.
+  \begin{enumerate}[label=(\alph*)]
+    \item $f_{\text{LO}}=990~\text{kHz}+445~\text{kHz}=1.435~\text{MHz}$.
+
+    \item The image that also mixes to $f_{\text{IF}}$ is at
+    \[
+      f_{\text{image}}=f_{\text{LO}}+f_{\text{IF}}=f_{\text{RF}}+2f_{\text{IF}}=1.880~\text{MHz}.
+    \]
+    Centering $H_{1}(f)$ at $f_{\text{RF}}$, the two-sided 3 dB bandwidth must remain below the image offset: $B_{1}<2(f_{\text{image}}-f_{\text{RF}})=1.78~\text{MHz}$ (i.e., $\pm0.89~\text{MHz}$ about $990~\text{kHz}$ keeps the image outside the passband).
+
+    \item $w(t)$ at the image frequency sees $|H_{1}(f_{\text{RF}}+2f_{\text{IF}})|=0.1$, so its amplitude after $H_{1}$ is $3\times0.1=0.3$. The mixer output with $2\cos(2\pi f_{\text{LO}}t)$ produces a difference tone at $|f_{\text{image}}-f_{\text{LO}}|=f_{\text{IF}}$ with amplitude $0.3$ (the sum term is out of band). The ideal $H_{2}$ passes it unchanged:
+    \[
+      P_{\text{int}}=\frac{0.3^{2}}{2}=0.045\;\text{(}-13.47\text{ dBW)}.
+    \]
+  \end{enumerate}
+\end{enumerate}
+
+\end{document}
