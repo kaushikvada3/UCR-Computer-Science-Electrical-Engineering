@@ -10,7 +10,10 @@ while iterating on the UI.
 from __future__ import annotations
 
 import argparse
+import http.server
+import socketserver
 import sys
+import threading
 from pathlib import Path
 
 from PyQt6.QtCore import QFileSystemWatcher, QTimer, QUrl
@@ -34,18 +37,47 @@ class DashboardWindow(QMainWindow):
         if not self.entrypoint.exists():
             raise FileNotFoundError(f"Unable to find {self.entrypoint}")
 
+        # Start HTTP server for proper resource loading
+        self.http_port = 8765
+        self.start_http_server()
+
         self._build_toolbar()
         self._install_watcher()
         self.load_page()
 
+    # --------------------------------------------------------------------- HTTP Server
+    def start_http_server(self) -> None:
+        """Start a simple HTTP server in a background thread to serve the frontend files."""
+        frontend_dir = self.entrypoint.parent
+        
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, directory=str(frontend_dir), **kwargs)
+            
+            def log_message(self, format, *args):
+                # Suppress HTTP server logs
+                pass
+        
+        self.httpd = socketserver.TCPServer(("", self.http_port), Handler)
+        self.server_thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+        self.server_thread.start()
+
     # --------------------------------------------------------------------- util
     def load_page(self) -> None:
         """Load the HTML entrypoint into the embedded browser."""
-        url = QUrl.fromLocalFile(str(self.entrypoint))
+        # Use HTTP instead of file:// to allow loading 3D models
+        filename = self.entrypoint.name
+        url = QUrl(f"http://localhost:{self.http_port}/{filename}")
         self.view.load(url)
 
     def reload(self) -> None:
         self.view.reload()
+    
+    def closeEvent(self, event) -> None:
+        """Cleanup HTTP server on window close."""
+        if hasattr(self, 'httpd'):
+            self.httpd.shutdown()
+        event.accept()
 
     # ---------------------------------------------------------------- toolbar
     def _build_toolbar(self) -> None:
