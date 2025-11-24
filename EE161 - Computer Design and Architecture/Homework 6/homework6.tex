@@ -1,0 +1,143 @@
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{booktabs}
+\setlist{nosep}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE Assignment: Pipeline Hazards}\\[0.5em]
+    {\large EE161 Homework 6}
+\end{center}
+
+\newpage
+\section*{Question 1: Dependencies}
+Find the data dependencies between all the instructions below. Write your answers in the format of the given example (e.g., ``I2 has a data dependency with I1 in R2'').
+\[
+\begin{aligned}
+\text{I1.}&\ \text{sub\ } R2, R5, R4\\
+\text{I2.}&\ \text{add\ } R4, R2, R5\\
+\text{I3.}&\ \text{lw\ } R5, 100(R2)\\
+\text{I4.}&\ \text{sub\ } R2, R5, R4\\
+\text{I5.}&\ \text{sw\ } R2, 101(R2)
+\end{aligned}
+\]
+
+\newpage
+\section*{Question 2: EX forwarding paths}
+Add the necessary forwarding paths for the following instructions in the given datapath.
+
+\subsection*{Part A}
+\begin{verbatim}
+1 add  R3, R3, R4
+2 sub  R4, R2, R3
+3 add  R4, R5, R5
+\end{verbatim}
+
+\subsection*{Part B}
+\begin{verbatim}
+1 add  R3, R3, R4
+2 sub  R4, R2, R4
+3 add  R4, R5, R3
+\end{verbatim}
+
+\newpage
+\section*{Question 3: Performance with stalls}
+On a 5-stage MIPS pipeline with forwarding and appropriate NOPs:
+\begin{enumerate}[label=\Alph*.]
+    \item Fill out the pipeline and draw the forwarding path(s).
+    \item How many cycles does it take to execute all three instructions?
+\end{enumerate}
+\begin{verbatim}
+add  R5, R5, R7
+lw   R6, 100(R7)
+sub  R7, R6, R8
+\end{verbatim}
+
+\bigskip
+\begin{tabular}{@{}l|ccccccccc@{}}
+\textbf{} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} & \textbf{6} & \textbf{7} & \textbf{8} & \textbf{9} \\
+\midrule
+add  R5, R5, R7 & & & & & & & & & \\
+lw   R6, 100(R7) & & & & & & & & & \\
+sub  R7, R6, R8 & & & & & & & & & \\
+\bottomrule
+\end{tabular}
+
+\bigskip
+Program execution time: \rule{2in}{0.4pt}\, cycles.
+
+\newpage
+\section*{Question 4: Load-to-use delay}
+The code below was written without regard for delay slots. The pipeline has a double-pumped register file and forwarding.
+\begin{verbatim}
+lw   R15, 0(R2)
+add  R14, R15, R15
+lw   R16, 4(R2)
+add  R17, R16, R16
+\end{verbatim}
+\begin{enumerate}[label=\Alph*.]
+    \item Identify dependencies.
+    \item Insert NOPs to resolve the dependencies.
+    \item After adding NOPs, add the instructions and draw the forwarding path(s) in the pipeline.
+    \item We would like to keep the pipeline full as much as possible and improve performance. Can we reorder the instructions to avoid NOPs? If so, how?
+    \item If the answer to Part D is yes, add the reordered instructions and draw the forwarding path(s) in the pipeline.
+\end{enumerate}
+
+\bigskip
+\textbf{Load-to-use hint:} the result of \texttt{lw} is only available at the end of MEM, while \texttt{add} needs the value at the start of EXE.
+
+\bigskip
+\begin{tabular}{@{}l|ccccccccc@{}}
+\textbf{} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} & \textbf{6} & \textbf{7} & \textbf{8} & \textbf{9} \\
+\midrule
+Instruction & & & & & & & & & \\
+Instruction & & & & & & & & & \\
+Instruction & & & & & & & & & \\
+Instruction & & & & & & & & & \\
+\bottomrule
+\end{tabular}
+
+\newpage
+\section*{Question 5: MEM-to-MEM stalls}
+Fill in the pipeline for the following code assuming forwarding and double-pumped registers. Show the forwarding path(s) in the pipeline. If there is a dependency that cannot be resolved with forwarding, add bubbles to the pipeline.
+\begin{verbatim}
+add  R4, R5, R2
+lw   R15, 0(R4)
+sw   R15, 4(R2)
+\end{verbatim}
+
+\bigskip
+\begin{tabular}{@{}l|ccccccccc@{}}
+\textbf{} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} & \textbf{6} & \textbf{7} & \textbf{8} & \textbf{9} \\
+\midrule
+add  R4, R5, R2  & & & & & & & & & \\
+lw   R15, 0(R4)  & & & & & & & & & \\
+sw   R15, 4(R2)  & & & & & & & & & \\
+\bottomrule
+\end{tabular}
+
+\bigskip
+Program execution time: \rule{2in}{0.4pt}\, cycles.
+
+\newpage
+\section*{Question 6: Branch delay slot}
+Parts A and B have two data dependencies (R3 and R4) that can be resolved using forwarding and a double-pumped register file. There is still a control dependency on \texttt{beq}. To solve it, a \texttt{nop} was inserted after \texttt{beq} (see Part B). We want to keep the pipeline full and improve performance.
+\begin{enumerate}[label=\Alph*.]
+    \item Identify dependencies.
+    \item Insert NOPs.
+    \item Can we reorder the instructions to avoid NOPs? If so, how?
+\end{enumerate}
+\begin{verbatim}
+add  R3, R3, R4
+sub  R4, R2, R3
+beq  R0, R2, end
+nop
+addi R4, R4, 12
+end:
+\end{verbatim}
+
+\end{document}
