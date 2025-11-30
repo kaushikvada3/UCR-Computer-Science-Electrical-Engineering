@@ -1,0 +1,179 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath, amssymb, graphicx, float, booktabs, hyperref}
+\usepackage[margin=1in]{geometry}
+
+\graphicspath{{./}{./images/}{./figures/}{../images/}{../figures/}}
+
+% Safer image include: draws a labeled box when the file is missing
+\newcommand{\safeincludegraphics}[2][]{%
+  \IfFileExists{#2}{%
+    \includegraphics[#1]{#2}%
+  }{%
+    \fbox{%
+      \begin{minipage}[c][0.25\textheight][c]{0.8\textwidth}
+        \centering
+        \textbf{Missing image}\\
+        \texttt{#2}
+      \end{minipage}%
+    }%
+  }%
+}
+
+\title{EE168 -- Lab 2 Report \\ \large Layout Design, DRC, LVS, NAND, Parasitics, Ring Oscillator}
+\author{Your Name \\ SID: 862441522 \\ Session: 021 \\ ENGR ID: vvada002 \\ UCR NetID: vvada002}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+% One paragraph summary of what you learned in this lab.
+Write your summary here.
+
+\newpage
+\section{Inverter Layout, DRC, LVS}
+
+\subsection{Inverter Layout}
+% Insert screenshot of inverter layout (Fig.11 or Fig.12 equivalent)
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{inverter_layout.png}
+    \caption{Inverter Layout}
+\end{figure}
+
+\subsection{DRC Result (CLEAN)}
+% Insert screenshot of DRC clean result for inverter
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{inverter_drc.png}
+    \caption{DRC: CLEAN}
+\end{figure}
+
+\newpage
+\section{NAND Gate: Schematic, Simulation, Layout}
+
+\subsection{NAND Schematic}
+% Insert schematic image of NAND cell
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{nand_schematic.png}
+    \caption{NAND Gate Schematic}
+\end{figure}
+
+\subsection{NAND Testbench}
+% Insert schematic of testbench for simulation
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{nand_testbench.png}
+    \caption{NAND Testbench Schematic}
+\end{figure}
+
+\subsection{NAND Simulation Waveform}
+% Insert transient waveform (AIN, BIN, OUT')
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=\textwidth]{nand_waveform.png}
+    \caption{Transient Simulation Waveform for NAND Gate}
+\end{figure}
+
+\subsection{NAND Layout}
+% Insert NAND layout image
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{nand_layout.png}
+    \caption{NAND Gate Layout}
+\end{figure}
+
+\subsection{DRC Result (CLEAN)}
+% Insert screenshot of DRC clean result for NAND
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{nand_drc.png}
+    \caption{DRC: CLEAN (NAND)}
+\end{figure}
+
+\subsection{LVS Result (PASS)}
+% Insert screenshot of LVS PASS for NAND layout
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{nand_lvs.png}
+    \caption{LVS: PASS (NAND)}
+\end{figure}
+
+\newpage
+\section{Inverter Parasitic View and Post-Layout Simulation}
+
+\subsection{Parasitic View (starrc)}
+% Insert inverter parasitic extraction view (similar to Fig.34 or Fig.35)
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.8\textwidth]{inverter_parasitics.png}
+    \caption{Inverter Parasitic View}
+\end{figure}
+
+\subsection{Post-Layout Simulation Result}
+% Insert waveform comparing original schematic vs parasitic version
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=\textwidth]{inverter_post_layout_waveform.png}
+    \caption{Post-Layout Simulation Waveform}
+\end{figure}
+
+\newpage
+\section{Ring Oscillator (Hierarchical Design)}
+
+\subsection{Ring Oscillator Schematic}
+% Insert schematic of 5-stage ring oscillator
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.85\textwidth]{ringosc_schematic.png}
+    \caption{Ring Oscillator Schematic}
+\end{figure}
+
+\subsection{Ring Oscillator Layout}
+% Insert layout of 5-stage ring oscillator
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.85\textwidth]{ringosc_layout.png}
+    \caption{Ring Oscillator Layout}
+\end{figure}
+
+\subsection{Ring Oscillator Testbench}
+% Insert schematic of ring oscillator testbench
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.85\textwidth]{ringosc_testbench.png}
+    \caption{Ring Oscillator Testbench}
+\end{figure}
+
+\subsection{DRC Result (CLEAN)}
+% Insert DRC result image
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.75\textwidth]{ringosc_drc.png}
+    \caption{DRC: CLEAN (Ring Oscillator)}
+\end{figure}
+
+\subsection{LVS Result (PASS)}
+% Insert LVS result image
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=0.75\textwidth]{ringosc_lvs.png}
+    \caption{LVS: PASS (Ring Oscillator)}
+\end{figure}
+
+\subsection{Post-Layout Simulation Waveform}
+% Insert transient waveform (VIO1..VIO5)
+\begin{figure}[H]
+    \centering
+    \safeincludegraphics[width=\textwidth]{ringosc_post_layout_waveform.png}
+    \caption{Post-Layout Simulation Waveform}
+\end{figure}
+
+\newpage
+\section{Issues Encountered}
+% One paragraph on issues during DRC/LVS/parasitics/simulation
+Write about any problems you encountered here.
+
+\end{document}
