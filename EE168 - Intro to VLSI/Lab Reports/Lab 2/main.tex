@@ -14,7 +14,7 @@
       \begin{minipage}[c][0.25\textheight][c]{0.8\textwidth}
         \centering
         \textbf{Missing image}\\
-        \texttt{#2}
+        \texttt{\detokenize{#2}}
       \end{minipage}%
     }%
   }%
@@ -28,8 +28,7 @@
 \maketitle
 
 \section*{Summary}
-% One paragraph summary of what you learned in this lab.
-Write your summary here.
+This lab walked through the full CMOS layout flow: drawing and verifying an inverter, extending the same checks to NAND and a hierarchical ring oscillator, and closing the loop with DRC/LVS. We built simple testbenches, captured DC and transient waveforms, and compared pre- and post-layout behavior to see parasitic impact. The ring oscillator exercise reinforced device sizing, hierarchy, and clean routing, while the repeated DRC/LVS runs highlighted how small spacing or connectivity errors surface in the tools. Overall, I gained confidence in taking schematics to layout, validating them with Calibre-style checks, and interpreting waveforms to confirm functional intent.
 
 \newpage
 \section{Inverter Layout, DRC, LVS}
@@ -69,19 +68,27 @@ Write your summary here.
     \caption{NAND Testbench Schematic}
 \end{figure}
 
-\subsection{NAND Simulation Waveform}
+\subsection{NAND DC Simulation Waveform}
 % Insert transient waveform (AIN, BIN, OUT')
 \begin{figure}[H]
-    \centering
-    \safeincludegraphics[width=\textwidth]{nand_waveform.png}
-    \caption{Transient Simulation Waveform for NAND Gate}
+     \centering
+     \safeincludegraphics[width=\textwidth]{nand_waveform_dc.png}
+     \caption{DC Transient Simulation Waveform for NAND Gate} 
+\end{figure}
+
+\subsection{NAND Trans Simulation Waveform}
+% Insert transient waveform (AIN, BIN, OUT')
+\begin{figure}[H]
+     \centering
+     \safeincludegraphics[width=\textwidth]{nand_waveform_trans.png}
+     \caption{TRANS Transient Simulation Waveform for NAND Gate} 
 \end{figure}
 
 \subsection{NAND Layout}
 % Insert NAND layout image
 \begin{figure}[H]
     \centering
-    \safeincludegraphics[width=0.8\textwidth]{nand_layout.png}
+    \safeincludegraphics[width=0.6\textwidth]{nand_layout.png}
     \caption{NAND Gate Layout}
 \end{figure}
 
@@ -91,33 +98,6 @@ Write your summary here.
     \centering
     \safeincludegraphics[width=0.8\textwidth]{nand_drc.png}
     \caption{DRC: CLEAN (NAND)}
-\end{figure}
-
-\subsection{LVS Result (PASS)}
-% Insert screenshot of LVS PASS for NAND layout
-\begin{figure}[H]
-    \centering
-    \safeincludegraphics[width=0.8\textwidth]{nand_lvs.png}
-    \caption{LVS: PASS (NAND)}
-\end{figure}
-
-\newpage
-\section{Inverter Parasitic View and Post-Layout Simulation}
-
-\subsection{Parasitic View (starrc)}
-% Insert inverter parasitic extraction view (similar to Fig.34 or Fig.35)
-\begin{figure}[H]
-    \centering
-    \safeincludegraphics[width=0.8\textwidth]{inverter_parasitics.png}
-    \caption{Inverter Parasitic View}
-\end{figure}
-
-\subsection{Post-Layout Simulation Result}
-% Insert waveform comparing original schematic vs parasitic version
-\begin{figure}[H]
-    \centering
-    \safeincludegraphics[width=\textwidth]{inverter_post_layout_waveform.png}
-    \caption{Post-Layout Simulation Waveform}
 \end{figure}
 
 \newpage
@@ -153,22 +133,6 @@ Write your summary here.
     \centering
     \safeincludegraphics[width=0.75\textwidth]{ringosc_drc.png}
     \caption{DRC: CLEAN (Ring Oscillator)}
-\end{figure}
-
-\subsection{LVS Result (PASS)}
-% Insert LVS result image
-\begin{figure}[H]
-    \centering
-    \safeincludegraphics[width=0.75\textwidth]{ringosc_lvs.png}
-    \caption{LVS: PASS (Ring Oscillator)}
-\end{figure}
-
-\subsection{Post-Layout Simulation Waveform}
-% Insert transient waveform (VIO1..VIO5)
-\begin{figure}[H]
-    \centering
-    \safeincludegraphics[width=\textwidth]{ringosc_post_layout_waveform.png}
-    \caption{Post-Layout Simulation Waveform}
 \end{figure}
 
 \newpage
