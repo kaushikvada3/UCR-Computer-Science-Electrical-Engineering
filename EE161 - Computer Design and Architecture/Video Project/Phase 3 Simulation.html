@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Comparison Simulator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            background-color: #000;
+            font-family: 'Orbitron', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sim-container {
+            position: relative;
+            border: 4px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 0 80px rgba(0, 100, 255, 0.1);
+        }
+
+        canvas {
+            display: block;
+            background: #020205;
+        }
+
+        /* --- MODE TOGGLE --- */
+        #mode-bar {
+            background: #111;
+            width: 100%;
+            padding: 15px 0;
+            display: flex;
+            justify-content: center;
+            border-bottom: 2px solid #333;
+        }
+
+        #toggle-btn {
+            background: #00ff00;
+            color: #000;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            padding: 10px 40px;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px #00ff00;
+            transition: all 0.3s;
+            border-radius: 4px;
+        }
+
+        #toggle-btn.disabled {
+            background: #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+            color: white;
+        }
+
+        /* --- UI Controls --- */
+        .controls {
+            display: flex;
+            gap: 2px;
+            background: #111;
+            border-top: 4px solid #333;
+            width: 100%;
+        }
+
+        button.action-btn {
+            flex: 1;
+            padding: 25px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: none;
+            border-right: 1px solid #222;
+            cursor: pointer;
+            background: #0a0a0a;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        button.action-btn:hover:not(:disabled) {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        button.action-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: #050505;
+            color: #333;
+            border-bottom: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Layer Colors */
+        .btn-l1 {
+            border-bottom: 6px solid #00ffff;
+        }
+
+        .btn-l2 {
+            border-bottom: 6px solid #ffee00;
+        }
+
+        .btn-l3 {
+            border-bottom: 6px solid #ffaa00;
+        }
+
+        .btn-ram {
+            border-bottom: 6px solid #ff0044;
+        }
+
+        .btn-l1:hover:not(:disabled) {
+            box-shadow: inset 0 -20px 40px rgba(0, 255, 255, 0.2);
+            color: #00ffff;
+        }
+
+        .btn-l2:hover:not(:disabled) {
+            box-shadow: inset 0 -20px 40px rgba(255, 238, 0, 0.2);
+            color: #ffee00;
+        }
+
+        .btn-l3:hover:not(:disabled) {
+            box-shadow: inset 0 -20px 40px rgba(255, 170, 0, 0.2);
+            color: #ffaa00;
+        }
+
+        .btn-ram:hover:not(:disabled) {
+            box-shadow: inset 0 -20px 40px rgba(255, 0, 68, 0.2);
+            color: #ff0044;
+        }
+
+        /* Recorder Button */
+        #rec-btn {
+            background: #200;
+            color: #f44;
+            max-width: 250px;
+            border-left: 2px solid #333;
+            border: none;
+            font-family: 'Orbitron';
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #rec-btn.recording {
+            background: #f00;
+            color: #fff;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: 0.7;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sim-container">
+        <div id="mode-bar">
+            <button id="toggle-btn" onclick="toggleCacheMode()">CACHE SYSTEM: ENABLED</button>
+        </div>
+
+        <canvas id="simCanvas" width="1280" height="550"></canvas>
+
+        <div class="controls">
+            <button id="btn-1" class="action-btn btn-l1" onclick="triggerFetch('L1')">1. Fetch L1</button>
+            <button id="btn-2" class="action-btn btn-l2" onclick="triggerFetch('L2')">2. Fetch L2</button>
+            <button id="btn-3" class="action-btn btn-l3" onclick="triggerFetch('L3')">3. Fetch L3</button>
+            <button id="btn-4" class="action-btn btn-ram" onclick="triggerFetch('RAM')">4. Fetch RAM</button>
+            <button id="rec-btn" onclick="toggleRecord()">● REC</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const btn1 = document.getElementById('btn-1');
+        const btn2 = document.getElementById('btn-2');
+        const btn3 = document.getElementById('btn-3');
+        const btn4 = document.getElementById('btn-4');
+
+        // --- Config ---
+        const COLORS = {
+            CPU: '#ffffff',
+            L1: '#00ffff', // Cyan
+            L2: '#ffee00', // Yellow
+            L3: '#ffaa00', // Orange
+            RAM: '#ff0044', // Red
+            WIRE: '#1a1a1a',
+            WIRE_OFF: '#0d0d0d',
+            GRID: '#0a0a0a',
+            OFFLINE: '#333333'
+        };
+
+        const NODES = {
+            CPU: { x: 100, y: 275, w: 90, h: 90, label: "CPU CORE" },
+            L1: { x: 300, y: 275, w: 70, h: 110, label: "L1" },
+            L2: { x: 550, y: 275, w: 70, h: 150, label: "L2" },
+            L3: { x: 800, y: 275, w: 70, h: 200, label: "L3 (Shared)" },
+            RAM: { x: 1200, y: 275, w: 120, h: 250, label: "RAM" }
+        };
+
+        // --- State ---
+        let packets = [];
+        let particles = [];
+        let cycleCount = 0;
+        let isWaiting = false;
+        let message = "SYSTEM READY";
+        let subMessage = "Select a fetch operation";
+        let activeHighlight = null;
+        let cacheEnabled = true;
+
+        // --- Animation Loop ---
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function update() {
+            if (isWaiting) cycleCount += 1;
+
+            for (let i = packets.length - 1; i >= 0; i--) {
+                let p = packets[i];
+                p.progress += p.speed;
+
+                // Trails
+                if (Math.random() > 0.3) {
+                    particles.push({
+                        x: p.startX + (p.endX - p.startX) * p.progress,
+                        y: p.y + (Math.random() - 0.5) * 15,
+                        color: p.color,
+                        life: 1.0,
+                        vx: (Math.random() - 0.5) * 1,
+                        vy: (Math.random() - 0.5) * 1
+                    });
+                }
+
+                if (p.progress >= 1) {
+                    p.onComplete();
+                    packets.splice(i, 1);
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.03;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = "#020205";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawGrid();
+            drawChipBoundary();
+            drawWires();
+
+            for (let key in NODES) {
+                drawNode(key, NODES[key]);
+            }
+
+            // Packets
+            packets.forEach(p => {
+                let cx = p.startX + (p.endX - p.startX) * p.progress;
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = p.color;
+                ctx.fillStyle = "rgba(255,255,255,0.8)";
+                ctx.fillRect(cx - 15, p.y - 15, 30, 30);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(cx - 8, p.y - 8, 16, 16);
+                ctx.shadowBlur = 0;
+            });
+
+            // Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 5, 5);
+                ctx.globalAlpha = 1.0;
+            });
+
+            drawHUD();
+        }
+
+        // --- Helpers ---
+
+        function drawGrid() {
+            ctx.strokeStyle = COLORS.GRID;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+            for (let y = 0; y < canvas.height; y += 40) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
+            ctx.stroke();
+        }
+
+        function drawChipBoundary() {
+            if (!cacheEnabled) return; // Hide if disabled/legacy mode
+
+            // Chip Box (CPU, L1, L2, L3)
+            const chipX = 40;
+            const chipY = 160;
+            const chipW = 860;
+            const chipH = 230;
+
+            ctx.strokeStyle = "rgba(0, 255, 255, 0.3)";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 5]);
+            ctx.strokeRect(chipX, chipY, chipW, chipH);
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = "rgba(0, 255, 255, 0.02)";
+            ctx.fillRect(chipX, chipY, chipW, chipH);
+
+            ctx.fillStyle = "rgba(0, 255, 255, 0.8)";
+            ctx.font = "bold 20px Orbitron";
+            ctx.textAlign = "left";
+            ctx.fillText("PROCESSOR CHIP", chipX + 20, chipY + 30);
+
+            ctx.font = "12px Orbitron";
+            ctx.fillStyle = "rgba(0, 255, 255, 0.5)";
+            ctx.fillText("INTERNAL BUS SPEED: HIGH", chipX + 20, chipY + 50);
+
+
+            // Off-Chip Box (RAM)
+            const memX = 1100;
+            const memY = 140;
+            const memW = 200;
+            const memH = 270;
+
+            // Dashed red line for memory area
+            ctx.strokeStyle = "rgba(255, 0, 68, 0.3)";
+            ctx.setLineDash([10, 5]);
+            ctx.strokeRect(memX, memY, memW, memH);
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = "rgba(255, 0, 68, 0.6)";
+            ctx.textAlign = "center";
+            ctx.font = "bold 16px Orbitron";
+            ctx.fillText("OFF-CHIP MEMORY", memX + memW / 2, memY - 15);
+        }
+
+        function drawWires() {
+            // If cache disabled, draw faint wires to L1/L2/L3
+            ctx.strokeStyle = cacheEnabled ? COLORS.WIRE : COLORS.WIRE_OFF;
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            ctx.moveTo(NODES.CPU.x, 275);
+            ctx.lineTo(NODES.RAM.x, 275);
+            ctx.stroke();
+
+            // Active Line Animation
+            if (activeHighlight) {
+                ctx.strokeStyle = COLORS[activeHighlight];
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = COLORS[activeHighlight];
+                ctx.beginPath();
+                ctx.moveTo(NODES.CPU.x, 275);
+                ctx.lineTo(NODES[activeHighlight].x, 275);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function drawNode(key, n) {
+            // If disabled, hide L1/L2/L3 completely
+            if (!cacheEnabled && (key === 'L1' || key === 'L2' || key === 'L3')) return;
+
+            let color = COLORS[key];
+            let isActive = activeHighlight === key;
+            let isOffline = !cacheEnabled && (key === 'L1' || key === 'L2' || key === 'L3');
+
+            // Handle Offline State
+            if (isOffline) color = COLORS.OFFLINE;
+
+            // Box
+            ctx.strokeStyle = isActive ? color : (isOffline ? "#222" : "#333");
+            ctx.lineWidth = isActive ? 4 : 2;
+            ctx.fillStyle = isOffline ? "#050505" : "#080808";
+
+            ctx.beginPath();
+            ctx.rect(n.x - n.w / 2, n.y - n.h / 2, n.w, n.h);
+            ctx.fill();
+            ctx.stroke();
+
+            // X mark if offline
+            if (isOffline) {
+                ctx.strokeStyle = "#222";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(n.x - n.w / 2, n.y - n.h / 2);
+                ctx.lineTo(n.x + n.w / 2, n.y + n.h / 2);
+                ctx.moveTo(n.x + n.w / 2, n.y - n.h / 2);
+                ctx.lineTo(n.x - n.w / 2, n.y + n.h / 2);
+                ctx.stroke();
+            }
+
+            // Label
+            ctx.fillStyle = isActive ? "#fff" : (isOffline ? "#333" : "#555");
+            ctx.font = "bold 18px Orbitron";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(n.label, n.x, n.y - n.h / 2 - 25);
+
+            // Size text
+            ctx.font = "12px Orbitron";
+            ctx.fillStyle = isOffline ? "#222" : "#444";
+            if (key === 'L1') ctx.fillText("32 KB", n.x, n.y + n.h / 2 + 20);
+            if (key === 'L2') ctx.fillText("512 KB", n.x, n.y + n.h / 2 + 20);
+            if (key === 'L3') ctx.fillText("16 MB", n.x, n.y + n.h / 2 + 20);
+            if (key === 'RAM') ctx.fillText("16 GB", n.x, n.y + n.h / 2 + 20);
+        }
+
+        function drawHUD() {
+            ctx.fillStyle = "#fff";
+            ctx.font = "30px Orbitron";
+            ctx.textAlign = "left";
+            ctx.fillText(message, 50, 60);
+
+            ctx.fillStyle = "#888";
+            ctx.font = "18px Orbitron";
+            ctx.fillText(subMessage, 50, 90);
+
+            // Cycle Counter
+            let counterColor = isWaiting ? "#ff0044" : "#00ffff";
+            if (!isWaiting && cycleCount > 0) counterColor = "#fff";
+
+            ctx.textAlign = "right";
+            ctx.fillStyle = counterColor;
+            ctx.font = "bold 70px Orbitron";
+            ctx.fillText(cycleCount, canvas.width - 50, 80);
+
+            ctx.font = "16px Orbitron";
+            ctx.fillStyle = "#555";
+            ctx.fillText("CYCLES WASTED", canvas.width - 50, 105);
+        }
+
+        // --- Logic ---
+
+        function toggleCacheMode() {
+            cacheEnabled = !cacheEnabled;
+            if (cacheEnabled) {
+                toggleBtn.innerText = "CACHE SYSTEM: ENABLED";
+                toggleBtn.classList.remove('disabled');
+                btn1.disabled = false;
+                btn2.disabled = false;
+                btn3.disabled = false;
+                btn4.innerText = "4. Fetch RAM";
+                message = "SYSTEM ENABLED";
+                subMessage = "Caches Online";
+            } else {
+                toggleBtn.innerText = "CACHE SYSTEM: DISABLED";
+                toggleBtn.classList.add('disabled');
+                btn1.disabled = true;
+                btn2.disabled = true;
+                btn3.disabled = true;
+                btn4.innerText = "FETCH FROM MEMORY";
+                message = "CACHES OFFLINE";
+                subMessage = "System running in legacy mode";
+            }
+        }
+
+        function triggerFetch(target) {
+            if (isWaiting) return;
+
+            cycleCount = 0;
+            isWaiting = true;
+            activeHighlight = null;
+            message = `FETCHING FROM ${target}...`;
+            subMessage = "Sending Request...";
+
+            packets.push({
+                startX: NODES.CPU.x,
+                endX: NODES[target].x,
+                y: 275,
+                progress: 0,
+                speed: 0.02,
+                color: "#fff",
+                onComplete: () => {
+                    message = "DATA FOUND";
+                    subMessage = "Returning...";
+                    activeHighlight = target;
+
+                    let speed = 0.03;
+                    if (target === 'L2') speed = 0.015;
+                    if (target === 'L3') speed = 0.008;
+                    if (target === 'RAM') speed = 0.002;
+
+                    packets.push({
+                        startX: NODES[target].x,
+                        endX: NODES.CPU.x,
+                        y: 275,
+                        progress: 0,
+                        speed: speed,
+                        color: COLORS[target],
+                        onComplete: () => {
+                            isWaiting = false;
+                            message = "COMPLETE";
+                            subMessage = `Total Stall: ${cycleCount} Cycles`;
+                            activeHighlight = null;
+
+                            for (let i = 0; i < 30; i++) {
+                                particles.push({
+                                    x: NODES.CPU.x, y: 275,
+                                    color: COLORS[target], life: 1.0,
+                                    vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // --- Recorder ---
+        let mediaRecorder;
+        let chunks = [];
+        let recording = false;
+
+        function toggleRecord() {
+            const btn = document.getElementById('rec-btn');
+            if (!recording) {
+                let stream = canvas.captureStream(60);
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                mediaRecorder.onstop = saveVideo;
+                mediaRecorder.start();
+                recording = true;
+                btn.classList.add('recording');
+                btn.innerText = "■ STOP";
+            } else {
+                mediaRecorder.stop();
+                recording = false;
+                btn.classList.remove('recording');
+                btn.innerText = "● REC";
+            }
+        }
+
+        function saveVideo() {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'cache_compare_mode.webm';
+            document.body.appendChild(a);
+            a.click();
+            chunks = [];
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (cacheEnabled) {
+                if (e.key === '1') triggerFetch('L1');
+                if (e.key === '2') triggerFetch('L2');
+                if (e.key === '3') triggerFetch('L3');
+            }
+            if (e.key === '4') triggerFetch('RAM');
+        });
+
+        loop();
+
+    </script>
+</body>
+
+</html>
