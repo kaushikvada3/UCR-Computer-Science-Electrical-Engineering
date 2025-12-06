@@ -1,0 +1,110 @@
+\documentclass[12pt, letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+
+% Page Setup
+\geometry{margin=1in}
+
+\title{\textbf{EE168 - Lab 3 Report}}
+\author{Kaushik Vada}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{1-bit Full Adder}
+
+\subsection{Schematic Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{one_bit_adder_schematic.png} 
+    \caption{1-bit Full Adder Schematic}
+    \label{fig:1bit_sch}
+\end{figure}
+
+\subsection{Layout Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{one_bit_adder_layout.png}
+    \caption{1-bit Full Adder Layout}
+    \label{fig:1bit_layout}
+\end{figure}
+
+\subsection{DRC Results}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{one_bit_adder_DRC.png}
+    \caption{1-bit Full Adder DRC Results}
+    \label{fig:1bit_drc}
+\end{figure}
+
+\subsection{LVS Results}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{one_bit_adder_LVS.png}
+    \caption{1-bit Full Adder LVS Results}
+    \label{fig:1bit_lvs}
+\end{figure}
+
+\section{1-bit FA Testbench}
+
+\subsection{Schematic Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{one_bit_adder_testbench.png}
+    \caption{1-bit Full Adder Testbench Schematic}
+    \label{fig:1bit_tb_sch}
+\end{figure}
+
+\section{4-bit Full Adder}
+
+\subsection{Schematic Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{4_bit_adder_schematic.png}
+    \caption{4-bit Full Adder Schematic}
+    \label{fig:4bit_sch}
+\end{figure}
+
+\subsection{Layout Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{4_bit_adder_layout.png}
+    \caption{4-bit Full Adder Layout}
+    \label{fig:4bit_layout}
+\end{figure}
+
+\subsection{DRC Results}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{4_bit_adder_DRC.png}
+    \caption{4-bit Full Adder DRC Results}
+    \label{fig:4bit_drc}
+\end{figure}
+
+\subsection{LVS Results}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{4_bit_adder_LVS.png}
+    \caption{4-bit Full Adder LVS Results}
+    \label{fig:4bit_lvs}
+\end{figure}
+
+
+
+\section{4-bit FA Testbench}
+
+\subsection{Schematic Design}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{4_bit_adder_testbench.png}
+    \caption{4-bit Full Adder Testbench Schematic}
+    \label{fig:4bit_tb_sch}
+\end{figure}
+
+\end{document}
