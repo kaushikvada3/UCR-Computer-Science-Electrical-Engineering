@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1765005929.52165 "c:/Users/kaush/Documents/UCR-Computer-Science-Electrical-Engineering/EE161 - Computer Design and Architecture/Labs/Lab2&Lab3/Report/main.tex" "main.pdf" "main" 1765005931.00776 0
-  "ALU_Control_Circuit.png" 1765001779 104889 ed43ec76acb35dc3f389e08aeb99ab0f ""
+["pdflatex"] 1765070520.11085 "c:/Users/kaush/Documents/UCR-Computer-Science-Electrical-Engineering/EE161 - Computer Design and Architecture/Labs/Lab2&Lab3/Report/main.tex" "main.pdf" "main" 1765070522.06039 0
+  "ALU_Control_Circuit.png" 1765070381 104889 ed43ec76acb35dc3f389e08aeb99ab0f ""
   "C:/Users/kaush/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1765004299 82507 a9eef8696c92627b87e9975edea03b2a ""
   "C:/Users/kaush/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1764530068 13333512 d7dc4f9ec0b4794aa9fd8eb7cb77a62f ""
   "C:/Users/kaush/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmbx12.tfm" 1136765053 1324 c910af8c371558dc20f2d7822f66fe64 ""
@@ -45,13 +45,13 @@
   "C:/Users/kaush/AppData/Local/Programs/MiKTeX/tex/latex/graphics/trig.sty" 1749322634 4023 e66acf578d6b564c4670fb57ff336a7a ""
   "C:/Users/kaush/AppData/Local/Programs/MiKTeX/tex/latex/l3backend/l3backend-pdftex.def" 1761202581 30662 bfd6e864f4ffc5018b0e2b6260c3181c ""
   "C:/Users/kaush/AppData/Local/Programs/MiKTeX/tex/latex/tools/array.sty" 1761901070 15651 9d7c62df82cb29a555c00550babfe364 ""
-  "Control_Decode_circuit.png" 1765001785 10133 47c9d91a015a260d2c8ba02f7f948dbb ""
-  "Type_Decode_Unit.png" 1765001793 103201 b87e6b1751204db313d8399a476c671e ""
-  "c:/Users/kaush/Documents/UCR-Computer-Science-Electrical-Engineering/EE161 - Computer Design and Architecture/Labs/Lab2&Lab3/Report/main.tex" 1765005928 3369 f7ef1ce392b6e0f076bcaabbfbb7ea22 ""
-  "fully_wired_datapath.png" 1765002070 40219 fafa30e9daaa9cdf3671050455737766 ""
-  "main.aux" 1765005930 2066 0ba887ca5c165076b71d2b1be806120b "pdflatex"
-  "main.tex" 1765005928 3369 f7ef1ce392b6e0f076bcaabbfbb7ea22 ""
-  "wired_Control_block.png" 1765001797 16991 66d6949b5cecc14c80f561ff4060ace7 ""
+  "Control_Decode_circuit.png" 1765070381 10133 47c9d91a015a260d2c8ba02f7f948dbb ""
+  "Type_Decode_Unit.png" 1765070381 103201 b87e6b1751204db313d8399a476c671e ""
+  "c:/Users/kaush/Documents/UCR-Computer-Science-Electrical-Engineering/EE161 - Computer Design and Architecture/Labs/Lab2&Lab3/Report/main.tex" 1765070515 3516 a5ecd29d87367e6c06e77592712d9ca2 ""
+  "fully_wired_datapath.png" 1765070381 40219 fafa30e9daaa9cdf3671050455737766 ""
+  "main.aux" 1765070521 2066 0ba887ca5c165076b71d2b1be806120b "pdflatex"
+  "main.tex" 1765070515 3516 a5ecd29d87367e6c06e77592712d9ca2 ""
+  "wired_Control_block.png" 1765070381 16991 66d6949b5cecc14c80f561ff4060ace7 ""
   (generated)
   "main.aux"
   "main.log"
