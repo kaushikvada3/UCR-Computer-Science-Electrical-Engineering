@@ -314,10 +314,11 @@
             if (!cacheEnabled) return; // Hide if disabled/legacy mode
 
             // Chip Box (CPU, L1, L2, L3)
+            // Moved UP to y=120 to provide space for text above node labels relative to node top ~220
             const chipX = 40;
-            const chipY = 160;
+            const chipY = 120;
             const chipW = 860;
-            const chipH = 230;
+            const chipH = 270; // Extended height to cover bottom
 
             ctx.strokeStyle = "rgba(0, 255, 255, 0.3)";
             ctx.lineWidth = 2;
@@ -339,10 +340,11 @@
 
 
             // Off-Chip Box (RAM)
+            // Moved UP to y=80 to strictly clear the RAM Label (at ~125)
             const memX = 1100;
-            const memY = 140;
+            const memY = 80;
             const memW = 200;
-            const memH = 270;
+            const memH = 330;
 
             // Dashed red line for memory area
             ctx.strokeStyle = "rgba(255, 0, 68, 0.3)";
@@ -353,7 +355,8 @@
             ctx.fillStyle = "rgba(255, 0, 68, 0.6)";
             ctx.textAlign = "center";
             ctx.font = "bold 16px Orbitron";
-            ctx.fillText("OFF-CHIP MEMORY", memX + memW / 2, memY - 15);
+            // Text inside box at top
+            ctx.fillText("OFF-CHIP MEMORY", memX + memW / 2, memY + 25);
         }
 
         function drawWires() {
@@ -438,18 +441,19 @@
             ctx.font = "18px Orbitron";
             ctx.fillText(subMessage, 50, 90);
 
-            // Cycle Counter
+            // Cycle Counter - Moved to Bottom Right to avoid overlap
             let counterColor = isWaiting ? "#ff0044" : "#00ffff";
             if (!isWaiting && cycleCount > 0) counterColor = "#fff";
 
             ctx.textAlign = "right";
             ctx.fillStyle = counterColor;
             ctx.font = "bold 70px Orbitron";
-            ctx.fillText(cycleCount, canvas.width - 50, 80);
+            // Y positions are near bottom (550)
+            ctx.fillText(cycleCount, canvas.width - 50, 480);
 
             ctx.font = "16px Orbitron";
             ctx.fillStyle = "#555";
-            ctx.fillText("CYCLES WASTED", canvas.width - 50, 105);
+            ctx.fillText("CYCLES WASTED", canvas.width - 50, 505);
         }
 
         // --- Logic ---
