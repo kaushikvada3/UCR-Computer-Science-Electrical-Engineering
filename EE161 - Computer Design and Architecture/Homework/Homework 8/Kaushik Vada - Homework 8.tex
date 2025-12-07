@@ -1,0 +1,98 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Kaushik Vada}
+\rhead{Homework 8}
+\cfoot{\thepage}
+
+\title{\textbf{Homework 8: Virtual Memory}}
+\author{Kaushik Vada}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Question 1}
+\textbf{What can virtual memory do for you if you have a 32-bit ISA and 8GB of physical memory? Briefly explain your answer.}
+
+\textbf{Answer: D}
+
+\noindent A lot: you need virtual memory to have multiple 32-bit applications use more than 4GB of memory together.
+
+\noindent \textbf{Explanation:} 
+A 32-bit ISA is limited to addressing $2^{32}$ bytes, which is 4GB, of virtual address space per process. This means a single program cannot directly address more than 4GB. However, if the machine has 8GB of physical RAM, virtual memory allows the operating system to map the virtual pages of multiple running processes to different physical frames in that 8GB space. For example, two separate processes could each use 4GB of their own virtual space, and the OS would map them to the 8GB of physical memory, utilizing the full capacity of the hardware.
+
+\vspace{0.5cm}
+
+\section*{Question 2}
+\textbf{What does it mean if we have more bits for the virtual page number than we do for the physical page number? Briefly explain your answer.}
+
+\textbf{Answer: C}
+
+\noindent We have less physical memory than our ISA supports.
+
+\noindent \textbf{Explanation:} 
+The Virtual Page Number (VPN) bits combined with the page offset determine the size of the virtual address space (the logical view of memory for a process). The Physical Page Number (PPN) bits determine the amount of actual physical RAM installed. If the number of VPN bits is greater than the number of PPN bits, it simply means the virtual address space is larger than the physical memory available. This is a very common scenario (e.g., a 64-bit address space is much larger than the typical 16GB or 32GB of RAM in a computer), and the OS uses paging to manage this difference.
+
+\vspace{0.5cm}
+
+\section*{Question 3: Page Sizing}
+\noindent \textbf{Figure out which bits of a 32-bit virtual address are used for the Virtual Page Number, the Page Offset, and how many bits of Physical Address you have.}
+
+\begin{enumerate}[label=\textbf{\Alph*)}]
+    \item \textbf{4kB pages with 64MB of RAM}
+    \begin{itemize}
+        \item \textbf{Page Offset (PO):} 4kB = $2^{12}$, so \textbf{12 bits}.
+        \item \textbf{Virtual Page Number (VPN):} 32-bit Virtual Address - 12 bits PO = \textbf{20 bits}.
+        \item \textbf{Physical Address (PA):} 64MB = $2^{26}$, so \textbf{26 bits}.
+        \item \textbf{Physical Pages (PP):} $\frac{\text{Physical Memory}}{\text{Page Size}} = \frac{64\text{MB}}{4\text{kB}} = \frac{2^{26}}{2^{12}} = 2^{14} = \mathbf{16,384}$.
+        \item \textbf{Virtual Pages (VP):} $2^{\text{VPN bits}} = 2^{20} = \mathbf{1,048,576}$ (or 1M).
+    \end{itemize}
+
+    \item \textbf{2MB pages with 1GB of RAM}
+    \begin{itemize}
+        \item \textbf{Page Offset (PO):} 2MB = $2^{21}$, so \textbf{21 bits}.
+        \item \textbf{Virtual Page Number (VPN):} 32-bit Virtual Address - 21 bits PO = \textbf{11 bits}.
+        \item \textbf{Physical Address (PA):} 1GB = $2^{30}$, so \textbf{30 bits}.
+        \item \textbf{Physical Pages (PP):} $\frac{1\text{GB}}{2\text{MB}} = \frac{2^{30}}{2^{21}} = 2^9 = \mathbf{512}$.
+        \item \textbf{Virtual Pages (VP):} $2^{\text{VPN bits}} = 2^{11} = \mathbf{2,048}$ (or 2k).
+    \end{itemize}
+
+    \item \textbf{1GB pages with 4GB of RAM}
+    \begin{itemize}
+        \item \textbf{Page Offset (PO):} 1GB = $2^{30}$, so \textbf{30 bits}.
+        \item \textbf{Virtual Page Number (VPN):} 32-bit Virtual Address - 30 bits PO = \textbf{2 bits}.
+        \item \textbf{Physical Address (PA):} 4GB = $2^{32}$, so \textbf{32 bits}.
+        \item \textbf{Physical Pages (PP):} $\frac{4\text{GB}}{1\text{GB}} = \frac{2^{32}}{2^{30}} = 2^2 = \mathbf{4}$.
+        \item \textbf{Virtual Pages (VP):} $2^{\text{VPN bits}} = 2^2 = \mathbf{4}$.
+    \end{itemize}
+\end{enumerate}
+
+\vspace{0.5cm}
+
+\newpage
+
+\section*{Question 4: TLB Sizes}
+\noindent \textbf{How much physical memory can be accessed without a TLB miss for the following TLBs? Briefly show your calculation.}
+\noindent \textit{Formula: Reach = Number of Entries $\times$ Page Size}
+
+\begin{enumerate}[label=\textbf{\Alph*.}]
+    \item \textbf{64 entries, 4kB pages}
+    \[ 64 \times 4\text{kB} = 2^6 \times 2^{12}\text{ bytes} = 2^{18}\text{ bytes} = \mathbf{256\text{kB}} \]
+    
+    \item \textbf{32 entries, 2MB pages}
+    \[ 32 \times 2\text{MB} = 2^5 \times 2^{21}\text{ bytes} = 2^{26}\text{ bytes} = \mathbf{64\text{MB}} \]
+    
+    \item \textbf{4 entries, 1GB pages}
+    \[ 4 \times 1\text{GB} = 2^2 \times 2^{30}\text{ bytes} = 2^{32}\text{ bytes} = \mathbf{4\text{GB}} \]
+\end{enumerate}
+
+\end{document}
