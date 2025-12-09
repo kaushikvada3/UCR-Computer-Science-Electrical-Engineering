@@ -325,13 +325,11 @@
                 ramUsage = 70; // High steady RAM
                 diskUsage = 0; // Low disk
             } else if (gameState === 'LOADING') {
-                // Handled in dedicated loader interval BUT we need to draw it
-                drawLoadingOverlay();
+                // Handled in dedicated loader interval
             } else if (gameState === 'STUTTER') {
                 cpuUsage += (0 - cpuUsage) * 0.2; // Drop to 0
                 diskUsage = 0;
                 // RAM usage stays high
-                drawStutterOverlay();
             } else {
                 // Menu / Idle
                 // Target around 5%
@@ -365,6 +363,13 @@
                 gameCtx.font = "14px Inter";
                 gameCtx.fillStyle = '#888';
                 gameCtx.fillText("Press 'LOAD GAME' to initialize memory", 450, 280);
+            }
+
+            // Draw Overlays (Draw ON TOP)
+            if (gameState === 'LOADING') {
+                drawLoadingOverlay();
+            } else if (gameState === 'STUTTER') {
+                drawStutterOverlay();
             }
 
             requestAnimationFrame(loop);

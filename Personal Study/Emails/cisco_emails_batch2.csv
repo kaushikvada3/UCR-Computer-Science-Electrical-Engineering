@@ -1,0 +1,251 @@
+Name,Email,Subject,Body
+Riken S.,rshah@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Riken,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Eric Zhang,ezhang@cisco.com,Interest in your Verification Technical Lead role at Cisco,"Hi Eric,
+
+I noticed your role as a Verification Technical Lead. I know that as designs scale, verification often becomes the bottleneck, and leading the effort to close coverage on complex networking silicon is exactly the kind of technical rigor I aspire to.
+
+My own focus has been on rigorous self-checking environments. I recently architected a configurable L1/L2 cache in Verilog and verified it using Synopsys VCS. I didn’t just run tests; I built a directed-random environment to uncover corner cases in the coherence protocol, ensuring the design wasn't just working, but robust.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Fatemeh K.,fkhalili@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Fatemeh,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Sinan H.,sinhuang@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Sinan,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Jitender K.,jkaul@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Jitender,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Vinay K.,vkotha@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Vinay,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Jeffrey L.,jeffrlee@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Jeffrey,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Thao Hoang,tmhoang@cisco.com,Interest in your Hardware Lead work at Cisco,"Hi Thao,
+
+I came across your profile and saw your work as a Hardware Lead. Generally, when I see hardware leadership at Cisco, I assume it involves balancing aggressive architectural targets with the physical realities of board and silicon implementation.
+
+I’ve tried to build that full-stack awareness in my own projects. I architected a configurable L1/L2 cache in Verilog, but I didn't stop at RTL—I used Design Compiler to analyze timing and area, and Verilog simulations to debug cycle-accurate behavior. I wanted to understand how my logic choices would play out in the final implementation.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Gian Francisco,gfrancisco@cisco.com,Interest in your ASIC Design work at Cisco Acacia,"Hi Gian,
+
+I was reading about your role as an ASIC Design Engineer at Cisco Acacia. The integration of high-speed coherent optics with digital ASIC logic is one of the most exciting frontiers in our field, and I’m fascinated by the design challenges involved in that convergence.
+
+My background is in digital design and memory hierarchies. I recently architected a configurable L1/L2 cache controller in Verilog/SystemVerilog, implementing complex coherence protocols (Write-Back/Write-Allocate). I verified the design using VCS, ensuring that the logic could handle the kind of high-throughput data movement required in optical transport.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Deepti Miyan,deepti.miyan@cisco.com,Interest in your Full Chip Integration and PnR work,"Hi Deepti,
+
+I noticed your deep expertise in Full Chip Integration and Physical Design—specifically your focus on PnR flows, clocking structures, and resolving complex IR drop issues. It stood out to me because you’re solving the problems that keep chips from taping out.
+
+I’m an Electrical Engineering student focused on bridging RTL and physical design. I experienced a slice of that complexity when I architected a configurable L1/L2 cache in Verilog. I used Design Compiler to analyze how my architectural decisions constrained timing relative to area, giving me a practical appreciation for the hand-off to physical implementation.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Mark Taylor,marktay@cisco.com,Interest in your ASIC DFT leadership,"Hi Mark,
+
+I saw your role as a Technical Leader in ASIC DFT. I know that Design for Test is often the unsung hero of yield, and creating the logic infrastructure to ensure silicon is testable at scale is a challenge I find technically compelling.
+
+My background is in RTL design and verification. I recently architected a configurable L1/L2 cache in Verilog and verified it using VCS. While my focus was functional correctness, I am eager to understand how DFT logic like scan chains and BIST are architected into complex hierarchies like the ones I designed.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Mital P.,mitapate@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Mital,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Jaclyn D.,jacdang@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Jaclyn,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Tarun G.,guptat@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Tarun,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Jon Stahl,jonstahl@cisco.com,Interest in your ASIC Development leadership,"Hi Jon,
+
+I was reading about your leadership as Senior Director of ASIC Development. Managing the full spectrum from RTL development to mixed-signal verification and physical implementation at Cisco's scale represents the pinnacle of engineering execution.
+
+I am striving to build a strong foundation across that flow. I recently architected a configurable L1/L2 cache in Verilog (RTL) and verified it using Synopsys VCS. I also explored synthesis using Design Compiler to understand physical constraints. I want to work in an organization where that holistic view of the design cycle is standard.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Roozbeh S.,rsafi@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Roozbeh,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Kent Pettus,kentp@cisco.com,Interest in your Hardware Management role at Cisco,"Hi Kent,
+
+I came across your profile and noticed your role as a Hardware Manager. Leading hardware teams involves a unique balance of technical oversight and execution strategy, especially when delivering the high-availability systems Cisco is known for.
+
+I’m an Electrical Engineering student focused on robust digital design. I recently architected a fully configurable L1/L2 cache controller in Verilog, using Synopsys VCS for verification. I learned that managing complexity—whether in code or in project scope—is key to delivering functional hardware.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Pankil S.,pankisha@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Pankil,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Carl Walker,carlwalk@cisco.com,Interest in your Hardware Engineering management work,"Hi Carl,
+
+I saw your background in Hardware Engineering Management. I know that building world-class hardware requires teams that are disciplined in verification and rigorous in their design methodology.
+
+I’ve tried to adopt that discipline in my own work. I recently architected a configurable L1/L2 cache in Verilog, but instead of just hacking it together, I built a structured verification environment using VCS to debug cycle-accurate waveforms. I believe that rigorous process is what separates good prototypes from production-grade silicon.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Ankith S.,anksrini@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Ankith,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Chuanyun F.,chuanfan@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Chuanyun,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Kevin C.,kevcao@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Kevin,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Vic C.,vichia@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Vic,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Venkat S.,vsukavan@cisco.com,Interest in contributing to Cisco's Core ASIC & RTL Team,"Hi Venkat,
+
+I’ve been following Cisco’s persistent push into high-performance silicon, and I know that the Core ASIC team is tackling some of the industry’s toughest latency and coherence challenges. I’m looking for an environment where rigorous verification is just as valued as the architecture itself.
+
+My technical work has been focused on exactly that memory hierarchy. I recently architected a fully configurable L1/L2 cache controller in Verilog, implementing complex coherence protocols (Write-Back/Write-Allocate) and low-latency LRU replacement policies. I verified the design using Synopsys VCS, debugging cycle-accurate waveforms to ensure the kind of functional correctness Cisco demands.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
+Lakshmi Channam,lchannam@cisco.com,Interest in your Power Engineering work at Cisco,"Hi Lakshmi,
+
+I noticed your specialized background as a Power Engineer and Hardware Manager. With power becoming the primary constraint in modern silicon, your focus on Power Electronics and Systems execution is absolutely critical.
+
+My work has been primarily in digital logic, but I am acutely aware of power implications. I recently architected a configurable L1/L2 cache in Verilog, and even at the RTL level, I had to consider how coherence policies (like Write-Back vs. Write-through) impacted bus activity and dynamic power. I am eager to learn how power constraints drive architectural decisions at the system level.
+
+I am actively pursuing an ASIC or RTL design internship for Summer 2026. I value the perspective of engineers who are already solving these problems at scale, and I would welcome any direction on how my background might align with the opportunities on your team.
+
+If your group is taking interns, I would strongly appreciate the chance to interview. I am confident I can ramp up quickly on your tools and contribute to your verification or design execution immediately. I have attached my resume and would appreciate a short conversation to discuss how I can help your team this summer.
+"
