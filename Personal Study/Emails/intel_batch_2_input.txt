@@ -1,0 +1,124 @@
+Tuan Do
+Job Title: Senior Physical Design Engineer
+Email: tuan.do@intel.com
+LinkedIn: Tuan Do
+
+Alex Levenzon
+Job Title: Senior Physical Design Engineer
+Email: alex.levenzon@intel.com
+LinkedIn: Alex Levenzon
+
+Pavithra M
+Job Title: Senior Physical Design Engineer
+Email: pavithra.maridi@intel.com
+LinkedIn: Not available
+
+Deepesh B
+Job Title: Senior Physical Design Engineer
+Email: deepesh.bagmar@intel.com
+LinkedIn: Not available
+
+Michael Fredette
+Job Title: Senior Physical Design Engineer
+Email: michael.fredette@intel.com
+LinkedIn: Michael Fredette
+
+John Rake
+Job Title: Senior Physical Design Engineer
+Email: john.rake@intel.com
+LinkedIn: John Rake
+
+Riya V
+Job Title: Senior Physical Design Engineer
+Email: riya.varghese@intel.com
+LinkedIn: Not available
+
+Kiranmai P
+Job Title: Sr. Physical Design Engineer
+Email: Not available
+LinkedIn: Not available
+
+Jose Negrete
+Job Title: Senior Physical Design Engineer
+Email: jose.negrete@intel.com
+LinkedIn: Jose Negrete
+
+Basil M
+Job Title: Full Chip STA/Timing Lead
+Email: basil.mohammed@intel.com
+LinkedIn: Not available
+
+Curtis W
+Job Title: Sr. IP Logic Design Engineer
+Email: curtis.wong@intel.com
+LinkedIn: Not available
+
+Takashi N
+Job Title: Senior RTL Design Engineer
+Email: takashi.nakagawa@intel.com
+LinkedIn: Not available
+
+Ganesh T
+Job Title: Graphics Hardware Engineer (Senior Logic Design & Validation Engineer)
+Email: ganesh.thiagarajan@intel.com
+LinkedIn: Not available
+
+Thomas Soong
+Job Title: CPU Security Verification Manager
+Email: thomas.soong@intel.com
+LinkedIn: Thomas Soong
+
+Dao P
+Job Title: Sr Hardware Design Engineer / ASIC DFT Engineer
+Email: dao.phan@intel.com
+LinkedIn: Not available
+
+Krishna S
+Job Title: Senior CPU Design Engineer
+Email: krishna.santhanam@intel.com
+LinkedIn: Not available
+
+Joy Paul
+Job Title: Senior Staff Engineer (Full Chip Timing Lead & Physical Design Engineer for E-Core CPU)
+Email: joy.p.paul@intel.com
+LinkedIn: Joy Paul
+
+Dave Maguire
+Job Title: Rtl/fw ASIC Design Manager
+Email: dave@dreambigsemi.com
+LinkedIn: Dave Maguire
+
+Gregg G
+Job Title: Senior Digital Design Engineer
+Email: gregg.goyins@pmcs.com
+LinkedIn: Not available
+
+Soumya Banerjee
+Job Title: Sr. Logic Design Methodology Engineer
+Email: soumya1.banerjee@intel.com
+LinkedIn: Soumya Banerjee
+
+Manish P
+Job Title: Senior ASIC Verification Engineer
+Email: manish.patel@intel.com
+LinkedIn: Not available
+
+Gayathri R
+Job Title: Senior SOC Physical Design Engineer
+Email: gayathri.raghavan@intel.com
+LinkedIn: Not available
+
+Avinash P
+Job Title: Sr ASIC Verification Engineer
+Email: Not available
+LinkedIn: Not available
+
+Shree K
+Job Title: Sr. GPU Physical Design Engineer
+Email: shree.kant@intel.com
+LinkedIn: Not available
+
+Dan D
+Job Title: Sr ASIC Design Engineer
+Email: dan.durghinescu@intel.com
+LinkedIn: Not available

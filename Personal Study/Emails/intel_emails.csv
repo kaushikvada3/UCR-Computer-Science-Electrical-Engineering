@@ -1,0 +1,176 @@
+Name,Email,Subject,Body
+Yi-chin Yan,yi-chin.yan@intel.com,3rd year EE student building RISC-V cores // Instruction Fetch ?s,"Hi Yi-Chin,
+
+I've been analyzing Intel's work on frontend throughput, and it really resonated with my recent project work. I'm a 3rd year Electrical Engineering student where I didn't just learn architecture theory—I built a 5-stage RISC-V processor in Verilog from scratch.
+
+I specifically designed a custom parameterizable L1/L2 cache controller, implementing LRU replacement and write-back/write-allocate policies to optimize memory access. I've also run my designs through Synopsys VCS for verification and Design Compiler for synthesis. I'm eager to bring this hands-on RTL experience to an internship on your team for Summer 2026.
+
+My resume is attached, and I'd love to prove what I can do."
+Munish Sharma,munish.sharma@intel.com,Aspiring CPU engineer for Summer '26 (Experience with Verilog/Synthesis),"Hi Munish,
+
+I'm a 3rd year Electrical Engineering student who is dead serious about a career in CPU design. I see you lead engineering teams at Intel, and I wanted to pitch myself directly.
+
+I'm not just efficient in Verilog; I've implemented a full RISC-V core and a custom L1/L2 cache hierarchy with MESI-like coherence concepts. I verify my RTL using Synopsys VCS and Verdi, and I understand the push-and-pull of timing closure from running Design Compiler. I want to bring that technical grit to your team as a Summer 2026 intern.
+
+My resume is attached, and I'd appreciate a quick look."
+Yury Levin,yury.levin@intel.com,Questions from a student building a 5-stage pipeline,"Hi Yury,
+
+I see you're a Senior Logic Design Engineer. I'm currently solving hazard detection challenges in my own 5-stage RISC-V CPU, and it's given me a huge appreciation for the control logic robustness required at Intel.
+
+I'm a 3rd year EE undergrad with strong hands-on skills—I've coded parametric L1/L2 cache controllers and validated them using Synopsys VCS/Verdi. I don't just write code; I verify it. I'm looking for a Summer 2026 internship to contribute to your logic design efforts.
+
+Resume attached, and thanks for your time."
+Amit Verma,amit.verma@intel.com,Bridging micro-arch specs to RTL (Student Resume),"Hi Amit,
+
+I noticed you bridge the gap between Architecture and Logic Design. That's exactly where I'm focusing my degree—taking high-level micro-architectural specs and turning them into efficient, synthesizeable RTL.
+
+I've implemented a 5-stage RISC-V pipeline and a highly configurable L1/L2 cache subsystem (LRU, Write-back) in Verilog. I validate everything with directed tests in Synopsys VCS. I'm ready to apply this rigorous design flow to an internship on your team for Summer 2026.
+
+I've attached my resume and look forward to hearing from you."
+Vishal Dhami,vishal.dhami@intel.com,Optimizing ALU critical paths // Internship interest,"Hi Vishal,
+
+I've been working on optimizing the critical path of my RISC-V ALU, and it's given me a lot of respect for the timing closure work you do at Intel.
+
+I'm a 3rd year Electrical Engineering student who loves the grind of logic optimization. I've designed custom L1/L2 caches and run synthesis using Design Compiler to check area/timing trade-offs. I want to apply these skills to a real project as an intern on your team next summer (2026).
+
+My resume is attached, and thanks for considering me."
+Angel Chao,angel.chao@intel.com,Verifying Load/Store logic (Student project),"Hi Angel,
+
+I'm recently deep in the verification of the Load/Store unit for my RISC-V processor, specifically handling unaligned accesses. It's detailed work, but I enjoy drilling down into the waveforms in Verdi.
+
+I'm a 3rd year EE undergrad with solid RTL coding skills (Verilog) and exposure to Design Compiler for synthesis. I've built parameterizable caches and verified them with Synopsys tools. I'm looking for a Summer 2026 internship where I can help your team with unit design or verification.
+
+I've attached my resume and appreciate your time."
+Srikanth Balaji,srikanth.balaji@intel.com,EDA tool experience & Logic Design // Student reaching out,"Hi Srikanth,
+
+I saw your background with Siemens EDA. That mix is awesome—I'm a 3rd year EE student who actually enjoys the verification environment side of things, using Synopsys VCS and Verdi to debug my RTL.
+
+I've built a RISC-V core and a custom L1/L2 cache controller (Write-back/Write-allocate) from scratch. I know how to interpret synthesis reports from Design Compiler. I'd love to intern on your team in Summer 2026 to put this tool knowledge to work.
+
+Resume attached, and I hope we can connect."
+Timothy Nguyen,timothy.nguyen@intel.com,Low-power logic design // 3rd year EE student,"Hi Timothy,
+
+I've been reading up on fine-grained clock gating, and I'm experimenting with it in my RISC-V designs design to reduce dynamic power. I know that's a huge focus for your team.
+
+I'm a 3rd year EE student who has implemented complex logic like parametric L1/L2 caches in Verilog. I check my work with Synopsys VCS and synthesize with Design Compiler. I want to get industry experience implementing low-power logic during an internship in Summer 2026.
+
+I've attached my resume and look forward to your thoughts."
+Alejandro Lenero,alejandro.lenero@intel.com,Datapath verification challenges (Student project),"Hi Alejandro,
+
+I've been verifying the arithmetic datapath for my RISC-V core and realized that finding corner-case bugs in Verdi is an art form. I want to learn that art from the best.
+
+I'm a 3rd year Electrical Engineering student with experience in Verilog, simulation (Synopsys VCS), and synthesis (Design Compiler). I've built a custom L1/L2 cache hierarchy from spec to RTL. I'm looking for a Summer 2026 internship to contribute to meaningful design work on your team.
+
+My resume is attached, and thanks for reading."
+Swapnil Aggarwal,swapnil.aggarwal@intel.com,Multi-core interconnects // Internship inquiry,"Hi Swapnil,
+
+I'm diving into multi-core coherence protocols in my classes, and I've implemented a Write-back/Write-allocate L1/L2 cache controller in Verilog. Seeing how that scales to Intel's mesh fabrics is my next goal.
+
+I'm a 3rd year EE student with a strong grip on computer architecture fundamentals and standard industry tools like Synopsys VCS and Design Compiler. I'm looking for a Summer 2026 internship to help design or verify on-chip logic.
+
+Resume attached, and I appreciate your consideration."
+Jakob Saxtorph,jakob.saxtorph@intel.com,Implementing FPU logic (Student with Verilog exp),"Hi Jakob,
+
+I've been implementing a basic FPU and handling the logic for IEEE 754 rounding modes. It's a beast to verify in waveforms, but I enjoy the rigor.
+
+I'm a 3rd year EE undergrad who has built a full RISC-V pipeline and custom L1/L2 caches. I verify with Synopsys VCS and synthesize with Design Compiler. I'd love to intern on your team for Summer 2026 and work on these complex arithmetic units.
+
+I've attached my resume and hope to speak with you soon."
+Michael Louis,michael.louis@intel.com,Frontend logic and IPC // 3rd year Student,"Hi Michael,
+
+I'm interested in how you design decoupling buffers to keep IPC high. In my own RISC-V processor, I've seen how critical fetch/decode bandwidth is to overall performance.
+
+I'm a 3rd year Electrical Engineering student proficient in Verilog logic design. I've implemented parametric L1/L2 caches and verified them using Synopsys VCS. I'm eager to bring these skills to an internship on your team for Summer 2026.
+
+Resume attached, and thanks for the opportunity."
+Udi Sherel,udi.sherel@intel.com,Aspiring Physical Design engineer (Exp with Design Compiler),"Hi Udi,
+
+I see you lead CPU Physical Design at Intel. I'm a 3rd year EE student who is fascinated by the backend—taking my Verilog designs and seeing the area/power results in Design Compiler.
+
+I've built a RISC-V core and custom L1/L2 caches, so I understand the logic structure before it hits physical implementation. I'm looking for a Summer 2026 internship where I can learn world-class PPA closure methodologies under your leadership.
+
+My resume is attached, and I appreciate your time."
+Radhapriyanka Rudrappasamy,radhapriyanka.rudrappasamy@intel.com,Writing better testbenches // SystemVerilog student,"Hi Radha,
+
+I've been writing directed tests for my RISC-V core using SystemVerilog and debugging in Verdi. I'm starting to see the limits of directed testing and the need for constrained random verification.
+
+I'm a 3rd year EE student who loves breaking my own code. I've built and verifying custom L1/L2 cache controllers (LRU, Write-back) and want to scale that experience up. I'm looking for a Summer 2026 internship to write robust testbenches for your team.
+
+Resume attached, and I look forward to connecting."
+Akhila Ponnam,akhila.ponnam@intel.com,GPU Logic Design // EE Student with Verilog skills,"Hi Akhila,
+
+I'm interested in the throughput challenges of GPU shader cores. I've designed a 5-stage RISC-V CPU and custom L1/L2 caches, so I understand pipeline flow, but the parallelism of GPUs is where I want to go next.
+
+I'm a 3rd year EE undergrad with strong Verilog coding skills and experience with Synopsys VCS and Design Compiler. I'm looking for a Summer 2026 internship to help design logic for Intel's graphics IPs.
+
+I've attached my resume and thanks for reviewing it."
+Ramya Krish,ramya.krish@intel.com,Functional coverage & verification // Student inquiry,"Hi Ramya,
+
+I realized recently that my processor design works in simulation, but without functional coverage, I don't know what I'm missing. That's why I'm focusing on better verification strategies.
+
+I'm a 3rd year EE student who wants to be a Verification Engineer. I've verified my own parametrizable L1/L2 cache controller using Synopsys VCS/Verdi. I'm looking for a Summer 2026 internship to help your team find bugs before silicon.
+
+Resume attached, and I appreciate your consideration."
+Frank Zappulla,frank.zappulla@intel.com,Fellow engineer building detailed RTL (saw your diverse background),"Hi Frank,
+
+I saw your path through NVIDIA, IBM, and now Intel. That kind of perspective on SoC design is exactly what I want to gain as I start my career.
+
+I'm a 3rd year EE student effectively working as a logic designer in my coursework—building RISC-V cores, writing Verilog for custom L1/L2 caches (LRU/Write-back), and running synthesis in Design Compiler. I'm looking for a Summer 2026 internship where I can contribute to real SoC logic and learn from your experience.
+
+My resume is attached, and thanks for your time."
+Kshitij Raj,kshitij.raj@intel.com,Formal Verification interest // 3rd year EE Student,"Hi Kshitij,
+
+I read about your work in Formal Validation. I've been verifying my RISC-V processor using standard VCS simulation, but the idea of mathematically proving security properties is incredibly compelling to me.
+
+I'm a 3rd year EE student with strong fundamentals in digital logic and Verilog (including custom cache designs). I want to move beyond standard directed testing and work on formal methods during a Summer 2026 internship on your team.
+
+Resume attached, and I hope to hear from you."
+Sangam Gambhir,sangam.gambhir@intel.com,Physical Synthesis // Student with Design Compiler exp,"Hi Sangam,
+
+I've been using Synopsys Design Compiler to synthesize my RISC-V RTL, but I know that physical synthesis—handling placement awareness—is where the real performance is won.
+
+I'm a 3rd year EE student who wants to specialize in Physical Design. I've built and validated complex logic (L1/L2 caches) and am ready to learn the backend flow properly. I'm looking for a Summer 2026 internship to contribute to your execution.
+
+I've attached my resume and appreciate a look."
+John Rake,john.rake@intel.com,Floorplanning & Thermal challenges // Student interest,"Hi John,
+
+I'm learning that a good floorplan makes or breaks a chip. I want to get good at that spatial puzzle.
+
+I'm a 3rd year EE student with experience in RTL (RISC-V/Caches) and synthesis using Design Compiler. I understand the logic I'm implementing, which I think makes me a better physical designer. I'm looking for a Summer 2026 internship to help with physical design tasks.
+
+Resume attached, and thanks for your time."
+Ashika Kumar,ashika.kumar@intel.com,Tape-out goals // 3rd year EE Student,"Hi Ashika,
+
+I saw you're a PD Lead. The intensity of closing timing for tape-out is something I want to experience firsthand. 
+
+I'm a 3rd year Electrical Engineering student familiar with Verilog (RISC-V cores) and synthesis (Design Compiler). I know how to check reports and iterate on the design. I'm looking for a Summer 2026 internship on a Physical Design team to help you hit closure.
+
+My resume is attached, and I appreciate your consideration."
+Swetha Karusala,swetha.karusala@intel.com,IR Drop & Power Grids // Physical Design interest,"Hi Swetha,
+
+I've been studying how IR drop can kill timing even on a ""working"" design. It's made me realize how critical the power grid network really is.
+
+I'm a 3rd year EE student looking for a Summer 2026 internship. I have strong fundamentals in digital circuits—I've built custom L1/L2 caches in Verilog and synthesized them with Design Compiler. I'd love to help analyze and fix physical effects on your team.
+
+Resume attached, and thanks for reading."
+Tuan Do,tuan.do@intel.com,Fixing Setup/Hold violations // Student inquiry,"Hi Tuan,
+
+I've spent hours fixing setup and hold violations in my own synthesis runs (using Design Compiler), and I actually enjoy the puzzle of it.
+
+I'm a 3rd year EE student who has built a RISC-V core and custom caches from scratch. I'm looking for an internship for Summer 2026 where I can apply this attention to detail to help your team close timing.
+
+My resume is attached, and I appreciate your time."
+Pavithra Maridi,pavithra.maridi@intel.com,Signal Integrity issues // 3rd Year EE,"Hi Pavithra,
+
+I'm interested in how you handle signal integrity and crosstalk at advanced nodes. It seems like the physics is fighting against the logic at that scale.
+
+I'm a 3rd year EE student with a solid background in electromagnetic fields and digital design (Verilog/Synthesis). I've implemented a full RISC-V pipeline and I'm looking for a Summer 2026 internship to work on these physical layer challenges.
+
+Resume attached, and I hope to connect soon."
+Alex Levenzon,alex.levenzon@intel.com,Hierarchical Place & Route // Student interest,"Hi Alex,
+
+I'm curious about the specific methodologies you use for Hierarchical P&R on massive chips. Managing that complexity is the kind of challenge I want to take on.
+
+I'm a 3rd year EE student with experience in Verilog (RISC-V, L1/L2 caches) and synthesis (Design Compiler). I'm looking for a Summer 2026 internship to help with the backend implementation of your designs.
+
+My resume is attached, and thanks for your consideration."
