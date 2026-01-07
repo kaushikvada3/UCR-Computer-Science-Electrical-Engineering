@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 /* Application Configuration */
-#define BMS_CELL_COUNT          12      // Example: 12S Pack
-#define BMS_THERMISTOR_COUNT    4       // Example: 4 Temp sensors
+#define BMS_CELL_COUNT          10      // 10s1p Battery Pack
+#define BMS_THERMISTOR_COUNT    10      // 10 NTCs (1 per cell)
 #define SENSOR_UPDATE_RATE_HZ   10      // 10Hz Sampling
 
 /* Hardware Definitions - Adapt these to your ADC */
