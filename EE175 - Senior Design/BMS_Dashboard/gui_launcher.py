@@ -20,6 +20,9 @@ from PyQt6.QtCore import QFileSystemWatcher, QTimer, QUrl
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtCore import QThread, pyqtSlot
+
+from backend.data_stream import SerialWorker
 
 
 class DashboardWindow(QMainWindow):
@@ -74,7 +77,12 @@ class DashboardWindow(QMainWindow):
         self.view.reload()
     
     def closeEvent(self, event) -> None:
-        """Cleanup HTTP server on window close."""
+        """Cleanup HTTP server and threads on window close."""
+        if hasattr(self, 'serial_worker'):
+            self.serial_worker.stop()
+            self.serial_thread.quit()
+            self.serial_thread.wait()
+        
         if hasattr(self, 'httpd'):
             self.httpd.shutdown()
         event.accept()
