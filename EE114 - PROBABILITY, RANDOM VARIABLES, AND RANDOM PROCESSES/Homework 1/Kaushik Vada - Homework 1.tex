@@ -1,0 +1,175 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+
+\geometry{letterpaper, margin=1in}
+
+\title{EE114 - Homework 1}
+\author{Kaushik Vada}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Problem 1.1.1}
+For Gerlanda's pizza in Quiz 1.1, answer these questions:
+\begin{enumerate}[label=(\alph*)]
+    \item Are $T$ and $M$ mutually exclusive?
+    \vspace{1.5in}
+    \item Are $R, T,$ and $M$ collectively exhaustive?
+    \vspace{1.5in}
+    \item Are $T$ and $O$ mutually exclusive? State this condition in words.
+    \vspace{1.5in}
+    \item Does Gerlanda's make Tuscan pizzas with mushrooms and onions?
+    \vspace{1.5in}
+    \item Does Gerlanda's make regular pizzas that have neither mushrooms nor onions?
+    \vspace{1.5in}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 1.2.1}
+A fax transmission can take place at any of three speeds depending on the condition of the phone connection between the two fax machines. The speeds are high ($h$) at 14,400 b/s, medium ($m$) at 9600 b/s, and low ($l$) at 4800 b/s. In response to requests for information, a company sends either short faxes of two ($t$) pages, or long faxes of four ($f$) pages. Consider the experiment of monitoring a fax transmission and observing the transmission speed and length. An observation is a two-letter word, for example, a high-speed, two-page fax is $ht$.
+
+\begin{enumerate}[label=(\alph*)]
+    \item What is the sample space of the experiment?
+    \vspace{1.5in}
+    \item Let $A_1$ be the event ``medium-speed fax.'' What are the outcomes in $A_1$?
+    \vspace{1.5in}
+    \item Let $A_2$ be the event ``short (two-page) fax.'' What are the outcomes in $A_2$?
+    \vspace{1.5in}
+    \item Let $A_3$ be the event ``high-speed fax or low-speed fax.'' What are the outcomes in $A_3$?
+    \vspace{1.5in}
+    \item Are $A_1, A_2,$ and $A_3$ mutually exclusive?
+    \vspace{1.5in}
+    \item Are $A_1, A_2,$ and $A_3$ collectively exhaustive?
+    \vspace{1.5in}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 1.2.2}
+An integrated circuit factory has three machines $X, Y,$ and $Z$. Test one integrated circuit produced by each machine. Either a circuit is acceptable ($a$) or it fails ($f$). An observation is a sequence of three test results corresponding to the circuits from machines $X, Y,$ and $Z$, respectively. For example, $aaf$ is the observation that the circuits from $X$ and $Y$ pass the test and the circuit from $Z$ fails the test.
+
+\begin{enumerate}[label=(\alph*)]
+    \item What are the elements of the sample space of this experiment?
+    \vspace{1.5in}
+    \item What are the elements of the sets
+    \[ Z_F = \{ \text{circuit from } Z \text{ fails} \}, \]
+    \[ X_A = \{ \text{circuit from } X \text{ is acceptable} \}. \]
+    \vspace{1.5in}
+    \item Are $Z_F$ and $X_A$ mutually exclusive?
+    \vspace{1.5in}
+    \item Are $Z_F$ and $X_A$ collectively exhaustive?
+    \vspace{1.5in}
+    \item What are the elements of the sets
+    \[ C = \{ \text{more than one circuit acceptable} \}, \]
+    \[ D = \{ \text{at least two circuits fail} \}. \]
+    \vspace{1.5in}
+    \item Are $C$ and $D$ mutually exclusive?
+    \vspace{1.5in}
+    \item Are $C$ and $D$ collectively exhaustive?
+    \vspace{1.5in}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 1.3.1}
+Computer programs are classified by the length of the source code and by the execution time. Programs with more than 150 lines in the source code are big ($B$). Programs with $\le 150$ lines are little ($L$). Fast programs ($F$) run in less than 0.1 seconds. Slow programs ($W$) require at least 0.1 seconds. Monitor a program executed by a computer. Observe the length of the source code and the run time. The probability model for this experiment contains the following information: $P[LF] = 0.5$, $P[BF] = 0.2$, and $P[BW] = 0.2$. What is the sample space of the experiment? Calculate the following probabilities:
+
+\begin{enumerate}[label=(\alph*)]
+    \item $P[W]$
+    \vspace{1.5in}
+    \item $P[B]$
+    \vspace{1.5in}
+    \item $P[W \cup B]$
+    \vspace{1.5in}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 1.3.2}
+There are two types of cellular phones, handheld phones ($H$) that you carry and mobile phones ($M$) that are mounted in vehicles. Phone calls can be classified by the traveling speed of the user as fast ($F$) or slow ($W$). Monitor a cellular phone call and observe the type of telephone and the speed of the user. The probability model for this experiment has the following information: $P[F] = 0.5$, $P[HF] = 0.2$, $P[MW] = 0.1$. What is the sample space of the experiment? Calculate the following probabilities:
+
+\begin{enumerate}[label=(\alph*)]
+    \item $P[W]$
+    \vspace{1.5in}
+    \item $P[MF]$
+    \vspace{1.5in}
+    \item $P[H]$
+    \vspace{1.5in}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 1.4.1}
+Mobile telephones perform \textit{handoffs} as they move from cell to cell. During a call, a telephone either performs zero handoffs ($H_0$), one handoff ($H_1$), or more than one handoff ($H_2$). In addition, each call is either long ($L$), if it lasts more than three minutes, or brief ($B$). The following table describes the probabilities of the possible types of calls.
+
+\begin{center}
+\begin{tabular}{c|ccc}
+ & $H_0$ & $H_1$ & $H_2$ \\
+\hline
+$L$ & 0.1 & 0.1 & 0.2 \\
+$B$ & 0.4 & 0.1 & 0.1
+\end{tabular}
+\end{center}
+
+\noindent
+What is the probability $P[H_0]$ that a phone makes no handoffs?
+\vspace{1.5in}
+
+\noindent
+What is the probability a call is brief?
+\vspace{1.5in}
+
+\noindent
+What is the probability a call is long or there are at least two handoffs?
+\vspace{1.5in}
+
+\newpage
+
+\section*{Problem 1.4.2}
+For the telephone usage model of Example 1.14, let $B_m$ denote the event that a call is billed for $m$ minutes. To generate a phone bill, observe the duration of the call in integer minutes (rounding up). Charge for $M$ minutes $M = 1, 2, 3, \dots$ if the exact duration $T$ is $M - 1 < t \le M$. A more complete probability model shows that for $m = 1, 2, \dots$ the probability of each event $B_m$ is
+\[ P[B_m] = \alpha(1 - \alpha)^{m-1} \]
+where $\alpha = 1 - (0.57)^{1/3} = 0.171$.
+
+\begin{enumerate}[label=(\alph*)]
+    \item Classify a call as long, $L$, if the call lasts more than three minutes. What is $P[L]$?
+    \vspace{2in}
+    \item What is the probability that a call will be billed for nine minutes or less?
+    \vspace{2in}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 1.4.3}
+The basic rules of genetics were discovered in mid-1800s by Mendel, who found that each characteristic of a pea plant, such as whether the seeds were green or yellow, is determined by two genes, one from each parent. Each gene is either dominant $d$ or recessive $r$. Mendel's experiment is to select a plant and observe whether the genes are both dominant $d$, both recessive $r$, or one of each (hybrid) $h$. In his pea plants, Mendel found that yellow seeds were a dominant trait over green seeds. A $yy$ pea with two yellow genes has yellow seeds; a $gg$ pea with two recessive genes has green seeds; a hybrid $gy$ or $yg$ pea has yellow seeds. In one of Mendel's experiments, he started with a parental generation in which half the pea plants were $yy$ and half the plants were $gg$. The two groups were crossbred so that each pea plant in the first generation was $gy$. In the second generation, each pea plant was equally likely to inherit a $y$ or a $g$ gene from each first generation parent. What is the probability $P[Y]$ that a randomly chosen pea plant in the second generation has yellow seeds?
+\vspace{3in}
+
+\newpage
+
+\section*{Problem 1.4.4}
+Use Theorem 1.7 to prove the following facts:
+\begin{enumerate}[label=(\alph*)]
+    \item $P[A \cup B] \ge P[A]$
+    \vspace{1.5in}
+    \item $P[A \cup B] \ge P[B]$
+    \vspace{1.5in}
+    \item $P[A \cap B] \le P[A]$
+    \vspace{1.5in}
+    \item $P[A \cap B] \le P[B]$
+    \vspace{1.5in}
+\end{enumerate}
+
+\newpage
+
+\section*{Problem 1.4.5}
+Use Theorem 1.7 to prove by induction the \textit{union bound}: For any collection of events $A_1, \dots, A_n$,
+\[ P[A_1 \cup A_2 \cup \dots \cup A_n] \le \sum_{i=1}^n P[A_i]. \]
+\vspace{3in}
+
+\end{document}
