@@ -1,0 +1,119 @@
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: #f4f4f4;
+    color: #1f2023;
+}
+
+.spacer-top, .spacer-bottom {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Container defining the scroll area */
+.home-section-container {
+    position: relative;
+    width: 100%;
+    /* No minimal height on container, the spacers give it height */
+}
+
+/* The content that sticks */
+.fixed-section {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    z-index: 10;
+}
+
+.home-section-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 20px;
+}
+
+.home-section-text {
+    text-align: center;
+    margin-bottom: 40px;
+    opacity: 0; /* Starts hidden, animates in */
+    transform: translateY(20px);
+}
+
+.section-heading {
+    font-size: 3.5rem;
+    line-height: 1.1;
+    margin: 0 0 20px 0;
+    font-weight: 800;
+}
+
+.section-sub-heading {
+    font-size: 1.25rem;
+    color: #666;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.toolbox-labels-container {
+    width: 100%;
+}
+
+.toolbox-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    height: 300px; /* Area for flying labels */
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+    width: 45%;
+}
+
+.label-item {
+    font-size: 1.5rem;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 50px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: absolute; /* We will absolute position them for the animation */
+    opacity: 0;
+    white-space: nowrap;
+}
+
+/* Colors matching the reference roughly */
+.theme-color-timer { color: #ff4b4b; }
+.theme-color-easings { color: #5b39e6; }
+.theme-color-draggable { color: #ff8f4b; }
+.theme-color-events { color: #39e65b; }
+.theme-color-scope { color: #e639a0; }
+.theme-color-waapi { color: #39a0e6; }
+.theme-color-timeline { color: #e6b739; }
+.theme-color-utils { color: #39e6d4; }
+.theme-color-svg { color: #9be639; }
+.theme-color-animation { color: #8f4bff; }
+
+/* Spacers to create existing scroll height */
+.section-spacer {
+    height: 100vh;
+    pointer-events: none;
+}
