@@ -1,0 +1,830 @@
+{
+  "DietaryWater": {
+    "count": 184,
+    "min": 0.728,
+    "max": 2957.35,
+    "avg": 139.04869826086943,
+    "unit": "mL",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "BodyMassIndex": {
+    "count": 301,
+    "min": 22.3614,
+    "max": 30.9925,
+    "avg": 27.907261794019913,
+    "unit": "count",
+    "first_record": "2024-05-26 17:09:14",
+    "last_record": "2026-01-06 11:17:11"
+  },
+  "Height": {
+    "count": 6,
+    "min": 5.83333,
+    "max": 5.84634,
+    "avg": 5.842003333333332,
+    "unit": "ft",
+    "first_record": "2024-08-19 06:37:18",
+    "last_record": "2025-09-27 08:58:36"
+  },
+  "BodyMass": {
+    "count": 329,
+    "min": 143.0,
+    "max": 216.0,
+    "avg": 194.27630699088138,
+    "unit": "lb",
+    "first_record": "2024-05-26 17:09:14",
+    "last_record": "2026-01-06 11:17:11"
+  },
+  "HeartRate": {
+    "count": 368702,
+    "min": 40.0,
+    "max": 198.0,
+    "avg": 90.61896560555658,
+    "unit": "count/min",
+    "first_record": "2024-08-22 16:40:44",
+    "last_record": "2026-01-10 23:50:06"
+  },
+  "OxygenSaturation": {
+    "count": 7425,
+    "min": 0.82,
+    "max": 1.0,
+    "avg": 0.9691124579124051,
+    "unit": "%",
+    "first_record": "2024-06-17 01:44:31",
+    "last_record": "2026-01-10 22:23:09"
+  },
+  "RespiratoryRate": {
+    "count": 26809,
+    "min": 7.0,
+    "max": 35.5,
+    "avg": 16.267522100787048,
+    "unit": "count/min",
+    "first_record": "2024-06-17 04:03:33",
+    "last_record": "2026-01-10 09:15:23"
+  },
+  "BodyFatPercentage": {
+    "count": 91,
+    "min": 0.218,
+    "max": 0.26,
+    "avg": 0.23672527472527494,
+    "unit": "%",
+    "first_record": "2024-08-19 06:37:30",
+    "last_record": "2026-01-06 11:17:11"
+  },
+  "LeanBodyMass": {
+    "count": 78,
+    "min": 149.4,
+    "max": 156.8,
+    "avg": 152.81794871794884,
+    "unit": "lb",
+    "first_record": "2024-08-19 06:37:30",
+    "last_record": "2026-01-06 11:17:11"
+  },
+  "StepCount": {
+    "count": 96194,
+    "min": 1.0,
+    "max": 1237.0,
+    "avg": 169.78546478990373,
+    "unit": "count",
+    "first_record": "2024-11-24 17:31:49",
+    "last_record": "2026-01-10 23:29:38"
+  },
+  "DistanceWalkingRunning": {
+    "count": 206948,
+    "min": 2.88146e-10,
+    "max": 3.54074,
+    "avg": 0.03496188412448731,
+    "unit": "mi",
+    "first_record": "2024-11-24 17:31:49",
+    "last_record": "2026-01-10 23:29:38"
+  },
+  "BasalEnergyBurned": {
+    "count": 219681,
+    "min": 0.054,
+    "max": 1904.0,
+    "avg": 8.317465411207866,
+    "unit": "Cal",
+    "first_record": "2024-11-24 17:35:06",
+    "last_record": "2026-01-10 23:34:57"
+  },
+  "ActiveEnergyBurned": {
+    "count": 245306,
+    "min": 0.0,
+    "max": 641.271,
+    "avg": 2.383732957375759,
+    "unit": "Cal",
+    "first_record": "2024-11-24 17:28:07",
+    "last_record": "2026-01-10 23:39:25"
+  },
+  "FlightsClimbed": {
+    "count": 14077,
+    "min": 1.0,
+    "max": 21.0,
+    "avg": 1.2428074163529161,
+    "unit": "count",
+    "first_record": "2024-11-24 19:37:25",
+    "last_record": "2026-01-10 20:14:57"
+  },
+  "DietaryFatTotal": {
+    "count": 1153,
+    "min": 0.0,
+    "max": 113.684,
+    "avg": 10.701005556461396,
+    "unit": "g",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:13:05"
+  },
+  "DietaryFatPolyunsaturated": {
+    "count": 550,
+    "min": 0.0,
+    "max": 12.1443,
+    "avg": 0.6906509282181817,
+    "unit": "g",
+    "first_record": "2024-06-21 07:57:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryFatMonounsaturated": {
+    "count": 552,
+    "min": 0.0,
+    "max": 28.6461,
+    "avg": 1.1995709007246373,
+    "unit": "g",
+    "first_record": "2024-06-21 07:57:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryFatSaturated": {
+    "count": 834,
+    "min": 0.0,
+    "max": 35.0002,
+    "avg": 3.1075763446762554,
+    "unit": "g",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:12:31"
+  },
+  "DietaryCholesterol": {
+    "count": 671,
+    "min": 0.0,
+    "max": 768.393,
+    "avg": 40.89158822652757,
+    "unit": "mg",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:12:31"
+  },
+  "DietarySodium": {
+    "count": 854,
+    "min": 0.0,
+    "max": 10000.0,
+    "avg": 455.7149165187355,
+    "unit": "mg",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:13:05"
+  },
+  "DietaryCarbohydrates": {
+    "count": 1153,
+    "min": 0.0,
+    "max": 252.632,
+    "avg": 37.37422982133563,
+    "unit": "g",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:13:05"
+  },
+  "DietaryFiber": {
+    "count": 803,
+    "min": 0.0,
+    "max": 20.0,
+    "avg": 3.098140200498128,
+    "unit": "g",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:13:05"
+  },
+  "DietarySugar": {
+    "count": 837,
+    "min": 0.0,
+    "max": 176.842,
+    "avg": 8.437770664277183,
+    "unit": "g",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:12:31"
+  },
+  "DietaryEnergyConsumed": {
+    "count": 1153,
+    "min": 0.0,
+    "max": 2273.68,
+    "avg": 291.50513812662587,
+    "unit": "Cal",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:13:05"
+  },
+  "DietaryProtein": {
+    "count": 1153,
+    "min": 0.0,
+    "max": 104.0,
+    "avg": 10.831930452731994,
+    "unit": "g",
+    "first_record": "2024-11-17 18:12:27",
+    "last_record": "2025-06-24 14:13:05"
+  },
+  "DietaryVitaminA": {
+    "count": 534,
+    "min": 0.0,
+    "max": 554400.0,
+    "avg": 7263.889276404495,
+    "unit": "mcg",
+    "first_record": "2024-06-21 20:17:33",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryVitaminB6": {
+    "count": 182,
+    "min": 0.0,
+    "max": 1.1816,
+    "avg": 0.16797800615384612,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryVitaminB12": {
+    "count": 182,
+    "min": 0.0,
+    "max": 1.5925,
+    "avg": 0.2430384615384616,
+    "unit": "mcg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryVitaminC": {
+    "count": 534,
+    "min": 0.0,
+    "max": 655.2,
+    "avg": 12.074082696629207,
+    "unit": "mg",
+    "first_record": "2024-06-21 20:17:33",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryVitaminD": {
+    "count": 494,
+    "min": 0.0,
+    "max": 17.25,
+    "avg": 0.3919021578947367,
+    "unit": "mcg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-06-24 14:12:31"
+  },
+  "DietaryVitaminE": {
+    "count": 206,
+    "min": 0.0,
+    "max": 6.657,
+    "avg": 0.5177597339805824,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryVitaminK": {
+    "count": 182,
+    "min": 0.0,
+    "max": 24.892,
+    "avg": 3.027141714285715,
+    "unit": "mcg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryCalcium": {
+    "count": 656,
+    "min": 0.0,
+    "max": 942.857,
+    "avg": 55.697248993902384,
+    "unit": "mg",
+    "first_record": "2024-06-21 20:17:33",
+    "last_record": "2025-06-24 14:12:31"
+  },
+  "DietaryIron": {
+    "count": 662,
+    "min": 0.0,
+    "max": 1313.68,
+    "avg": 21.06015850030213,
+    "unit": "mg",
+    "first_record": "2024-06-21 20:17:33",
+    "last_record": "2025-06-24 14:12:31"
+  },
+  "DietaryThiamin": {
+    "count": 182,
+    "min": 0.0,
+    "max": 0.8802,
+    "avg": 0.1598101868131868,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryRiboflavin": {
+    "count": 182,
+    "min": 0.0,
+    "max": 0.68708,
+    "avg": 0.15871161868131875,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryNiacin": {
+    "count": 182,
+    "min": 0.027675,
+    "max": 26.8181,
+    "avg": 2.3950617252747253,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryFolate": {
+    "count": 182,
+    "min": 0.0,
+    "max": 345.06,
+    "avg": 55.13879703296702,
+    "unit": "mcg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryPantothenicAcid": {
+    "count": 182,
+    "min": 0.0,
+    "max": 2.29442,
+    "avg": 0.6831897912087913,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryPhosphorus": {
+    "count": 182,
+    "min": 0.0,
+    "max": 592.2,
+    "avg": 124.8301328571428,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryMagnesium": {
+    "count": 198,
+    "min": 0.0,
+    "max": 1008.0,
+    "avg": 56.07299080808076,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryZinc": {
+    "count": 186,
+    "min": 0.0,
+    "max": 2.8658,
+    "avg": 0.8688228172043017,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietarySelenium": {
+    "count": 182,
+    "min": 0.0,
+    "max": 56.252,
+    "avg": 14.957203296703298,
+    "unit": "mcg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryCopper": {
+    "count": 182,
+    "min": 0.0,
+    "max": 0.87665,
+    "avg": 0.11282492890109894,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryManganese": {
+    "count": 182,
+    "min": 0.0,
+    "max": 2.8028,
+    "avg": 0.445683124175824,
+    "unit": "mg",
+    "first_record": "2024-06-21 21:17:34",
+    "last_record": "2025-04-17 11:33:23"
+  },
+  "DietaryPotassium": {
+    "count": 696,
+    "min": 0.0,
+    "max": 2295.0,
+    "avg": 163.0477112068966,
+    "unit": "mg",
+    "first_record": "2024-06-21 20:17:33",
+    "last_record": "2025-06-24 14:12:31"
+  },
+  "AppleExerciseTime": {
+    "count": 34703,
+    "min": 1.0,
+    "max": 1.0,
+    "avg": 1.0,
+    "unit": "min",
+    "first_record": "2024-11-24 19:37:00",
+    "last_record": "2026-01-10 20:14:00"
+  },
+  "DistanceCycling": {
+    "count": 262,
+    "min": 1.26723e-06,
+    "max": 0.478456,
+    "avg": 0.02184974458099237,
+    "unit": "mi",
+    "first_record": "2024-08-16 15:44:16",
+    "last_record": "2025-12-04 20:41:09"
+  },
+  "DistanceSwimming": {
+    "count": 1358,
+    "min": 25.0,
+    "max": 648.0,
+    "avg": 27.170103092783506,
+    "unit": "yd",
+    "first_record": "2025-06-22 18:53:09",
+    "last_record": "2025-11-25 18:36:58"
+  },
+  "SwimmingStrokeCount": {
+    "count": 1333,
+    "min": 1.0,
+    "max": 19.0,
+    "avg": 7.874718679669917,
+    "unit": "count",
+    "first_record": "2025-06-22 18:53:09",
+    "last_record": "2025-11-25 18:36:58"
+  },
+  "RestingHeartRate": {
+    "count": 772,
+    "min": 47.0,
+    "max": 96.0,
+    "avg": 59.64637305699482,
+    "unit": "count/min",
+    "first_record": "2024-10-27 23:02:53",
+    "last_record": "2026-01-10 00:01:43"
+  },
+  "VO2Max": {
+    "count": 375,
+    "min": 32.47,
+    "max": 41.25,
+    "avg": 35.08085333333333,
+    "unit": "mL/min\u00b7kg",
+    "first_record": "2024-12-02 17:08:34",
+    "last_record": "2026-01-10 20:17:47"
+  },
+  "WalkingHeartRateAverage": {
+    "count": 730,
+    "min": 68.0,
+    "max": 174.0,
+    "avg": 111.1,
+    "unit": "count/min",
+    "first_record": "2024-11-24 00:05:59",
+    "last_record": "2026-01-10 00:01:43"
+  },
+  "EnvironmentalAudioExposure": {
+    "count": 30035,
+    "min": 32.6704,
+    "max": 101.213,
+    "avg": 59.531455282170555,
+    "unit": "dBASPL",
+    "first_record": "2024-11-24 17:28:57",
+    "last_record": "2026-01-10 22:45:48"
+  },
+  "HeadphoneAudioExposure": {
+    "count": 41519,
+    "min": 0.0,
+    "max": 106.951,
+    "avg": 71.8622139659735,
+    "unit": "dBASPL",
+    "first_record": "2024-11-24 22:26:06",
+    "last_record": "2026-01-10 23:47:58"
+  },
+  "WalkingDoubleSupportPercentage": {
+    "count": 30012,
+    "min": 0.216,
+    "max": 0.364,
+    "avg": 0.2995582100493122,
+    "unit": "%",
+    "first_record": "2024-11-24 17:45:47",
+    "last_record": "2026-01-10 23:19:57"
+  },
+  "SixMinuteWalkTestDistance": {
+    "count": 108,
+    "min": 437.0,
+    "max": 500.0,
+    "avg": 492.6203703703704,
+    "unit": "m",
+    "first_record": "2024-11-30 07:10:36",
+    "last_record": "2026-01-05 06:54:43"
+  },
+  "AppleStandTime": {
+    "count": 33432,
+    "min": 1.0,
+    "max": 5.0,
+    "avg": 2.5581777937305574,
+    "unit": "min",
+    "first_record": "2024-11-24 17:35:00",
+    "last_record": "2026-01-10 23:25:00"
+  },
+  "WalkingSpeed": {
+    "count": 31247,
+    "min": 0.917144,
+    "max": 4.6752,
+    "avg": 2.6708233651549365,
+    "unit": "mi/hr",
+    "first_record": "2024-11-24 17:45:47",
+    "last_record": "2026-01-10 23:19:57"
+  },
+  "WalkingStepLength": {
+    "count": 31246,
+    "min": 9.05512,
+    "max": 53.1496,
+    "avg": 27.42375024707126,
+    "unit": "in",
+    "first_record": "2024-11-24 17:45:47",
+    "last_record": "2026-01-10 23:19:57"
+  },
+  "WalkingAsymmetryPercentage": {
+    "count": 16007,
+    "min": 0.0,
+    "max": 1.0,
+    "avg": 0.011242581370650397,
+    "unit": "%",
+    "first_record": "2024-11-24 18:26:31",
+    "last_record": "2026-01-10 21:18:51"
+  },
+  "StairAscentSpeed": {
+    "count": 2897,
+    "min": 0.656431,
+    "max": 3.54134,
+    "avg": 0.951018990680014,
+    "unit": "ft/s",
+    "first_record": "2024-11-24 19:37:00",
+    "last_record": "2026-01-10 11:13:28"
+  },
+  "StairDescentSpeed": {
+    "count": 3429,
+    "min": 0.656749,
+    "max": 3.13776,
+    "avg": 1.211393032079326,
+    "unit": "ft/s",
+    "first_record": "2024-11-24 17:44:29",
+    "last_record": "2026-01-10 20:32:25"
+  },
+  "SleepDurationGoal": {
+    "count": 3,
+    "min": 7.0,
+    "max": 8.5,
+    "avg": 7.833333333333333,
+    "unit": "hr",
+    "first_record": "2023-09-12 21:24:47",
+    "last_record": "2020-06-26 17:37:43"
+  },
+  "AppleWalkingSteadiness": {
+    "count": 112,
+    "min": 0.917249,
+    "max": 1.0,
+    "avg": 0.9696033660714287,
+    "unit": "%",
+    "first_record": "2024-08-31 16:00:00",
+    "last_record": "2026-01-03 16:00:00"
+  },
+  "AppleSleepingWristTemperature": {
+    "count": 263,
+    "min": 93.548,
+    "max": 100.027,
+    "avg": 95.83857452471476,
+    "unit": "degF",
+    "first_record": "2024-03-17 00:30:00",
+    "last_record": "2026-01-09 00:10:01"
+  },
+  "RunningStrideLength": {
+    "count": 9,
+    "min": 1.28059,
+    "max": 1.46,
+    "avg": 1.3867322222222223,
+    "unit": "m",
+    "first_record": "2024-05-25 19:08:55",
+    "last_record": "2024-05-26 16:59:26"
+  },
+  "RunningVerticalOscillation": {
+    "count": 10,
+    "min": 9.7,
+    "max": 10.8079,
+    "avg": 10.090790000000002,
+    "unit": "cm",
+    "first_record": "2024-05-25 19:08:52",
+    "last_record": "2024-05-26 16:59:28"
+  },
+  "RunningGroundContactTime": {
+    "count": 9,
+    "min": 266.0,
+    "max": 290.139,
+    "avg": 274.4598888888889,
+    "unit": "ms",
+    "first_record": "2024-05-25 19:08:57",
+    "last_record": "2024-05-26 16:59:28"
+  },
+  "HeartRateRecoveryOneMinute": {
+    "count": 178,
+    "min": 18.6488,
+    "max": 46.3234,
+    "avg": 32.981707865168524,
+    "unit": "count/min",
+    "first_record": "2024-05-26 17:16:14",
+    "last_record": "2026-01-08 11:52:08"
+  },
+  "UnderwaterDepth": {
+    "count": 277,
+    "min": 3.28271,
+    "max": 12.2465,
+    "avg": 4.769321552346567,
+    "unit": "ft",
+    "first_record": "2025-06-22 19:03:18",
+    "last_record": "2025-08-05 19:55:01"
+  },
+  "RunningPower": {
+    "count": 175,
+    "min": 62.0,
+    "max": 355.0,
+    "avg": 126.59508171428571,
+    "unit": "W",
+    "first_record": "2024-05-25 19:08:44",
+    "last_record": "2025-09-25 09:24:25"
+  },
+  "EnvironmentalSoundReduction": {
+    "count": 7036,
+    "min": 1.01757,
+    "max": 29.0,
+    "avg": 20.787065399374598,
+    "unit": "dBASPL",
+    "first_record": "2024-11-26 20:39:24",
+    "last_record": "2026-01-10 23:00:35"
+  },
+  "RunningSpeed": {
+    "count": 181,
+    "min": 0.753487,
+    "max": 8.97887,
+    "avg": 3.4089425856353626,
+    "unit": "mi/hr",
+    "first_record": "2024-05-25 19:08:44",
+    "last_record": "2025-09-25 09:24:28"
+  },
+  "AppleSleepingBreathingDisturbances": {
+    "count": 380,
+    "min": 0.0,
+    "max": 5.25381,
+    "avg": 1.547960357894737,
+    "unit": "count",
+    "first_record": "2024-11-25 00:02:16",
+    "last_record": "2026-01-10 00:18:47"
+  },
+  "WaterTemperature": {
+    "count": 1335,
+    "min": 76.118,
+    "max": 101.264,
+    "avg": 82.89233857677849,
+    "unit": "degF",
+    "first_record": "2025-06-29 19:34:11",
+    "last_record": "2025-08-28 18:56:50"
+  },
+  "TimeInDaylight": {
+    "count": 9636,
+    "min": 1.0,
+    "max": 5.0,
+    "avg": 4.2788501452885015,
+    "unit": "min",
+    "first_record": "2024-11-25 09:11:40",
+    "last_record": "2026-01-10 11:48:23"
+  },
+  "CyclingPower": {
+    "count": 3,
+    "min": 96.5462,
+    "max": 109.266,
+    "avg": 104.05239999999999,
+    "unit": "W",
+    "first_record": "2024-06-02 18:12:04",
+    "last_record": "2024-06-02 18:17:05"
+  },
+  "CyclingSpeed": {
+    "count": 4,
+    "min": 11.8852,
+    "max": 14.5292,
+    "avg": 12.957474999999999,
+    "unit": "mi/hr",
+    "first_record": "2024-06-02 18:12:02",
+    "last_record": "2024-06-02 18:18:44"
+  },
+  "CyclingCadence": {
+    "count": 3,
+    "min": 94.0084,
+    "max": 97.7983,
+    "avg": 96.16456666666666,
+    "unit": "count/min",
+    "first_record": "2024-06-02 18:12:03",
+    "last_record": "2024-06-02 18:17:03"
+  },
+  "PhysicalEffort": {
+    "count": 288627,
+    "min": 1.0,
+    "max": 20.0,
+    "avg": 3.556959328130317,
+    "unit": "kcal/hr\u00b7kg",
+    "first_record": "2024-11-24 17:35:12",
+    "last_record": "2026-01-10 23:49:11"
+  },
+  "DistanceRowing": {
+    "count": 18,
+    "min": 0.100202,
+    "max": 0.436702,
+    "avg": 0.2743196666666667,
+    "unit": "km",
+    "first_record": "2025-08-30 16:15:41",
+    "last_record": "2025-08-30 18:15:22"
+  },
+  "RowingSpeed": {
+    "count": 20,
+    "min": 0.591028,
+    "max": 2.76529,
+    "avg": 1.5775461500000003,
+    "unit": "mi/hr",
+    "first_record": "2025-08-30 16:15:41",
+    "last_record": "2025-08-30 18:15:31"
+  },
+  "SleepAnalysis": {
+    "count": 25417,
+    "type": "categorical/text",
+    "first_record": "2019-07-13 01:58:24",
+    "last_record": "2026-01-10 07:53:30"
+  },
+  "AppleStandHour": {
+    "count": 16149,
+    "type": "categorical/text",
+    "first_record": "2023-11-04 19:00:00",
+    "last_record": "2026-01-10 23:00:00"
+  },
+  "MenstrualFlow": {
+    "count": 5,
+    "type": "categorical/text",
+    "first_record": "2024-02-26 12:00:00",
+    "last_record": "2024-03-01 12:00:00"
+  },
+  "SexualActivity": {
+    "count": 1,
+    "type": "categorical/text",
+    "first_record": "2025-10-06 12:02:00",
+    "last_record": "2025-10-06 12:02:00"
+  },
+  "MindfulSession": {
+    "count": 8,
+    "type": "categorical/text",
+    "first_record": "2019-10-04 18:52:00",
+    "last_record": "2025-10-26 08:19:02"
+  },
+  "HighHeartRateEvent": {
+    "count": 61,
+    "type": "categorical/text",
+    "first_record": "2025-09-22 19:14:33",
+    "last_record": "2025-12-31 21:40:32"
+  },
+  "LowHeartRateEvent": {
+    "count": 1627,
+    "type": "categorical/text",
+    "first_record": "2024-02-16 04:07:35",
+    "last_record": "2025-12-18 04:39:57"
+  },
+  "AudioExposureEvent": {
+    "count": 67,
+    "type": "categorical/text",
+    "first_record": "2023-11-08 22:05:55",
+    "last_record": "2025-12-15 20:21:25"
+  },
+  "HeadphoneAudioExposureEvent": {
+    "count": 206,
+    "type": "categorical/text",
+    "first_record": "2023-08-22 20:29:09",
+    "last_record": "2026-01-08 13:40:28"
+  },
+  "LowCardioFitnessEvent": {
+    "count": 2,
+    "type": "categorical/text",
+    "first_record": "2024-02-22 23:14:45",
+    "last_record": "2025-03-05 11:33:56"
+  },
+  "HandwashingEvent": {
+    "count": 461,
+    "type": "categorical/text",
+    "first_record": "2024-01-24 18:30:51",
+    "last_record": "2026-01-10 20:33:58"
+  },
+  "UnsuccessfulBloodOxygenSaturationAnalysisEvent": {
+    "count": 2,
+    "type": "categorical/text",
+    "first_record": "2025-10-09 07:32:45",
+    "last_record": "2025-10-09 07:32:45"
+  },
+  "HeartRateVariabilitySDNN": {
+    "count": 7302,
+    "min": 6.02521,
+    "max": 274.623,
+    "avg": 60.457946577649885,
+    "unit": "ms",
+    "first_record": "2023-11-05 00:01:14",
+    "last_record": "2026-01-10 23:11:55"
+  }
+}

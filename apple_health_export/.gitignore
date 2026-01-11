@@ -1,0 +1,11 @@
+# Large XML and JSON files (ignored in favor of .gz versions)
+export.xml
+export_cda.xml
+full_health_data.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Mac OS
+.DS_Store

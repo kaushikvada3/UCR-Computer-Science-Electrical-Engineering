@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Health Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Extra styles for layout */
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        aside {
+            width: 300px;
+            background: var(--card-bg);
+            border-right: var(--card-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .search-box {
+            padding: 1rem;
+            border-bottom: var(--card-border);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 8px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .metric-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .metric-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .metric-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .metric-item.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .header-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .chart-container-large {
+            flex: 1;
+            min-height: 400px;
+        }
+    </style>
+</head>
+
+<body>
+    <aside>
+        <div class="search-box">
+            <input type="text" id="search" placeholder="Search metrics...">
+        </div>
+        <div class="metric-list" id="metricList">
+            <!-- Populated by JS -->
+        </div>
+    </aside>
+
+    <main>
+        <header style="margin-bottom: 0;">
+            <h2 id="metricTitle">Select a Metric</h2>
+            <div id="metricDesc" class="subtext">--</div>
+        </header>
+
+        <div class="metrics-grid header-stats" id="statsGrid">
+            <!-- Dynamic stats -->
+        </div>
+
+        <div class="card chart-card full-width chart-container-large">
+            <div class="chart-header">
+                <h3>History Graph</h3>
+            </div>
+            <canvas id="mainChart"></canvas>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
