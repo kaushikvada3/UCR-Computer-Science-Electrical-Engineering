@@ -1,0 +1,53 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T18:52:37Z",
+  "id" : "TVOY4ZrPvD7EI491id2VdeyZEzjBrlQ1kAGsUDqFi4ZAB",
+  "code" : {
+    "text" : "LYMPHOCYTES IN BLOOD BY - DI"
+  },
+  "valueQuantity" : {
+    "code" : "%",
+    "value" : 31,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "%"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "%",
+        "value" : 20,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "%"
+      },
+      "high" : {
+        "code" : "%",
+        "value" : 49,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "%"
+      },
+      "text" : "20 - 49 %"
+    }
+  ],
+  "resourceType" : "Observation"
+}

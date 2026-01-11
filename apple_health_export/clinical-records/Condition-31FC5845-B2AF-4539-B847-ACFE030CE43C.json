@@ -1,0 +1,65 @@
+{
+  "id" : "TJbruN1MnrDlO-.vQaFun1wB",
+  "category" : {
+    "text" : "Diagnosis",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Diagnosis",
+        "code" : "29308-4"
+      },
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "Diagnosis",
+        "code" : "439401001"
+      },
+      {
+        "system" : "http://hl7.org/fhir/condition-category",
+        "display" : "Diagnosis",
+        "code" : "diagnosis"
+      },
+      {
+        "system" : "http://argonautwiki.hl7.org/extension-codes",
+        "display" : "Problem",
+        "code" : "problem"
+      }
+    ]
+  },
+  "onsetDateTime" : "2025-03-28",
+  "asserter" : {
+    "display" : "Albana Smurlo, MD",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TFWb5XoSEpo.xXnUsg1ZBpwB"
+  },
+  "resourceType" : "Condition",
+  "abatementDateTime" : "2025-04-10",
+  "verificationStatus" : "confirmed",
+  "code" : {
+    "text" : "Rectal bleeding",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/icd-9-cm/diagnosis",
+        "display" : "Rectal bleeding",
+        "code" : "569.3"
+      },
+      {
+        "system" : "urn:oid:2.16.840.1.113883.6.90",
+        "display" : "Rectal bleeding",
+        "code" : "K62.5"
+      },
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "Rectal hemorrhage (disorder)",
+        "code" : "12063002"
+      }
+    ]
+  },
+  "severity" : {
+    "text" : "Medium"
+  },
+  "dateRecorded" : "2025-03-28",
+  "clinicalStatus" : "resolved",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  }
+}

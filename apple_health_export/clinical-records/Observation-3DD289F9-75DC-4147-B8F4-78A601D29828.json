@@ -1,0 +1,30 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TG.aG5YXLrog2xMMLYV2Qrnr47.c5CH.VMc4V4EQ6T.YB",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "Pediatric reference ranges (age 0-21) originally source from the CALIPER study and adult reference ranges from the Beckman package insert, with adjustments made for our patient population based on clinical input.",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "resourceType" : "Observation"
+}

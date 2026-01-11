@@ -1,0 +1,47 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "value" : 2.99,
+    "unit" : "mcIntl_unit/mL"
+  },
+  "id" : "T040jJjfxdWHQeQp.Z06Hk4h4K2Kj.O2HzE96EDHRWkcB",
+  "code" : {
+    "text" : "THYROID STIMULATING HORMONE"
+  },
+  "comments" : "1.)   (Medium Importance) Interpretive Data by SYSTEM on December 07, 2021 12:03\r\nThe reference range for this TSH assay applies to adults only.\r\n",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2021-12-07T19:05:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "value" : 0.45,
+        "unit" : "mcIntl_unit/mL"
+      },
+      "high" : {
+        "value" : 5.33,
+        "unit" : "mcIntl_unit/mL"
+      },
+      "text" : "0.450 - 5.330 mcIntl_unit/mL"
+    }
+  ],
+  "resourceType" : "Observation"
+}

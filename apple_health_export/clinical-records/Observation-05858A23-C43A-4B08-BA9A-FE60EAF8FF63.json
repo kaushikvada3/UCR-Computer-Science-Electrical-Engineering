@@ -1,0 +1,60 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2024-06-12T17:03:00Z",
+  "id" : "TQ6DJPAMo9.yJUNKpksvH.SqEL7vFbrbO6qXIEUHxBwUB",
+  "code" : {
+    "text" : "CHLORIDE (MMOL/L) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Chloride [Moles/volume] in Serum or Plasma",
+        "code" : "2075-0"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "mmol/L",
+    "value" : 104,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mmol/L"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2024-06-12T17:03:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "mmol/L",
+        "value" : 98,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mmol/L"
+      },
+      "high" : {
+        "code" : "mmol/L",
+        "value" : 107,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mmol/L"
+      },
+      "text" : "98 - 107 mmol/L"
+    }
+  ],
+  "resourceType" : "Observation"
+}

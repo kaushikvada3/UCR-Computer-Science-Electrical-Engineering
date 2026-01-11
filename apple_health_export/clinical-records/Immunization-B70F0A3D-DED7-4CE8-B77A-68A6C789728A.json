@@ -1,0 +1,22 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TsBQkdE4LLG9KkCgHlxeWeAB",
+  "vaccineCode" : {
+    "text" : "Influenza, Unspecified",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "INFLUENZA, UNSPECIFIED",
+        "code" : "88"
+      }
+    ]
+  },
+  "date" : "2012-10-11",
+  "reported" : true,
+  "resourceType" : "Immunization"
+}

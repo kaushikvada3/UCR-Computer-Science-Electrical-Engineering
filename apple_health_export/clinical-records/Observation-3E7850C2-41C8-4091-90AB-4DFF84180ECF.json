@@ -1,0 +1,56 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Vital Signs",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Vital Signs",
+        "code" : "vital-signs"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "%",
+    "value" : 98,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "%"
+  },
+  "id" : "TASgq.MDcjG.om7.2CmtK78D.vyh1zKijFpdU3vh2hGPwr4WhGFT7YPmpPpLH6Q5uB",
+  "code" : {
+    "text" : "SpO2",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Oxygen saturation in Arterial blood",
+        "code" : "2708-6"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Oxygen saturation in Capillary blood by Oximetry",
+        "code" : "2710-2"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Oxygen saturation in Arterial blood by Pulse oximetry",
+        "code" : "59408-5"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Oxygen saturation in Arterial blood by Pulse oximetry --on room air",
+        "code" : "59410-1"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Vital signs",
+        "code" : "8716-3"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2015-06-01T22:23:00Z",
+  "resourceType" : "Observation"
+}

@@ -1,0 +1,46 @@
+{
+  "id" : "Tbk2fPct4iIs4OztMCa9gtgB",
+  "wasNotGiven" : false,
+  "resourceType" : "Immunization",
+  "reported" : true,
+  "lotNumber" : "EW0186",
+  "date" : "2021-05-26",
+  "manufacturer" : {
+    "display" : "Pfizer-BioNTech"
+  },
+  "route" : {
+    "text" : "Intramuscular",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4030",
+        "display" : "Intramuscular",
+        "code" : "2"
+      }
+    ]
+  },
+  "vaccineCode" : {
+    "text" : "Pfizer Purple Cap SARS-CoV-2 Vaccination",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "PFIZER PURPLE CAP SARS-COV-2 VACCINATION",
+        "code" : "208"
+      }
+    ]
+  },
+  "site" : {
+    "text" : "Left deltoid",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4040",
+        "display" : "Left deltoid",
+        "code" : "7"
+      }
+    ]
+  },
+  "status" : "completed",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  }
+}

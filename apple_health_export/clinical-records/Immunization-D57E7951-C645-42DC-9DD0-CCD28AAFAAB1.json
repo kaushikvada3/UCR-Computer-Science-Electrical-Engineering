@@ -1,0 +1,46 @@
+{
+  "id" : "T7RAkWm4oo-USdt10W.GyIwB",
+  "wasNotGiven" : false,
+  "resourceType" : "Immunization",
+  "reported" : true,
+  "lotNumber" : "AHBVC070AA",
+  "date" : "2012-05-01",
+  "manufacturer" : {
+    "display" : "GlaxoSmithKline"
+  },
+  "route" : {
+    "text" : "Intramuscular",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4030",
+        "display" : "Intramuscular",
+        "code" : "2"
+      }
+    ]
+  },
+  "vaccineCode" : {
+    "text" : "Hep B, Adolescent or Pediatric",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "HEP B, ADOLESCENT OR PEDIATRIC",
+        "code" : "08"
+      }
+    ]
+  },
+  "site" : {
+    "text" : "Left deltoid",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4040",
+        "display" : "Left deltoid",
+        "code" : "7"
+      }
+    ]
+  },
+  "status" : "completed",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  }
+}

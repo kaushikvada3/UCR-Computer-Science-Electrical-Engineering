@@ -1,0 +1,40 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-06-25T16:14:57Z",
+  "id" : "TaQ8fV8NNUMBGcWmx0zB6mRPUA-tI92.7N4fqo3bwg.0B",
+  "code" : {
+    "text" : "MEAN GLUCOSE",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Glucose mean value [Mass/volume] in Blood Estimated from glycated hemoglobin",
+        "code" : "27353-2"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "value" : 97
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Carter Wahl, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TW8fKOexRAlvAdNZpuIDTIgB"
+    }
+  ],
+  "effectiveDateTime" : "2025-06-25T16:14:00Z",
+  "resourceType" : "Observation"
+}

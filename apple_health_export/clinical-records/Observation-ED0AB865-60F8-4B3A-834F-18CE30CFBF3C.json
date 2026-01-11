@@ -1,0 +1,53 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T18:52:37Z",
+  "id" : "TVOY4ZrPvD7EI491id2Vde9em3oIaOXMMnP1JCrffbKUB",
+  "code" : {
+    "text" : "EOSINOPHILS IN BLOOD - DI"
+  },
+  "valueQuantity" : {
+    "code" : "%",
+    "value" : 4,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "%"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "%",
+        "value" : 0,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "%"
+      },
+      "high" : {
+        "code" : "%",
+        "value" : 8,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "%"
+      },
+      "text" : "0 - 8 %"
+    }
+  ],
+  "resourceType" : "Observation"
+}

@@ -1,0 +1,29 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TzYhguZ93SiO6-65UCzKKeQB",
+  "vaccineCode" : {
+    "text" : "Meningococcal B, Omv",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "MENINGOCOCCAL B, OMV",
+        "code" : "163"
+      }
+    ]
+  },
+  "date" : "2021-12-07",
+  "reported" : true,
+  "lotNumber" : "ABXB34AA",
+  "resourceType" : "Immunization",
+  "doseQuantity" : {
+    "code" : "mL",
+    "value" : 0.5,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mL"
+  }
+}

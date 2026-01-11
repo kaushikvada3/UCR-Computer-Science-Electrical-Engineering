@@ -1,0 +1,29 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TzmOHdw6W03Lx4kuWbV3J2gB",
+  "vaccineCode" : {
+    "text" : "HPV 9-Valent (Gardasil)",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "HPV 9-VALENT (GARDASIL)",
+        "code" : "165"
+      }
+    ]
+  },
+  "date" : "2017-11-28",
+  "reported" : true,
+  "lotNumber" : "NO21571",
+  "resourceType" : "Immunization",
+  "doseQuantity" : {
+    "code" : "mL",
+    "value" : 0.5,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mL"
+  }
+}

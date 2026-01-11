@@ -1,0 +1,22 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "T.2ZAw-bkVJUB0cJuPygWYAB",
+  "vaccineCode" : {
+    "text" : "OPV",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "OPV",
+        "code" : "02"
+      }
+    ]
+  },
+  "date" : "2005-07-21",
+  "reported" : true,
+  "resourceType" : "Immunization"
+}

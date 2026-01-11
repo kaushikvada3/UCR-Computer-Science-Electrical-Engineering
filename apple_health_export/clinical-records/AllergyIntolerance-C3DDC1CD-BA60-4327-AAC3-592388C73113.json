@@ -1,0 +1,24 @@
+{
+  "status" : "confirmed",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB",
+  "recorder" : {
+    "display" : "Albana Smurlo, MD",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TFWb5XoSEpo.xXnUsg1ZBpwB"
+  },
+  "substance" : {
+    "text" : "No Known Allergies",
+    "coding" : [
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "No known allergy",
+        "code" : "716186003"
+      }
+    ]
+  },
+  "recordedDate" : "2025-06-25T15:45:38Z",
+  "resourceType" : "AllergyIntolerance"
+}

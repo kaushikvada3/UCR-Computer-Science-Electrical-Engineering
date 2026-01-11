@@ -1,0 +1,46 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Vital Signs",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Vital Signs",
+        "code" : "vital-signs"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "kg",
+    "value" : 59.4,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "kg"
+  },
+  "id" : "TASgq.MDcjG.om7.2CmtK73.zLokNHXXgwOyhW8kvIuA0OWS6kpb.NpVW5SKJfrKbB",
+  "code" : {
+    "text" : "Weight",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Body weight",
+        "code" : "29463-7"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Body weight Measured",
+        "code" : "3141-9"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Vital signs",
+        "code" : "8716-3"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2018-05-29T23:09:00Z",
+  "resourceType" : "Observation"
+}

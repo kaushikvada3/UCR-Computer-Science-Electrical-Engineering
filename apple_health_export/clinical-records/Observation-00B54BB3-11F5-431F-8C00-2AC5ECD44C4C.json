@@ -1,0 +1,53 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "value" : 3.7,
+    "unit" : "K/mcL"
+  },
+  "id" : "Tnhr52j2cinrFtbYNKXtw.9a9Iz89u205sRtXKBpkntAB",
+  "code" : {
+    "text" : "ABSOLUTE NEUTROPHILS (K/MCL) - DI",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Neutrophils [#/volume] in Blood by Automated count",
+        "code" : "751-8"
+      }
+    ]
+  },
+  "referenceRange" : [
+    {
+      "low" : {
+        "value" : 1.8,
+        "unit" : "K/mcL"
+      },
+      "high" : {
+        "value" : 7.8,
+        "unit" : "K/mcL"
+      },
+      "text" : "1.8 - 7.8 K/mcL"
+    }
+  ],
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2021-12-07T19:05:00Z",
+  "resourceType" : "Observation"
+}

@@ -1,0 +1,64 @@
+{
+  "asserter" : {
+    "display" : "Albana Smurlo, MD",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TFWb5XoSEpo.xXnUsg1ZBpwB"
+  },
+  "dateRecorded" : "2025-04-10",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TBBi-mipxi66SVUALPFhDvgB",
+  "code" : {
+    "text" : "ALT (SGPT) level raised",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/icd-9-cm/diagnosis",
+        "display" : "ALT (SGPT) level raised",
+        "code" : "790.4"
+      },
+      {
+        "system" : "urn:oid:2.16.840.1.113883.6.90",
+        "display" : "ALT (SGPT) level raised",
+        "code" : "R74.01"
+      },
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "Alanine aminotransferase (serum glutamic-pyruvic transaminase) level raised (finding)",
+        "code" : "409673008"
+      }
+    ]
+  },
+  "category" : {
+    "text" : "Diagnosis",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Diagnosis",
+        "code" : "29308-4"
+      },
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "Diagnosis",
+        "code" : "439401001"
+      },
+      {
+        "system" : "http://hl7.org/fhir/condition-category",
+        "display" : "Diagnosis",
+        "code" : "diagnosis"
+      },
+      {
+        "system" : "http://argonautwiki.hl7.org/extension-codes",
+        "display" : "Problem",
+        "code" : "problem"
+      }
+    ]
+  },
+  "clinicalStatus" : "active",
+  "verificationStatus" : "confirmed",
+  "onsetDateTime" : "2025-04-10",
+  "resourceType" : "Condition",
+  "severity" : {
+    "text" : "Medium"
+  }
+}

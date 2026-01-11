@@ -1,0 +1,74 @@
+{
+  "status" : "completed",
+  "dosage" : [
+    {
+      "asNeededBoolean" : true,
+      "timing" : {
+        "code" : {
+          "text" : "if needed"
+        },
+        "repeat" : {
+          "period" : 1,
+          "periodUnits" : "d",
+          "frequency" : 1,
+          "boundsPeriod" : {
+            "start" : "2014-02-19",
+            "end" : "2025-03-28"
+          }
+        }
+      },
+      "text" : "USE 1 UNIT DOSE EVERY 4-6 HOURS AS NEEDED FOR WHEEZING ."
+    }
+  ],
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "Te8fCRUBW7O5dAbdWyp8UrgB",
+  "effectivePeriod" : {
+    "start" : "2014-02-19",
+    "end" : "2025-03-28"
+  },
+  "medicationCodeableConcept" : {
+    "text" : "albuterol 2.5 mg /3 mL (0.083 %) nebulizer solution",
+    "coding" : [
+      {
+        "system" : "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "display" : "albuterol 2.5 mg /3 mL (0.083 %) nebulizer solution",
+        "code" : "630208"
+      }
+    ]
+  },
+  "identifier" : [
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.2.798268",
+      "value" : "16604535"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.3.798268.801",
+      "value" : "16604535:0656776826"
+    }
+  ],
+  "informationSource" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "extension" : [
+    {
+      "url" : "http://hl7.org/fhir/3.0/StructureDefinition/extension-MedicationStatement.category",
+      "valueCodeableConcept" : {
+        "text" : "Patient Specified",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/medication-statement-category",
+            "display" : "Patient Specified",
+            "code" : "patientspecified"
+          }
+        ]
+      }
+    }
+  ],
+  "resourceType" : "MedicationStatement"
+}

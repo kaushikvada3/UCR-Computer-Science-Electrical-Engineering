@@ -1,0 +1,30 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TgDevVNoG34xUnoL4c4bsM8im9p5wxP5TQeg.yjfh9EQB",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "Optimal results are individualized and depend on the risk factors and clinical context. For further details, please see most recent guidelines.\r\n\r\n\r\nEstablishing appropriate treatment strategies and lipid goals require the results for each component of the Lipid Panel be considered in context with other risk factors, including age, sex, smoking status, family and personal history of heart disease. ",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-06-25T16:14:00Z",
+  "resourceType" : "Observation"
+}

@@ -1,0 +1,79 @@
+{
+  "id" : "TkEH0sRQLcnrWuzWcEyW.DKcK6O4aHbK7QRUqdW65e6YB",
+  "medicationCodeableConcept" : {
+    "text" : "hydrocortisone-pramoxine 2.5-1 % rectal cream",
+    "coding" : [
+      {
+        "system" : "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "display" : "hydrocortisone-pramoxine 2.5-1 % rectal cream",
+        "code" : "1294025"
+      }
+    ]
+  },
+  "note" : "Reported on 6/25/2025",
+  "resourceType" : "MedicationStatement",
+  "identifier" : [
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.2.798268",
+      "value" : "168522870"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.3.798268.801",
+      "value" : "168522870:2568069919"
+    }
+  ],
+  "informationSource" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "dosage" : [
+    {
+      "text" : "Not taking: Reported on 6/25/2025",
+      "timing" : {
+        "repeat" : {
+          "boundsPeriod" : {
+            "start" : "2025-03-28",
+            "end" : "2025-06-25"
+          }
+        }
+      },
+      "method" : {
+        "text" : "Insert",
+        "coding" : [
+          {
+            "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.4.798268.8600",
+            "display" : "Insert",
+            "code" : "5"
+          }
+        ]
+      }
+    }
+  ],
+  "effectivePeriod" : {
+    "start" : "2025-03-28",
+    "end" : "2025-06-25"
+  },
+  "extension" : [
+    {
+      "url" : "http://hl7.org/fhir/3.0/StructureDefinition/extension-MedicationStatement.category",
+      "valueCodeableConcept" : {
+        "text" : "Community",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/medication-statement-category",
+            "display" : "Community",
+            "code" : "community"
+          }
+        ]
+      }
+    }
+  ],
+  "wasNotTaken" : true,
+  "status" : "completed",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  }
+}

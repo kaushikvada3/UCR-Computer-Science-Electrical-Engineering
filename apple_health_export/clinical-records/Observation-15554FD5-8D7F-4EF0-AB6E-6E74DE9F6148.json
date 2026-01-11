@@ -1,0 +1,30 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TLS.4QgZw8q1QlrkEYs72dgZSNKdBM9foMEKhQjRKVe8B",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "HEPATITIS C INDEX VALUE\r\n0.0 to 0.79     Negative/nonreactive.\r\n\r\n\r\n0.8 to 0.99     Equivocal.Repeat antibody screen with or without hepatitis C virus quantitative by PCR.\r\n\r\n\r\n>= 1.0          Positive/reactive.Confirmatory testing with hepatitis C virus quantitative by PCR is recommended.",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-06-25T16:14:00Z",
+  "resourceType" : "Observation"
+}

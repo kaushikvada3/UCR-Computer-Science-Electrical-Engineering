@@ -1,0 +1,62 @@
+{
+  "id" : "Tx0RoTWvq9HJL-stBlNr4sgB",
+  "wasNotGiven" : false,
+  "resourceType" : "Immunization",
+  "reported" : false,
+  "expirationDate" : "2025-06-30",
+  "performer" : {
+    "display" : "Samantha R, RN",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/T1nNtUaAkFmRNHXDk8aLL3AB"
+  },
+  "date" : "2024-09-25",
+  "lotNumber" : "UT8415JA",
+  "manufacturer" : {
+    "display" : "Sanofi Pasteur"
+  },
+  "route" : {
+    "text" : "Intramuscular",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4030",
+        "display" : "Intramuscular",
+        "code" : "2"
+      }
+    ]
+  },
+  "vaccineCode" : {
+    "text" : "Influenza, split virus, injectable, trivalent, preservative free (Flulaval/Fluzone/Fluarix)",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "INFLUENZA, SPLIT VIRUS, INJECTABLE, TRIVALENT, PRESERVATIVE FREE (FLULAVAL/FLUZONE/FLUARIX)",
+        "code" : "140"
+      },
+      {
+        "system" : "http://hl7.org/fhir/sid/ndc",
+        "display" : "49281-424-88",
+        "code" : "49281-424-88"
+      }
+    ]
+  },
+  "site" : {
+    "text" : "Left deltoid",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4040",
+        "display" : "Left deltoid",
+        "code" : "7"
+      }
+    ]
+  },
+  "doseQuantity" : {
+    "code" : "mL",
+    "value" : 0.5,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mL"
+  },
+  "status" : "completed",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  }
+}

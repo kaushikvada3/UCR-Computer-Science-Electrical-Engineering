@@ -1,0 +1,30 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TIKsr5hFo4Od.BJ4pURV8U7rk7ITxet9H-VvEjWcvsRYB",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "TOTAL CHOLESTEROL:\r\nDesirable: <200 mg/dL \r\nBorderline high: 200 -239 mg/dL \r\nHigh: > or = 240 mg/dL  \r\nOptimal results are individualized and depend on the risk factors and clinical context.  For further details, please see most recent guidelines.",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2024-06-12T17:03:00Z",
+  "resourceType" : "Observation"
+}

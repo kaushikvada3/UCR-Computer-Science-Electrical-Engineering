@@ -1,0 +1,30 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TNgFC73Nw1yRg8-NloF8MQFkd3RTajWzv-NPD4Gc.00gB",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "For the majority of patients, HgbA1c is a good estimate of average glucose over the last three months. According to the American Diabetes Association:\r\nA1c < 5.7% is considered normal. \r\nA1c 5.7% to 6.4% is considered pre diabetes \r\nA1c > or = 6.5% is considered diabete",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Carter Wahl, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TW8fKOexRAlvAdNZpuIDTIgB"
+    }
+  ],
+  "effectiveDateTime" : "2025-06-25T16:14:00Z",
+  "resourceType" : "Observation"
+}

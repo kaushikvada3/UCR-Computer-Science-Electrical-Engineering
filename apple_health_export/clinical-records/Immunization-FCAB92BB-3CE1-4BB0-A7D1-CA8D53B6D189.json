@@ -1,0 +1,22 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "T9NRzPj-ebNAJAiWdmzO2VAB",
+  "vaccineCode" : {
+    "text" : "MMR",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "MMR",
+        "code" : "03"
+      }
+    ]
+  },
+  "date" : "2005-12-10",
+  "reported" : true,
+  "resourceType" : "Immunization"
+}

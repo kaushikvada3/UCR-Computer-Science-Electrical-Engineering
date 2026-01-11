@@ -1,0 +1,52 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-06-25T16:14:57Z",
+  "id" : "Ta54R8nM9pIKWBGfPE57kCHXs84eq3y5qmwCRnzb5J-0B",
+  "code" : {
+    "text" : "HEPATITIS B VIRUS SURFACE AG PRESENCE IN SERUM",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Hepatitis B virus surface Ag [Presence] in Serum or Plasma by Immunoassay",
+        "code" : "5196-1"
+      }
+    ]
+  },
+  "referenceRange" : [
+    {
+      "text" : "Negative"
+    }
+  ],
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-06-25T16:14:00Z",
+  "valueCodeableConcept" : {
+    "text" : "Negative",
+    "coding" : [
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "Negative (qualifier value)",
+        "code" : "260385009"
+      }
+    ]
+  },
+  "resourceType" : "Observation"
+}

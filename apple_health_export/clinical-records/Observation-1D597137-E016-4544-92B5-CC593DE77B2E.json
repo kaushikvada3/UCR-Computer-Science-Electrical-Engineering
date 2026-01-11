@@ -1,0 +1,48 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-04-05T16:12:00Z",
+  "id" : "Tvpyxfw2LhRaUoLofSYM9JAQnMEQ9iVIwzPnxFKrlsbgB",
+  "code" : {
+    "text" : "HEMOGLOBIN A1C/HEMOGLOBIN TOTAL IN BLOOD",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Hemoglobin A1c/Hemoglobin.total in Blood",
+        "code" : "4548-4"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "%",
+    "value" : 5.1,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "%"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-04-05T16:12:00Z",
+  "referenceRange" : [
+    {
+      "text" : "<=6.5"
+    }
+  ],
+  "resourceType" : "Observation"
+}

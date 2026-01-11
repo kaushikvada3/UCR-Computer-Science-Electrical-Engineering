@@ -1,0 +1,43 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T23:56:41Z",
+  "id" : "T5wkgSESha.AXyYJaFV-2uOeZ8zULPbLnC523.mEqMskB",
+  "code" : {
+    "text" : "SHIGA TOXIN ANTIGEN",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Escherichia coli shiga-like toxin [Presence] in Stool by Immunoassay",
+        "code" : "21262-1"
+      }
+    ]
+  },
+  "valueString" : "Negative",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Christopher Wixom, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TUwk4-BlZE.EDo9DL-RigmQB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T23:56:00Z",
+  "referenceRange" : [
+    {
+      "text" : "Negative"
+    }
+  ],
+  "resourceType" : "Observation"
+}

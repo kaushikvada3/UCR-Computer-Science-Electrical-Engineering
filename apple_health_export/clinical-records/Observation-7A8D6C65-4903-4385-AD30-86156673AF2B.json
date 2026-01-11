@@ -1,0 +1,50 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "mg/dL",
+    "value" : 146,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mg/dL"
+  },
+  "id" : "TFlcRbZ43lnopvhJjBLK85cr0zcUIag26XaSPz61awUcB",
+  "code" : {
+    "text" : "NON HDL CHOL. (LDL+VLDL)"
+  },
+  "interpretation" : {
+    "text" : "High",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/ValueSet/observation-interpretation",
+        "display" : "High",
+        "code" : "H"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2021-12-07T19:05:00Z",
+  "referenceRange" : [
+    {
+      "text" : "<=129"
+    }
+  ],
+  "resourceType" : "Observation"
+}

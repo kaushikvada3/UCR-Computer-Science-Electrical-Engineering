@@ -1,0 +1,22 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TA4NIXyDIVtj7AMij-pY2FQB",
+  "vaccineCode" : {
+    "text" : "BCG",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "BCG",
+        "code" : "19"
+      }
+    ]
+  },
+  "date" : "2005-03-25",
+  "reported" : true,
+  "resourceType" : "Immunization"
+}

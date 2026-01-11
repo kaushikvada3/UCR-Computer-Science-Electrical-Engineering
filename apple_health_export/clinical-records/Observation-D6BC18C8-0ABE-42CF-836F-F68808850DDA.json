@@ -1,0 +1,54 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2024-06-12T17:03:00Z",
+  "id" : "TM8aUyQT8gcXqZYMDePfelQ6NsEOeozyjYaSB.NgTblMB",
+  "code" : {
+    "text" : "LEUKOCYTES(K/MCL) IN BLOOD BY AUTOMATED COUNT",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Leukocytes [#/volume] corrected for nucleated erythrocytes in Blood by Automated count",
+        "code" : "33256-9"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "value" : 6.7,
+    "unit" : "K/mcL"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2024-06-12T17:03:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "value" : 4.2,
+        "unit" : "K/mcL"
+      },
+      "high" : {
+        "value" : 10.2,
+        "unit" : "K/mcL"
+      },
+      "text" : "4.2 - 10.2 K/mcL"
+    }
+  ],
+  "resourceType" : "Observation"
+}

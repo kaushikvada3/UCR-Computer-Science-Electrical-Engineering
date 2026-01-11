@@ -1,0 +1,59 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "mEq/L",
+    "value" : 30,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mEq/L"
+  },
+  "id" : "TT5xtCcqT2QMZ7YChW.H4BUXOpI-1YmJBY7rhU3HYT3cB",
+  "code" : {
+    "text" : "CARBON DIOXIDE, TOTAL (MMOL/L) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Carbon dioxide, total [Moles/volume] in Serum or Plasma",
+        "code" : "2028-9"
+      }
+    ]
+  },
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "mEq/L",
+        "value" : 22,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mEq/L"
+      },
+      "high" : {
+        "code" : "mEq/L",
+        "value" : 32,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mEq/L"
+      },
+      "text" : "22 - 32 mEq/L"
+    }
+  ],
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2021-12-07T19:05:00Z",
+  "resourceType" : "Observation"
+}

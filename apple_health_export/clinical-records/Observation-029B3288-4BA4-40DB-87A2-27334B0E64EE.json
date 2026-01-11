@@ -1,0 +1,58 @@
+{
+  "id" : "TioP31nKwoPbtOE-U5kxZT6ASCRi15Dp13VRslvDwKpIB",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "resourceType" : "Observation",
+  "code" : {
+    "text" : "ALANINE AMINOTRANSFERASE",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+        "code" : "1742-6"
+      }
+    ]
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "interpretation" : {
+    "text" : "High",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/ValueSet/observation-interpretation",
+        "display" : "High",
+        "code" : "H"
+      }
+    ]
+  },
+  "referenceRange" : [
+    {
+      "text" : "7 - 52"
+    }
+  ],
+  "valueQuantity" : {
+    "code" : "U/L",
+    "value" : 66,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "U/L"
+  },
+  "status" : "final",
+  "issued" : "2025-03-28T18:52:37Z"
+}

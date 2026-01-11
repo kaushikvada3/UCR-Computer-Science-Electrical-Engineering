@@ -1,0 +1,22 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "Tnj7lBsIxvnwNeBrB75SS5gB",
+  "vaccineCode" : {
+    "text" : "Influenza, injectable, MDCK, preservative free, quadrivalent",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "INFLUENZA, INJECTABLE, MDCK, PRESERVATIVE FREE, QUADRIVALENT",
+        "code" : "171"
+      }
+    ]
+  },
+  "date" : "2020-10-05",
+  "reported" : true,
+  "resourceType" : "Immunization"
+}

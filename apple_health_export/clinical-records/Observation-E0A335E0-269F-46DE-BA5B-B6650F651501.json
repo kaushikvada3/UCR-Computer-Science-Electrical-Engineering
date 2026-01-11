@@ -1,0 +1,60 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T18:52:37Z",
+  "id" : "TioP31nKwoPbtOE-U5kxZT9PEmtbvh-hu4YrL.MoR4xkB",
+  "code" : {
+    "text" : "SODIUM (MMOL/L) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Sodium [Moles/volume] in Serum or Plasma",
+        "code" : "2951-2"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "mmol/L",
+    "value" : 138,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mmol/L"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "mmol/L",
+        "value" : 136,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mmol/L"
+      },
+      "high" : {
+        "code" : "mmol/L",
+        "value" : 145,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mmol/L"
+      },
+      "text" : "136 - 145 mmol/L"
+    }
+  ],
+  "resourceType" : "Observation"
+}

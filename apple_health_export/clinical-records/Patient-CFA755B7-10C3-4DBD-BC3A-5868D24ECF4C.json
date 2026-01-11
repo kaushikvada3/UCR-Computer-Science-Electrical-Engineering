@@ -1,0 +1,168 @@
+{
+  "id" : "TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB",
+  "birthDate" : "2005-03-17",
+  "resourceType" : "Patient",
+  "active" : true,
+  "telecom" : [
+    {
+      "system" : "phone",
+      "value" : "858-305-8647",
+      "use" : "home"
+    },
+    {
+      "system" : "phone",
+      "value" : "858-305-8647",
+      "use" : "mobile"
+    },
+    {
+      "system" : "email",
+      "value" : "kaushikvada3@gmail.com"
+    },
+    {
+      "system" : "email",
+      "value" : "kaushikvada@outlook.com"
+    }
+  ],
+  "careProvider" : [
+    {
+      "display" : "Albana Smurlo, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TFWb5XoSEpo.xXnUsg1ZBpwB"
+    }
+  ],
+  "deceasedBoolean" : false,
+  "identifier" : [
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.5.737384.0",
+      "value" : "E2837291"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.3.7.5.737384.14",
+      "value" : "105195875"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.5.737384.135001",
+      "value" : "4832211"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.5.737384.230001",
+      "value" : "02-21-30-31"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.5.737384.230007",
+      "value" : "04-36-07-64"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.5.737384.1640000010",
+      "value" : "967252109"
+    }
+  ],
+  "address" : [
+    {
+      "use" : "home",
+      "line" : [
+        "10791 RENEGADE CT"
+      ],
+      "state" : "CA",
+      "city" : "SAN DIEGO",
+      "country" : "US",
+      "postalCode" : "92126-1073"
+    }
+  ],
+  "maritalStatus" : {
+    "text" : "Single",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/ValueSet/v3-NullFlavor",
+        "display" : "Other",
+        "code" : "OTH"
+      }
+    ]
+  },
+  "communication" : [
+    {
+      "preferred" : true,
+      "language" : {
+        "text" : "English",
+        "coding" : [
+          {
+            "system" : "urn:oid:2.16.840.1.113883.6.99",
+            "display" : "English",
+            "code" : "en"
+          }
+        ]
+      }
+    }
+  ],
+  "extension" : [
+    {
+      "url" : "http://hl7.org/fhir/StructureDefinition/us-core-race",
+      "valueCodeableConcept" : {
+        "text" : "Asian",
+        "coding" : [
+          {
+            "system" : "urn:oid:2.16.840.1.113883.5.104",
+            "display" : "Asian",
+            "code" : "2028-9"
+          }
+        ]
+      }
+    },
+    {
+      "url" : "http://hl7.org/fhir/StructureDefinition/us-core-ethnicity",
+      "valueCodeableConcept" : {
+        "text" : "Unknown",
+        "coding" : [
+          {
+            "system" : "urn:oid:2.16.840.1.113883.5.50",
+            "display" : "Unknown",
+            "code" : "UNK"
+          }
+        ]
+      }
+    },
+    {
+      "url" : "http://hl7.org/fhir/StructureDefinition/us-core-birth-sex",
+      "valueCodeableConcept" : {
+        "text" : "Male",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/v3/AdministrativeGender",
+            "display" : "Male",
+            "code" : "M"
+          }
+        ]
+      }
+    }
+  ],
+  "name" : [
+    {
+      "use" : "official",
+      "text" : "Venkata Kaushik Vada",
+      "family" : [
+        "Vada"
+      ],
+      "given" : [
+        "Venkata",
+        "Kaushik"
+      ]
+    },
+    {
+      "use" : "usual",
+      "text" : "Venkata Kaushik Vada",
+      "family" : [
+        "Vada"
+      ],
+      "given" : [
+        "Venkata",
+        "Kaushik"
+      ]
+    }
+  ],
+  "gender" : "male"
+}

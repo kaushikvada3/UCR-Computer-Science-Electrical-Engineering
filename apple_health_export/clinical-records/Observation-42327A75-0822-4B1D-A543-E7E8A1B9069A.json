@@ -1,0 +1,47 @@
+{
+  "id" : "TE-C2MC6UTckpaTE2ibjWfsUKwskdADqFsZ-adQYu2.YB",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2025-03-28T23:56:00Z",
+  "comments" : "Reference Interval\r\n\r\n    < 49 mcg/g - Normal \r\n50 - 120 mcg/g - Borderline elevated, test should be re-evaluated in\r\n                 4-6 weeks\r\n     121 mcg/g - Elevated",
+  "resourceType" : "Observation",
+  "code" : {
+    "text" : "CALPROTECTIN",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Calprotectin [Mass/volume] in Stool",
+        "code" : "82874-9"
+      }
+    ]
+  },
+  "performer" : [
+    {
+      "display" : "Christopher Wixom, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TUwk4-BlZE.EDo9DL-RigmQB"
+    }
+  ],
+  "referenceRange" : [
+    {
+      "text" : "<49"
+    }
+  ],
+  "valueQuantity" : {
+    "value" : 11,
+    "unit" : "mcg/g"
+  },
+  "status" : "final",
+  "issued" : "2025-03-28T23:56:41Z"
+}

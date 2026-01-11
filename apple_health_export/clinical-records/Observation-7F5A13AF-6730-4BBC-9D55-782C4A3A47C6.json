@@ -1,0 +1,30 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TwkugjKziyxEoJ3YN6n3LypvPe.mMYnUvkfXNo3wzQEUB",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "e GFR Reference Ranges\r\n\r\n\r\nGFR Categories in Chronic Kidney Disease (CKD)\r\n\t\r\nGFR Category  GFR (mL/min/1.73 square meter) Interpretation\r\nG1            90 or greater                  Normal or high*\r\nG2            60-89                          Mild decrease*\r\nG3a           45-59                          Mild to moderate decrease\r\nG3b           30-44                          Moderate to severe decrease\r\nG4            15-29                          Severe decrease\r\nG5            14 or less                     Kidney failure\r\n\r\n\r\n*In the absence of evidence of kidney damage, neither GFR category G1 nor G2 fulfill the criteria for CKD (Kidney Int Suppl 2013;3:1-150)",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2024-06-12T17:03:00Z",
+  "resourceType" : "Observation"
+}

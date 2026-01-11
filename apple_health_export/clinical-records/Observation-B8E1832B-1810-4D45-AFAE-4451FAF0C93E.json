@@ -1,0 +1,48 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2024-06-12T17:03:00Z",
+  "id" : "TM8aUyQT8gcXqZYMDePfelZ5MJm0HwTuiMllUJYu4LucB",
+  "code" : {
+    "text" : "HEMATOCRIT (%) IN BLOOD BY AUTOMATED COUNT",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Hematocrit [Volume Fraction] of Blood by Automated count",
+        "code" : "4544-3"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "%",
+    "value" : 43.8,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "%"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2024-06-12T17:03:00Z",
+  "referenceRange" : [
+    {
+      "text" : "33.8 - 48.2"
+    }
+  ],
+  "resourceType" : "Observation"
+}

@@ -1,0 +1,39 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Vital Signs",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Vital Signs",
+        "code" : "vital-signs"
+      }
+    ]
+  },
+  "id" : "TASgq.MDcjG.om7.2CmtK7..T9NHsej7jONqEAtySDzUnZ8enahdDxRC7QiNwU5GqB",
+  "code" : {
+    "text" : "R BP LOCATION",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Vital signs",
+        "code" : "8716-3"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "valueCodeableConcept" : {
+    "text" : "Left arm",
+    "coding" : [
+      {
+        "display" : "Left arm",
+        "code" : "Left arm"
+      }
+    ]
+  },
+  "effectiveDateTime" : "2022-10-26T18:56:00Z",
+  "resourceType" : "Observation"
+}

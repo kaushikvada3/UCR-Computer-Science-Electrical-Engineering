@@ -1,0 +1,69 @@
+{
+  "id" : "Tz95G0Pb9HGUJ0MbQFtgzSnkllTuCLFNRWhdFQtTm9R0B",
+  "medicationCodeableConcept" : {
+    "text" : "atropine 1 % ophthalmic solution",
+    "coding" : [
+      {
+        "system" : "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "display" : "atropine 1 % ophthalmic solution",
+        "code" : "1190655"
+      }
+    ]
+  },
+  "note" : "Reported on 6/25/2025",
+  "resourceType" : "MedicationStatement",
+  "identifier" : [
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.2.798268",
+      "value" : "105960469"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.3.798268.801",
+      "value" : "105960469:1632029618"
+    }
+  ],
+  "informationSource" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "dosage" : [
+    {
+      "text" : "Not taking: Reported on 6/25/2025",
+      "timing" : {
+        "repeat" : {
+          "boundsPeriod" : {
+            "start" : "2022-12-15",
+            "end" : "2025-06-25"
+          }
+        }
+      }
+    }
+  ],
+  "effectivePeriod" : {
+    "start" : "2022-12-15",
+    "end" : "2025-06-25"
+  },
+  "extension" : [
+    {
+      "url" : "http://hl7.org/fhir/3.0/StructureDefinition/extension-MedicationStatement.category",
+      "valueCodeableConcept" : {
+        "text" : "Patient Specified",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/medication-statement-category",
+            "display" : "Patient Specified",
+            "code" : "patientspecified"
+          }
+        ]
+      }
+    }
+  ],
+  "wasNotTaken" : true,
+  "status" : "completed",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  }
+}

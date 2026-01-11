@@ -1,0 +1,64 @@
+{
+  "asserter" : {
+    "display" : "Albana Smurlo, MD",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TFWb5XoSEpo.xXnUsg1ZBpwB"
+  },
+  "dateRecorded" : "2025-06-27",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TYOXEa3CK91VYGYgAfoMjoQB",
+  "code" : {
+    "text" : "Vitamin D deficiency",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/icd-9-cm/diagnosis",
+        "display" : "Vitamin D deficiency",
+        "code" : "268.9"
+      },
+      {
+        "system" : "urn:oid:2.16.840.1.113883.6.90",
+        "display" : "Vitamin D deficiency",
+        "code" : "E55.9"
+      },
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "Vitamin D deficiency (disorder)",
+        "code" : "34713006"
+      }
+    ]
+  },
+  "category" : {
+    "text" : "Diagnosis",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Diagnosis",
+        "code" : "29308-4"
+      },
+      {
+        "system" : "http://snomed.info/sct",
+        "display" : "Diagnosis",
+        "code" : "439401001"
+      },
+      {
+        "system" : "http://hl7.org/fhir/condition-category",
+        "display" : "Diagnosis",
+        "code" : "diagnosis"
+      },
+      {
+        "system" : "http://argonautwiki.hl7.org/extension-codes",
+        "display" : "Problem",
+        "code" : "problem"
+      }
+    ]
+  },
+  "clinicalStatus" : "active",
+  "verificationStatus" : "confirmed",
+  "onsetDateTime" : "2025-06-27",
+  "resourceType" : "Condition",
+  "severity" : {
+    "text" : "Medium"
+  }
+}

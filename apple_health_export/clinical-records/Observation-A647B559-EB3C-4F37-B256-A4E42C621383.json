@@ -1,0 +1,60 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T18:52:37Z",
+  "id" : "TioP31nKwoPbtOE-U5kxZT5ane3h1VFhvNnzP8grWAdEB",
+  "code" : {
+    "text" : "POTASSIUM (MMOL/L) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Potassium [Moles/volume] in Serum or Plasma",
+        "code" : "2823-3"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "mmol/L",
+    "value" : 4.4,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mmol/L"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "mmol/L",
+        "value" : 3.5,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mmol/L"
+      },
+      "high" : {
+        "code" : "mmol/L",
+        "value" : 5.1,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mmol/L"
+      },
+      "text" : "3.5 - 5.1 mmol/L"
+    }
+  ],
+  "resourceType" : "Observation"
+}

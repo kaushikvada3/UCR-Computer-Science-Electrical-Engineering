@@ -1,0 +1,46 @@
+{
+  "id" : "TYvAts1QPysUOp36ehxOT4wB",
+  "wasNotGiven" : false,
+  "resourceType" : "Immunization",
+  "reported" : true,
+  "lotNumber" : "1026AA",
+  "date" : "2012-05-01",
+  "manufacturer" : {
+    "display" : "Merck & Co. Inc"
+  },
+  "route" : {
+    "text" : "Subcutaneous",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4030",
+        "display" : "Subcutaneous",
+        "code" : "5"
+      }
+    ]
+  },
+  "vaccineCode" : {
+    "text" : "MMR",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "MMR",
+        "code" : "03"
+      }
+    ]
+  },
+  "site" : {
+    "text" : "Right arm",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.768076.4040",
+        "display" : "Right arm",
+        "code" : "15"
+      }
+    ]
+  },
+  "status" : "completed",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  }
+}

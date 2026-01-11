@@ -1,0 +1,60 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T18:52:37Z",
+  "id" : "THo3IdsWky2Lm98LGkJv83UKRkUGswGjXobTZY165Hf0B",
+  "code" : {
+    "text" : "THYROXINE (T4) FREE (NG/DL) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Thyroxine (T4) free [Mass/volume] in Serum or Plasma",
+        "code" : "3024-7"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "ng/dL",
+    "value" : 0.79,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "ng/dL"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "ng/dL",
+        "value" : 0.62,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "ng/dL"
+      },
+      "high" : {
+        "code" : "ng/dL",
+        "value" : 1.6,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "ng/dL"
+      },
+      "text" : "0.62 - 1.60 ng/dL"
+    }
+  ],
+  "resourceType" : "Observation"
+}

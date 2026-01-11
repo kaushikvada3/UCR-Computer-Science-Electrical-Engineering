@@ -1,0 +1,47 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T18:52:37Z",
+  "id" : "TZcREVefBBT9mCSnTkVqrpxt1.pzcLEpSRgCFaf3iYiAB",
+  "code" : {
+    "text" : "THYROID STIMULATING HORMONE"
+  },
+  "valueQuantity" : {
+    "value" : 3.02,
+    "unit" : "mcIU/mL"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "value" : 0.45,
+        "unit" : "mcIU/mL"
+      },
+      "high" : {
+        "value" : 5.33,
+        "unit" : "mcIU/mL"
+      },
+      "text" : "0.45 - 5.33 mcIU/mL"
+    }
+  ],
+  "resourceType" : "Observation"
+}

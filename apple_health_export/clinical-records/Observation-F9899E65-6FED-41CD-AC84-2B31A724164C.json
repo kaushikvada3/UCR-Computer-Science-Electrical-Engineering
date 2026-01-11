@@ -1,0 +1,60 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-09-24T21:27:10Z",
+  "id" : "TJpurL4EcqPUbpnv0fETRpwYajgGPp6LKMujkT55.lB4B",
+  "code" : {
+    "text" : "ALKALINE PHOSPHATASE (U/L) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+        "code" : "6768-6"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "U/L",
+    "value" : 48,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "U/L"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-09-24T21:27:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "U/L",
+        "value" : 34,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "U/L"
+      },
+      "high" : {
+        "code" : "U/L",
+        "value" : 104,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "U/L"
+      },
+      "text" : "34 - 104 U/L"
+    }
+  ],
+  "resourceType" : "Observation"
+}

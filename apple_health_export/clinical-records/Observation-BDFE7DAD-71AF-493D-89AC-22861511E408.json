@@ -1,0 +1,43 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2024-06-12T17:22:21Z",
+  "id" : "T5s3LLTZF-dRXWKhzECGPNiHmB1HtgZU9d4zy1Y7rc98B",
+  "code" : {
+    "text" : "PH OF URINE",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "pH of Urine by Test strip",
+        "code" : "5803-2"
+      }
+    ]
+  },
+  "valueString" : "5.5",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2024-06-12T17:22:00Z",
+  "referenceRange" : [
+    {
+      "text" : "5.0 - 9.0"
+    }
+  ],
+  "resourceType" : "Observation"
+}

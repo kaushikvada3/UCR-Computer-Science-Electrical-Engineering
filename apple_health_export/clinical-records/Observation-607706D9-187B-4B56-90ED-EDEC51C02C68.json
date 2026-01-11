@@ -1,0 +1,30 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TcJ8OM-pwFWHvzjT-ZoRy8gNHNae0Xg0h6UWzIFGubxMB",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "NEGATIVE for Shiga Toxins 1 and 2. The Shiga toxin EIA is a rapid qualitative test that detects all Shiga toxin-producing E. coli, including E. coli 0157.",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Christopher Wixom, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TUwk4-BlZE.EDo9DL-RigmQB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T23:56:00Z",
+  "resourceType" : "Observation"
+}

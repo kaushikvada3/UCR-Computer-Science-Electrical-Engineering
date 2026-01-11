@@ -1,0 +1,60 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T18:52:37Z",
+  "id" : "TVOY4ZrPvD7EI491id2Vde-Ize4UBCfKwdp0RppGdXgcB",
+  "code" : {
+    "text" : "ERYTHROCYTE MEAN CORPUSCULAR VOLUME (FL) BY AUTOMATED COUNT",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "MCV [Entitic volume] by Automated count",
+        "code" : "787-2"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "fL",
+    "value" : 87,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "fL"
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "fL",
+        "value" : 78,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "fL"
+      },
+      "high" : {
+        "code" : "fL",
+        "value" : 96,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "fL"
+      },
+      "text" : "78 - 96 fL"
+    }
+  ],
+  "resourceType" : "Observation"
+}

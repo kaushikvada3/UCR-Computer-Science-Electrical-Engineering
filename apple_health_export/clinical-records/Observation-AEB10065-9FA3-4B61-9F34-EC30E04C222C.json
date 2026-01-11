@@ -1,0 +1,43 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "issued" : "2025-03-28T23:56:41Z",
+  "id" : "TZ7bJvf7cATypbr47ZGgj8tr08Tq3SbHXars1vGjPnDIB",
+  "code" : {
+    "text" : "HELICOBACTER PYLORI AG PRESENCE IN STOOL BY IMMUNOASSAY",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Helicobacter pylori Ag [Presence] in Stool by Immunoassay",
+        "code" : "17780-8"
+      }
+    ]
+  },
+  "valueString" : "Negative",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2025-03-28T23:56:00Z",
+  "referenceRange" : [
+    {
+      "text" : "Negative"
+    }
+  ],
+  "resourceType" : "Observation"
+}

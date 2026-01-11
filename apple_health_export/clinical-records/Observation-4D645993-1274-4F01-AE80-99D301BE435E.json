@@ -1,0 +1,24 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "id" : "TsegTUnJGUWM2WNbj6WnMVl3r77-RzpD7iFBQV4-4E2MB",
+  "code" : {
+    "text" : "Narrative"
+  },
+  "valueString" : "The following orders were created for panel order STOOL CULTURE & SHIGA 1/2 TOXIN ANTIGEN, EIA PANEL.\r\nProcedure                               Abnormality         Status                   \r\n---------                               -----------         ------                   \r\nSTOOL CULTURE[168610892]                Normal              Final result             \r\nSHIGA TOXIN 1/2 ANTIGEN,...[168610893]  Normal              Final result             \r\n\r\n\r\nPlease view results for these tests on the individual orders.",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2025-03-28T23:56:00Z",
+  "resourceType" : "Observation"
+}

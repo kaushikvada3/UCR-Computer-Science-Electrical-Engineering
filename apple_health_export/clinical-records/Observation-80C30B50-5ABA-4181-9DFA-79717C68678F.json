@@ -1,0 +1,41 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Vital Signs",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Vital Signs",
+        "code" : "vital-signs"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "code" : "cm",
+    "value" : 142.2,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "cm"
+  },
+  "id" : "TASgq.MDcjG.om7.2CmtK7zcJEL6xv9WHud0uc5A80lQSXhhFFXd23xECR61fUrbLB",
+  "code" : {
+    "text" : "Height",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Body height",
+        "code" : "8302-2"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Vital signs",
+        "code" : "8716-3"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2014-06-10T22:36:00Z",
+  "resourceType" : "Observation"
+}

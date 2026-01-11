@@ -1,0 +1,38 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Vital Signs",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Vital Signs",
+        "code" : "vital-signs"
+      }
+    ]
+  },
+  "valueQuantity" : {
+    "value" : 25.45
+  },
+  "id" : "TASgq.MDcjG.om7.2CmtK7ygZKK5u4iYZTZj8jtWt2UTib1vxPavW0LD90v5XdA4pB",
+  "code" : {
+    "text" : "R BMI",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Body Mass Index (BMI) [Ratio]",
+        "code" : "39156-5"
+      },
+      {
+        "system" : "http://loinc.org",
+        "display" : "Vital signs",
+        "code" : "8716-3"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2020-12-15T22:25:00Z",
+  "resourceType" : "Observation"
+}

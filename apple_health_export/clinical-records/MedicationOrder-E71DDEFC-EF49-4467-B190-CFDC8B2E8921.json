@@ -1,0 +1,162 @@
+{
+  "id" : "TkEH0sRQLcnrWuzWcEyW.DKcK6O4aHbK7QRUqdW65e6YB",
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "resourceType" : "MedicationOrder",
+  "dateWritten" : "2025-03-28",
+  "contained" : [
+    {
+      "code" : {
+        "text" : "HYDROCORTISONE-PRAMOXINE 2.5 %-1 % RECTAL CREAM",
+        "coding" : [
+          {
+            "system" : "http://www.nlm.nih.gov/research/umls/rxnorm",
+            "display" : "HYDROCORTISONE-PRAMOXINE 2.5 %-1 % RECTAL CREAM",
+            "code" : "1294025"
+          }
+        ]
+      },
+      "id" : "T5xSHNtCi944JJoAKcdfvOQB",
+      "resourceType" : "Medication",
+      "product" : {
+        "form" : {
+          "text" : "cream",
+          "coding" : [
+            {
+              "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.4.698288.310",
+              "display" : "cream",
+              "code" : "18"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "identifier" : [
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.2.798268",
+      "value" : "168522870"
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.3.798268.801",
+      "value" : "168522870:2568069919"
+    }
+  ],
+  "reasonEnded" : {
+    "text" : "Therapy completed",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.4.798268.7074",
+        "display" : "Therapy completed",
+        "code" : "10"
+      }
+    ]
+  },
+  "extension" : [
+    {
+      "url" : "http://hl7.org/fhir/3.0/StructureDefinition/extension-MedicationRequest.category",
+      "valueCodeableConcept" : {
+        "text" : "Community",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/medication-request-category",
+            "display" : "Community",
+            "code" : "community"
+          }
+        ]
+      }
+    }
+  ],
+  "dosageInstruction" : [
+    {
+      "method" : {
+        "text" : "Insert",
+        "coding" : [
+          {
+            "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.4.798268.8600",
+            "display" : "Insert",
+            "code" : "5"
+          }
+        ]
+      },
+      "timing" : {
+        "code" : {
+          "text" : "twice a day"
+        },
+        "repeat" : {
+          "frequency" : 2,
+          "period" : 1,
+          "periodUnits" : "d",
+          "boundsPeriod" : {
+            "start" : "2025-03-28",
+            "end" : "2025-06-25"
+          }
+        }
+      },
+      "text" : "Insert 1 Application into the rectum twice a day.",
+      "asNeededBoolean" : false,
+      "extension" : [
+        {
+          "url" : "https://open.epic.com/fhir/extensions/ordered-dose",
+          "valueQuantity" : {
+            "value" : 1,
+            "unit" : "Application"
+          }
+        },
+        {
+          "url" : "https://open.epic.com/fhir/extensions/admin-amount",
+          "valueQuantity" : {
+            "value" : 1,
+            "unit" : "Application"
+          }
+        }
+      ],
+      "route" : {
+        "text" : "rectal",
+        "coding" : [
+          {
+            "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.4.698288.330",
+            "display" : "rectal",
+            "code" : "17"
+          }
+        ]
+      },
+      "doseQuantity" : {
+        "value" : 1,
+        "unit" : "Application"
+      }
+    }
+  ],
+  "dispenseRequest" : {
+    "quantity" : {
+      "code" : "g",
+      "value" : 30,
+      "system" : "http://unitsofmeasure.org",
+      "unit" : "g"
+    },
+    "expectedSupplyDuration" : {
+      "code" : "d",
+      "value" : 15,
+      "system" : "http://unitsofmeasure.org",
+      "unit" : "days"
+    },
+    "validityPeriod" : {
+      "start" : "2025-03-28",
+      "end" : "2025-06-25"
+    },
+    "numberOfRepeatsAllowed" : 0
+  },
+  "prescriber" : {
+    "display" : "Albana Smurlo, MD",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TFWb5XoSEpo.xXnUsg1ZBpwB"
+  },
+  "status" : "stopped",
+  "medicationReference" : {
+    "display" : "hydrocortisone-pramoxine 2.5-1 % rectal cream",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Medication/T5xSHNtCi944JJoAKcdfvOQB"
+  }
+}

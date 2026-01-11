@@ -1,0 +1,31 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "comments" : "1.)   (Medium Importance) Interpretive Data by SYSTEM on December 07, 2021 11:46\r\nLIPID PROFILE\r\n \r\nTRIGLYCERIDES\r\nNormal:        < 150     mg/dL\r\nBorderline high:      150 - 199 mg/dL\r\nHigh:              200 - 499 mg/dL\r\nVery High        > or = 500 mg/dL\r\n \r\nLDL CHOLESTEROL\r\nDesirable:         < 100     mg/dL\r\nAbove Desirable:      100 - 129 mg/dL\r\nBorderline high:      130 - 159 mg/dL\r\nHigh:              160 - 189 mg/dL\r\nVery high:         > or = 190 mg/dL\r\n \r\nHDL CHOLESTEROL\r\n>  or =40 mg/dL\r\n \r\nTOTAL CHOLESTEROL\r\nDesirable:         < 200     mg/dL  \r\nBorderline high:       200 -239 mg/dL\r\nHigh:             > or = 240 mg/dL  \r\n \r\nNON-HDL CHOLESTEROL\r\nDesirable:         <130     mg/ dl \r\nAbove Desirable:      130 - 159 mg/dl\r\nBorderline High:      160 - 189 mg/dl\r\nHigh:              190 - 219 mg/dl\r\nVery high:         > or = 220 mg/dl\r\n \r\nTo calculate total cholesterol: HDL + LDL + TG/5\r\nValues from this equation are only accurate when the patient is \r\nfasting.\r\n \r\nEstablishing appropriate treatment strategies and lipid goals require the results for each component of the lipid profile be considered in context with other risk factors, including age, sex, smoking status, family and personal history of heart disease. \r\n\r\n",
+  "id" : "TFlcRbZ43lnopvhJjBLK85RvqGmd1fINi9kJWyY0j66AB",
+  "code" : {
+    "text" : "LIPID-COMMENT."
+  },
+  "valueString" : "See Comment",
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "effectiveDateTime" : "2021-12-07T19:05:00Z",
+  "resourceType" : "Observation"
+}

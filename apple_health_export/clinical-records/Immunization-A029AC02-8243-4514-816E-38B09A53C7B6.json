@@ -1,0 +1,29 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "TDFG0bAYsGp49OsLapZosnAB",
+  "vaccineCode" : {
+    "text" : "Hep A, Unspecified",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "HEP A, UNSPECIFIED",
+        "code" : "85"
+      }
+    ]
+  },
+  "date" : "2012-06-22",
+  "reported" : true,
+  "lotNumber" : "0271AE",
+  "resourceType" : "Immunization",
+  "doseQuantity" : {
+    "code" : "mL",
+    "value" : 0.5,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mL"
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Lab",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.798268.30",
+        "display" : "Lab",
+        "code" : "Lab"
+      }
+    ]
+  },
+  "issued" : "2021-12-07T19:37:00Z",
+  "id" : "TH.tIV4Xim9A7o94TcrfU9QB",
+  "code" : {
+    "text" : "COMPLETE BLOOD COUNT WITH DIFFERENTIAL  - SRS - Final result"
+  },
+  "result" : [
+    {
+      "display" : "Component: LEUKOCYTES(K/MCL) IN BLOOD BY AUTOMATED COUNT (1)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.wyzxLCYqHesKLZVBggfVC4B"
+    },
+    {
+      "display" : "Component: HEMOGLOBIN (G/DL) IN BLOOD (2)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.yL2jQLFHiXODxjUlg8EoloB"
+    },
+    {
+      "display" : "Component: HEMATOCRIT (%) IN BLOOD BY AUTOMATED COUNT (3)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.xTUR3JbaYBc9J.0tXm8TooB"
+    },
+    {
+      "display" : "Component: PLATELETS (K/MCL) IN BLOOD AUTOMATED COUNT (4)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.yw0zPXjiHNJCk5Djs13PHEB"
+    },
+    {
+      "display" : "Component: ERYTHROCYTE MEAN CORPUSCULAR VOLUME (FL) BY AUTOMATED COUNT (5)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.42KZ7Gc.dW2ZL2aRTP-G18B"
+    },
+    {
+      "display" : "Component: ERYTHROCYTES (M/MCL) IN BLOOD BY AUTOMATED COUNT (6)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.1LVesKP7p5Zuo6x3pUryCkB"
+    },
+    {
+      "display" : "Component: ERYTHROCYTE MEAN CORPUSCULAR HEMOGLOBIN (PG) AUTOMATED CT (7)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.-E6GY4xc5qwF0-jBVXyHJ0B"
+    },
+    {
+      "display" : "Component: ERYTHROCYTE MEAN CORPUSCULAR HEMOGLOBIN CONC (PG) AUTO CT (8)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.4BTDdZ6P0c1SF1uVk835vMB"
+    },
+    {
+      "display" : "Component: ERYTHROCYTE DISTRIBUTION WIDTH AUTO (9)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.5DcIL0NK5pHjvuusgw2Q.UB"
+    },
+    {
+      "display" : "Component: NEUTROPHILS IN BLOOD - DI (10)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.4OAKZdfSddCznWmB6uz8mIB"
+    },
+    {
+      "display" : "Component: LYMPHOCYTES IN BLOOD BY - DI (11)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.2sVoildFL-wYDdzU5WIB9cB"
+    },
+    {
+      "display" : "Component: MONOCYTES IN BLOOD - DI (12)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.28fgQxn7P90YjCQUmX0PH0B"
+    },
+    {
+      "display" : "Component: EOSINOPHILS IN BLOOD - DI (13)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.9m4pw6hyyUfef.0F0T284kB"
+    },
+    {
+      "display" : "Component: BASOPHILS IN BLOOD - DI (14)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.-KLPv9qgesDZS2o7qYdSLkB"
+    },
+    {
+      "display" : "Component: ABSOLUTE NEUTROPHILS (K/MCL) - DI (15)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.9a9Iz89u205sRtXKBpkntAB"
+    },
+    {
+      "display" : "Component: ABS LYMPHOCYTES (K/MCL) IN BLOOD - DI (16)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.567Z.OUnpRimrnSM42OfIkB"
+    },
+    {
+      "display" : "Component: ABS MONOCYTES (K/MCL) IN BLOOD - DI (17)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.3iaDbnhmPMcaN8S5t7OVxUB"
+    },
+    {
+      "display" : "Component: ABS EOSINOPHILS (K/MCL) IN BLOOD - DI (18)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.1c4MjLdtkDTfV9Vkq7i.qIB"
+    },
+    {
+      "display" : "Component: ABS BASOPHILS (K/MCL) IN BLOOD - DI (19)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.71HMwj87rpfDbK10i1Zt7cB"
+    },
+    {
+      "display" : "Component: HEME COMMENT (20)",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/Tnhr52j2cinrFtbYNKXtw.1GRwMfkr7JymTSJNZSN8k8B"
+    }
+  ],
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "identifier" : [
+    {
+      "use" : "official",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.2.798268",
+      "value" : "16604533",
+      "type" : {
+        "text" : "Placer Identifier",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/ValueSet/identifier-type",
+            "display" : "Placer Identifier",
+            "code" : "PLAC"
+          }
+        ]
+      }
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.3.798268.320",
+      "value" : "03-21-341-00162120211207110549",
+      "type" : {
+        "text" : "Filler Identifier",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/ValueSet/identifier-type",
+            "display" : "Filler Identifier",
+            "code" : "FILL"
+          }
+        ]
+      }
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.3.798268.800",
+      "value" : "03-21-341-00162120211207110549",
+      "type" : {
+        "text" : "Filler Identifier",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/ValueSet/identifier-type",
+            "display" : "Filler Identifier",
+            "code" : "FILL"
+          }
+        ]
+      }
+    }
+  ],
+  "effectiveDateTime" : "2021-12-07T19:05:00Z",
+  "performer" : {
+    "display" : "Bob Bernaba, MD",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+  },
+  "resourceType" : "DiagnosticReport"
+}

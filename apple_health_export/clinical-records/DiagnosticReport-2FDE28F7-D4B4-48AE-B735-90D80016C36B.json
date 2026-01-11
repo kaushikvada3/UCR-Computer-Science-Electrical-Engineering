@@ -1,0 +1,77 @@
+{
+  "status" : "final",
+  "category" : {
+    "text" : "Lab",
+    "coding" : [
+      {
+        "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.10.798268.30",
+        "display" : "Lab",
+        "code" : "Lab"
+      }
+    ]
+  },
+  "issued" : "2025-06-25T19:13:59Z",
+  "id" : "TobzocedJunLCHhNHvtmQqtWynLKK.c9XULbNW9CTBKUB",
+  "code" : {
+    "text" : "PTH INTACT (PTH, INTACT) - Final result",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Parathyrin.intact [Mass/volume] in Serum or Plasma",
+        "code" : "2731-8"
+      }
+    ]
+  },
+  "result" : [
+    {
+      "display" : "Component: PARATHYRIN INTACT (PG/ML) IN SER/PLAS",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/TgWlwbst6eUaEd2oEbugaYm6PkCu0eUBqIp4hi6cGg3oB"
+    },
+    {
+      "display" : "Component: CALCIUM (MG/DL) IN SER/PLAS",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Observation/TgWlwbst6eUaEd2oEbugaYkRX6D2j2MeDwBH5tMjXA1cB"
+    }
+  ],
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "identifier" : [
+    {
+      "use" : "official",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.2.798268",
+      "value" : "186786710",
+      "type" : {
+        "text" : "Placer Identifier",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/ValueSet/identifier-type",
+            "display" : "Placer Identifier",
+            "code" : "PLAC"
+          }
+        ]
+      }
+    },
+    {
+      "use" : "usual",
+      "system" : "urn:oid:1.2.840.114350.1.13.683.2.7.3.798268.320:application_id:Beaker",
+      "value" : "25R-176I00068",
+      "type" : {
+        "text" : "Filler Identifier",
+        "coding" : [
+          {
+            "system" : "http://hl7.org/fhir/ValueSet/identifier-type",
+            "display" : "Filler Identifier",
+            "code" : "FILL"
+          }
+        ]
+      }
+    }
+  ],
+  "effectiveDateTime" : "2025-06-25T16:14:00Z",
+  "performer" : {
+    "display" : "Bob Bernaba, MD",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+  },
+  "resourceType" : "DiagnosticReport"
+}

@@ -1,0 +1,61 @@
+{
+  "id" : "TJjMQ6jeLzaEspPxYhpD6QModPS1li-.zBF-PP9AnUsIB",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2025-03-28T18:52:00Z",
+  "comments" : "Reference Range is Valid for Adults Only.",
+  "resourceType" : "Observation",
+  "code" : {
+    "text" : "IGA (MG/DL) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "IgA [Mass/volume] in Serum or Plasma",
+        "code" : "2458-8"
+      }
+    ]
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "mg/dL",
+        "value" : 66,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mg/dL"
+      },
+      "high" : {
+        "code" : "mg/dL",
+        "value" : 433,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mg/dL"
+      },
+      "text" : "66 - 433 mg/dL"
+    }
+  ],
+  "valueQuantity" : {
+    "code" : "mg/dL",
+    "value" : 162,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mg/dL"
+  },
+  "status" : "final",
+  "issued" : "2025-03-28T18:52:37Z"
+}

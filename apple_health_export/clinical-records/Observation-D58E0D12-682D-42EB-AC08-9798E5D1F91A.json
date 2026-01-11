@@ -1,0 +1,61 @@
+{
+  "id" : "TQ6DJPAMo9.yJUNKpksvH.RdRGOemiDWuXJLMSEFCX04B",
+  "category" : {
+    "text" : "Laboratory",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/observation-category",
+        "display" : "Laboratory",
+        "code" : "laboratory"
+      }
+    ]
+  },
+  "subject" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "effectiveDateTime" : "2024-06-12T17:03:00Z",
+  "comments" : "Has the patient been fasting for 8 hours? Yes ",
+  "resourceType" : "Observation",
+  "code" : {
+    "text" : "GLUCOSE (MG/DL) IN SER/PLAS",
+    "coding" : [
+      {
+        "system" : "http://loinc.org",
+        "display" : "Glucose [Mass/volume] in Serum or Plasma",
+        "code" : "2345-7"
+      }
+    ]
+  },
+  "performer" : [
+    {
+      "display" : "Bob Bernaba, MD",
+      "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Practitioner/TqtM5L3JK2RjkoA5WAv3s2wB"
+    }
+  ],
+  "referenceRange" : [
+    {
+      "low" : {
+        "code" : "mg/dL",
+        "value" : 70,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mg/dL"
+      },
+      "high" : {
+        "code" : "mg/dL",
+        "value" : 100,
+        "system" : "http://unitsofmeasure.org",
+        "unit" : "mg/dL"
+      },
+      "text" : "70 - 100 mg/dL"
+    }
+  ],
+  "valueQuantity" : {
+    "code" : "mg/dL",
+    "value" : 88,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mg/dL"
+  },
+  "status" : "final",
+  "issued" : "2024-06-12T17:03:00Z"
+}

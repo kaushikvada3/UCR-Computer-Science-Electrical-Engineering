@@ -1,0 +1,29 @@
+{
+  "status" : "completed",
+  "wasNotGiven" : false,
+  "patient" : {
+    "display" : "Vada, Venkata Kaushik",
+    "reference" : "https://epicproxy.et1275.epichosted.com/fhirproxy/api/FHIR/DSTU2/Patient/TLYmIi7nJEsd0FsQymXbFjgaQJT3Yjhy2slXZ9Lqrc4MB"
+  },
+  "id" : "T.A9Rw3G1E4A8H5dlfrEYRgB",
+  "vaccineCode" : {
+    "text" : "Influenza, live, intranasal, quadrivalent",
+    "coding" : [
+      {
+        "system" : "http://hl7.org/fhir/sid/cvx",
+        "display" : "INFLUENZA, LIVE, INTRANASAL, QUADRIVALENT",
+        "code" : "149"
+      }
+    ]
+  },
+  "date" : "2022-10-26",
+  "reported" : true,
+  "lotNumber" : "PJ3267",
+  "resourceType" : "Immunization",
+  "doseQuantity" : {
+    "code" : "mL",
+    "value" : 0.2,
+    "system" : "http://unitsofmeasure.org",
+    "unit" : "mL"
+  }
+}
