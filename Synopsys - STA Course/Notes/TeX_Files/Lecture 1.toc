@@ -1,0 +1,17 @@
+\contentsline {section}{\numberline {1}The Core Problem: Physics vs. Logic}{2}{section.1}%
+\contentsline {section}{\numberline {2}Why Simulation Fails (And STA Exists)}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}The Simulation Mindset}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}The STA Mindset}{2}{subsection.2.2}%
+\contentsline {section}{\numberline {3}Vector-less Analysis: The Mechanism}{2}{section.3}%
+\contentsline {section}{\numberline {4}Timing Goals \& Frequency}{2}{section.4}%
+\contentsline {section}{\numberline {5}Variability: Why Delay isn't a Single Number}{3}{section.5}%
+\contentsline {section}{\numberline {6}Registers: The Traffic Lights}{3}{section.6}%
+\contentsline {section}{\numberline {7}The Anatomy of a Timing Path}{3}{section.7}%
+\contentsline {section}{\numberline {8}Special Path Types}{3}{section.8}%
+\contentsline {subsection}{\numberline {8.1}False Paths}{3}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Multi-Cycle Paths (MCP)}{4}{subsection.8.2}%
+\contentsline {section}{\numberline {9}The Mathematics of Timing}{4}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Required Time vs. Arrival Time}{4}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Slack}{4}{subsection.9.2}%
+\contentsline {section}{\numberline {10}Early vs. Late Analysis (Crucial)}{4}{section.10}%
+\contentsline {section}{\numberline {11}Summary: The Mental Model}{4}{section.11}%

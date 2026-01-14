@@ -1,0 +1,231 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- Packages ---
+\usepackage[margin=1in]{geometry} % Standard margins
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern} % Sharp, scalable fonts
+\usepackage{amsmath, amssymb} % Math symbols
+\usepackage{xcolor} % Colors
+\usepackage{tcolorbox} % Beautiful boxes
+\tcbuselibrary{skins, breakable}
+\usepackage{enumitem} % Better lists
+\usepackage{fancyhdr} % Headers/Footers
+\usepackage{hyperref} % Clickable links
+\usepackage{titlesec} % Custom section styling
+
+% --- Color Definitions ---
+\definecolor{techblue}{RGB}{0, 51, 102}
+\definecolor{alertred}{RGB}{153, 0, 0}
+\definecolor{softgray}{RGB}{245, 245, 245}
+\definecolor{codegreen}{RGB}{0, 100, 0}
+
+% --- Custom Box Styles ---
+
+% 1. The "Mental Model" Box (Blue)
+\newtcolorbox{mentalmodel}[1]{
+  colback=techblue!5!white,
+  colframe=techblue,
+  fonttitle=\bfseries,
+  title={#1},
+  enhanced,
+  boxrule=0.5mm,
+  attach boxed title to top left={xshift=0.5cm, yshift=-2mm},
+  boxed title style={colback=techblue, sharp corners},
+  breakable
+}
+
+% 2. The "Equation" Box (Gray)
+\newtcolorbox{eqbox}[1]{
+  colback=white,
+  colframe=gray!50!black,
+  fonttitle=\bfseries,
+  title={#1},
+  enhanced,
+  attach boxed title to top center={yshift=-2mm},
+  boxed title style={colback=gray!50!black},
+  sharp corners,
+  breakable
+}
+
+% 3. The "Warning/Crucial" Box (Red)
+\newtcolorbox{crucial}[1]{
+  colback=alertred!5!white,
+  colframe=alertred,
+  fonttitle=\bfseries,
+  title={#1},
+  enhanced,
+  boxrule=0.5mm,
+  attach boxed title to top left={xshift=0.5cm, yshift=-2mm},
+  boxed title style={colback=alertred},
+  breakable
+}
+
+% --- Page Layout ---
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textbf{Static Timing Analysis}}
+\rhead{Teaching Notes}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{1pt}
+
+% --- Title Section ---
+\title{\textbf{\Huge Static Timing Analysis}\\ \Large The Physics of Digital Time}
+\author{\textit{Structured Learning Notes}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+
+\section{The Core Problem: Physics vs. Logic}
+
+Forget software tools for a moment. Think physics. A digital circuit is essentially a race. Signals leave one register, travel through logic gates and wires, and must arrive at the next register at the exact right moment.
+
+\begin{itemize}
+    \item \textbf{Too Late:} Setup failure $\rightarrow$ The wrong value is captured.
+    \item \textbf{Too Early:} Hold failure $\rightarrow$ The new value overwrites the old one too fast.
+\end{itemize}
+
+\begin{mentalmodel}{STA's One Question}
+``For every possible path in this design, under worst-case conditions, will data arrive at the right time?''
+\end{mentalmodel}
+
+\section{Why Simulation Fails (And STA Exists)}
+
+\subsection{The Simulation Mindset}
+Simulation is like watching a movie. You choose input vectors, watch what happens, and hope you covered all cases.
+\begin{itemize}
+    \item \textbf{Problems:} It misses corner cases, it is non-exhaustive, and it is computationally impossible for million-path designs.
+\end{itemize}
+
+\subsection{The STA Mindset}
+STA is like a mathematical proof.
+\begin{itemize}
+    \item No input vectors required.
+    \item No guessing.
+    \item \textbf{Topological Propagation:} It pushes timing through gates, accumulates delay, and stops at endpoints.
+\end{itemize}
+
+\section{Vector-less Analysis: The Mechanism}
+
+STA does not care about logical values (``0'' or ``1''). It ignores functional behavior and focuses entirely on \textbf{delay math}.
+
+\begin{description}
+    \item[Pipes:] Gates + Wires
+    \item[Flow Time:] Delay
+    \item[Reservoirs:] Registers
+\end{description}
+
+\section{Timing Goals \& Frequency}
+
+Every synchronous chip lives under one law: \textbf{Everything must fit inside one clock period.}
+
+If your clock is 1 GHz ($T_{period} = 1\text{ns}$):
+\begin{itemize}
+    \item All logic between registers must finish in $< 1\text{ns}$ (minus uncertainty margins).
+    \item STA verifies frequency targets, signal collisions, and data integrity.
+\end{itemize}
+
+\section{Variability: Why Delay isn't a Single Number}
+
+Delays change constantly due to physics. STA uses \textbf{PVT} (Process, Voltage, Temperature) variations.
+\begin{enumerate}
+    \item \textbf{Process:} Transistors vary during manufacturing.
+    \item \textbf{Voltage:} IR drop slows down switching.
+    \item \textbf{Temperature:} Hot silicon is generally slower.
+    \item \textbf{Noise:} Crosstalk and jitter.
+\end{enumerate}
+
+\begin{crucial}{Min/Max Analysis}
+STA must always assume:
+\begin{itemize}
+    \item \textbf{Worst Case Slow:} For Setup checks (Late Analysis).
+    \item \textbf{Worst Case Fast:} For Hold checks (Early Analysis).
+\end{itemize}
+\end{crucial}
+
+\section{Registers: The Traffic Lights}
+
+Registers define the timing windows. They are not just storage; they are constraints.
+
+\begin{eqbox}{Setup Constraint (Max Delay)}
+Data must arrive \textbf{before} the clock edge.
+\[ T_{data\_delay} + T_{setup} < T_{clock\_period} \]
+\textit{Violation:} Data arrives too late.
+\end{eqbox}
+
+\begin{eqbox}{Hold Constraint (Min Delay)}
+Data must stay stable \textbf{after} the clock edge.
+\[ T_{data\_delay} > T_{hold} \]
+\textit{Violation:} Data changes too early (racing through).
+\end{eqbox}
+
+\section{The Anatomy of a Timing Path}
+
+STA enumerates every possible path between valid \textbf{Startpoints} and \textbf{Endpoints}.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Startpoints} & \textbf{Endpoints} \\
+\hline
+Input Ports & Output Ports \\
+Clock pins of Flip-Flops & Data pins of Flip-Flops \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Special Path Types}
+
+\subsection{False Paths}
+Some paths exist physically but not logically (e.g., mutually exclusive MUX inputs). STA doesn't know logic intent. You must constrain these as \texttt{set\_false\_path}, otherwise STA will report violations for things that never happen.
+
+\subsection{Multi-Cycle Paths (MCP)}
+Logic intentionally designed to take $>1$ cycle (e.g., complex arithmetic). By default, STA assumes everything is single-cycle. MCP constraints relax the \textbf{Required Time}.
+
+\section{The Mathematics of Timing}
+
+\subsection{Required Time vs. Arrival Time}
+\begin{itemize}
+    \item \textbf{Required Time:} The deadline. ``By when \textit{must} data arrive?''
+    \item \textbf{Arrival Time:} The reality. ``When \textit{does} data actually get there?''
+\end{itemize}
+
+\subsection{Slack}
+Slack is the single most important number in a timing report. It represents your \textbf{Margin}.
+
+\begin{eqbox}{The Slack Equation}
+\[ \text{Slack} = \text{Required Time} - \text{Arrival Time} \]
+\end{eqbox}
+
+\begin{itemize}
+    \item \textbf{Positive Slack:} Safe.
+    \item \textbf{Zero Slack:} Razor's edge (exact met timing).
+    \item \textbf{Negative Slack:} \textcolor{alertred}{\textbf{FAILURE}}.
+\end{itemize}
+
+The path with the most negative slack is your \textbf{Critical Path}.
+
+\section{Early vs. Late Analysis (Crucial)}
+
+\begin{mentalmodel}{Two Universes of Analysis}
+\begin{itemize}
+    \item \textbf{Late Analysis (Setup):} Assumes everything is \textbf{slow}. Checks if the signal arrives \textit{before} the next clock edge.
+    \item \textbf{Early Analysis (Hold):} Assumes everything is \textbf{fast}. Checks if the signal stays stable \textit{long enough} after the current clock edge.
+\end{itemize}
+\end{mentalmodel}
+
+\section{Summary: The Mental Model}
+
+Think of Static Timing Analysis as a physics-based scheduling problem with strict deadlines (Required Time) and actual physical estimates (Arrival Time).
+
+\begin{itemize}
+    \item STA is not pessimistic by accident; it is pessimistic by \textbf{design}.
+    \item If you pass STA, you are mathematically guaranteed to work on silicon (within the modeled physics).
+\end{itemize}
+
+\end{document}
