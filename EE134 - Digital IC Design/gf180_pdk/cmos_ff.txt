@@ -1,0 +1,2 @@
+.inc nmos_f.txt
+.inc pmos_f.txt

@@ -1,0 +1,23 @@
+*******************************************************************************************************
+* model for metal 1 resistor
+.subckt rm1 1 2 r_length=l r_width=w dtemp=0 par=1 s=1
+*-------------------
+* body resistor parameters
+.param rsh_rm1='0.09-0.012'
++ r_rsh0=rsh_rm1
++ r_dw=0
++ r_dl=0
++ r_vc1=0
++ r_vc2=0
++ r_tc1=3.33E-3
++ r_tc2=0
++ r_tnom=25
++ r_l='s*(r_length-2*r_dl)'
++ r_w='r_width-2*r_dw'
++ r_n='r_l/r_w'
++ r_temp='1+r_tc1*(temp+dtemp-r_tnom)+r_tc2*(temp+dtemp-r_tnom)*(temp+dtemp-r_tnom)'
+*-------------------
+* body
+rb 1 2 r='r_temp*r_n*(r_rsh0)'
+*-------------------
+.ends rm1

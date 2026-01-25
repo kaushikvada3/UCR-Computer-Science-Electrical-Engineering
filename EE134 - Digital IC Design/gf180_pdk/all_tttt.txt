@@ -1,0 +1,4 @@
+.inc nmos_t.txt
+.inc pmos_t.txt
+.inc m1res_t.txt
+.inc mimcap_t.txt

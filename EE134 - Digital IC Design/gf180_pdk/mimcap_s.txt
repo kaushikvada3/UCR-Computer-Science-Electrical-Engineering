@@ -1,0 +1,20 @@
+*/ -------------------------------------------------------------------------------------
+*/ MIM Capacitor (2fF/um2) subcircuit model for GLOBALFOUNDRIES 0.18 Analog CMOS process M2-M3
+*/--------------------------------------------------------------------------------------
+.subckt mim_2p0fF  1 2  c_length=l  c_width=w dtemp=0 par=1
+.param gleak='9.51e-10/5*10000'
+.param c_cox='1.99e-3*1.1'
+.param c_capsw='2.383e-10*1.1'
+.param c_vcr1='0+(1)*8.742e-6+(1)*(-81e-6)'
+.param c_vcr2='0+(1)*9.188e-6+(1)*(16.7e-6)'
+
+.param c_tnom=25
+.param c_tc1=1.46e-5
+.param c_tc2=-5.55e-8
+.param c_AREA='c_length*c_width'
+.param c_PERI='2*(c_length+c_width)'
+
+.param c_c0='(c_cox*c_AREA+c_capsw*c_PERI)'
+c_cap 1 2 'c_c0'
+r_leak 1 2 r='1/(gleak*c_AREA)'
+.ends mim_2p0fF
