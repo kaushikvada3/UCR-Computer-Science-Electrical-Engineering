@@ -17,7 +17,7 @@
 \rhead{Kaushik Vada \\ EE 134 - Digital IC Design \\ Homework 1 \\ \today}
 \cfoot{Page \thepage \hspace{1pt} of \pageref{LastPage}}
 
-\title{Homework 1}
+\title{Homework 1 Report}
 \author{Kaushik Vada}
 \date{\today}
 
@@ -25,108 +25,125 @@
 
 \maketitle
 
-\section*{Problem 1.1}
+\section*{Part 1: MOSFET Analysis}
+
+\section*{Q1.1: Analytical Current Calculation}
 \subsection*{Calculations}
-The formula for the current is given by:
+The saturation current for a MOSFET is given by the equation:
 \[ I_D = \frac{1}{2} \mu C_{ox} \frac{W}{L} (V_{GS} - V_{th})^2 \]
 
 \textbf{NMOS Current Calculation:}
+Given: $\mu_n C_{ox} = 200 \mu A/V^2$, $W/L = 10$, $V_{GS} = 1.8V$, $V_{th,n} = 0.7V$.
 \[ I_{D,n} = 0.5 \times 200 \times 10 \times (1.8 - 0.7)^2 \]
-\[ I_{D,n} = 1000 \times (1.1)^2 \]
-\[ I_{D,n} = 1000 \times 1.21 = 1210 \, \mu A \]
-NMOS Current = \textbf{1210 $\mu A$}
-
-\vspace{1em}
+\[ I_{D,n} = 1000 \times (1.1)^2 = 1000 \times 1.21 \]
+\[ \mathbf{I_{D,n} = 1210 \, \mu A} \]
 
 \textbf{PMOS Current Calculation:}
+Given: $\mu_p C_{ox} = 80 \mu A/V^2$, $W/L = 20$, $V_{SG} = 1.8V$, $|V_{th,p}| = 0.9V$.
 \[ I_{D,p} = 0.5 \times 80 \times 20 \times (1.8 - 0.9)^2 \]
-\[ I_{D,p} = 800 \times (0.9)^2 \]
-\[ I_{D,p} = 800 \times 0.81 = 648 \, \mu A \]
-PMOS Current = \textbf{648 $\mu A$}
+\[ I_{D,p} = 800 \times (0.9)^2 = 800 \times 0.81 \]
+\[ \mathbf{I_{D,p} = 648 \, \mu A} \]
 
 \subsection*{Analysis}
-PMOS devices have wider channels because the mobility of holes ($\mu_p$) is lower than that of electrons ($\mu_n$). To match the current of an NMOS, the PMOS width must be increased.
+PMOS devices typically have wider channels in digital cells because the mobility of holes ($\mu_p \approx 80$) is significantly lower than that of electrons ($\mu_n \approx 200$). To achieve symmetrical rise and fall times (equal drive current) in a CMOS gate, the PMOS width must be increased to compensate for its lower mobility.
 
-\section*{Problem 1.2}
+\section*{Q1.2: NMOS $I_D - V_G$ Simulation}
 \begin{figure}[H]
     \centering
+    % Ensure you have the file 'Q1.2.png' in your directory
     \includegraphics[width=0.8\textwidth]{Q1.2.png}
-    \caption{Problem 1.2}
+    \caption{NMOS $I_D$ vs $V_{GS}$ Curve}
 \end{figure}
 
-\section*{Problem 1.3}
+\section*{Q1.3: PMOS $I_D - V_G$ Simulation}
 \begin{figure}[H]
     \centering
+    % Ensure you have the file 'Q1.3.png' in your directory
     \includegraphics[width=0.8\textwidth]{Q1.3.png}
-    \caption{Problem 1.3}
+    \caption{PMOS $I_D$ vs $V_{GS}$ Curve}
 \end{figure}
 
-\section*{Problem 1.4}
+\section*{Q1.4: Threshold Voltage Estimation}
+\subsection*{Method of Extrapolation}
+To estimate the threshold voltage ($V_{th}$), the square root of the drain current ($\sqrt{I_D}$) was plotted against the gate voltage ($V_{GS}$). In the saturation region, the relationship $\sqrt{I_D} \propto (V_{GS} - V_{th})$ is linear. By fitting a tangent line to the linear portion of the curve (after the inflection point) and extending it to intersect the x-axis ($V_{GS}$ axis), the x-intercept provides the estimated $V_{th}$.
+
+\subsection*{Results}
+\begin{itemize}
+    \item \textbf{Estimated NMOS $V_{th}$:} 0.726 V
+    \item \textbf{Estimated PMOS $V_{th}$:} [Insert PMOS Value from Plot] V
+\end{itemize}
+
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{Q1.4(a).png}
-    \caption{Problem 1.4 (a)}
+    \includegraphics[width=0.48\textwidth]{Q1.4(a).png}
+    \includegraphics[width=0.48\textwidth]{Q1.4(b).png}
+    \caption{$\sqrt{I_D}$ vs $V_{GS}$ plots for NMOS (left) and PMOS (right).}
 \end{figure}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{Q1.4(b).png}
-    \caption{Problem 1.4 (b)}
-\end{figure}
-Estimated NMOS $V_{th} = 0.726V$.
-
-\section*{Problem 1.5}
+\section*{Q1.5: NMOS $I_D - V_D$ Simulation}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{Q1.5.png}
-    \caption{Problem 1.5}
+    \caption{NMOS $I_D$ vs $V_{DS}$ Family of Curves}
 \end{figure}
 
-\section*{Problem 1.6}
+\textbf{Transition Point Identification:}
+The transition from the linear (triode) region to the saturation region occurs theoretically when $V_{DS} = V_{GS} - V_{th}$. On the waveforms, this is identified as the "knee" of the curve where the current stops increasing linearly with $V_{DS}$ and begins to flatten out.
+
+\section*{Part B: Inverter Analysis}
+
+\section*{Q1.6: Inverter DC Characteristic}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{Q1.6.png}
-    \caption{Problem 1.6}
+    \caption{Inverter Voltage Transfer Characteristic (VTC)}
 \end{figure}
 
-\subsection*{Analysis: Why is the intersection not at 1.5V?}
-The question asks why the intersection isn't exactly at half of $V_{DD}$ (1.5V).
+\subsection*{Intersection Analysis}
+The intersection of $V_{in}$ and $V_{out}$ is located below $V_{DD}/2$ (1.5V).
+\textbf{Explanation:} Even though the PMOS width ($4\mu m$) is twice the NMOS width ($2\mu m$), the NMOS is still effectively "stronger." As calculated in Q1.1, the mobility of electrons ($\mu_n \approx 200$) is roughly 2.5 times higher than the mobility of holes ($\mu_p \approx 80$). Since the width ratio ($W_p/W_n = 2$) is less than the mobility ratio ($\mu_n/\mu_p \approx 2.5$), the NMOS pulls the output low faster than the PMOS pulls it high, shifting the switching threshold to a lower voltage.
 
-\textbf{Explanation:} Even though the PMOS was made wider ($4\mu m$) than the NMOS ($2\mu m$), the NMOS is still "stronger."
-
-\textbf{Reason:} Looking at the mobility values from Q1.1:
-\begin{itemize}
-    \item NMOS Mobility ($\mu_n$) $\approx 200$
-    \item PMOS Mobility ($\mu_p$) $\approx 80$
-\end{itemize}
-The NMOS is roughly 2.5x faster than the PMOS, but the PMOS was only made 2x wider. Therefore, the NMOS is still slightly stronger, pulling the switching point lower than 1.5V.
-
-\section*{Problem 1.7}
+\section*{Q1.7: Sizing for Symmetric Switching}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{Q1.7.png}
-    \caption{Problem 1.7}
+    \caption{Inverter VTC with tuned PMOS width}
 \end{figure}
+To center the intersection at 1.5V ($V_{DD}/2$), the PMOS width was increased to balance the drive strengths.
+\textbf{Updated PMOS Sizing:} $W_p \approx 5 \mu m$ (Theoretical estimate: $2\mu m \times \frac{200}{80} = 5\mu m$).
 
-\section*{Problem 1.8}
+\section*{Q1.8: Transient Simulation}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{Q1.8.png}
-    \caption{Problem 1.8}
+    \caption{Transient Response (Input vs Output)}
 \end{figure}
 
-\section*{Problem 1.9}
+\textbf{Propagation Delay Results:}
+\begin{itemize}
+    \item \textbf{High-to-Low Delay ($t_{pHL}$):} $5.9ns - 5.5ns = \mathbf{0.4 ns}$
+    \item \textbf{Low-to-High Delay ($t_{pLH}$):} $15.16ns - 14.49ns = \mathbf{0.67 ns}$
+\end{itemize}
+
+\section*{Q1.9: Input Capacitance Estimation (Small Inverter)}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{Q1.9.png}
-    \caption{Problem 1.9}
+    \caption{Delay matching for Input Capacitance Estimation}
 \end{figure}
+The input capacitance of Inverter C (NMOS $2\mu m$, PMOS $4\mu m$) was estimated by matching the delay of a loaded reference inverter.
+\textbf{Estimated $C_{in}$:} \textbf{10 fF}
 
-\section*{Problem 1.10}
+\section*{Q1.10: Input Capacitance Estimation (Large Inverter)}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{Q1.10.png}
-    \caption{Problem 1.10}
+    \caption{Delay matching for Large Inverter}
 \end{figure}
+The input capacitance for the larger Inverter C (NMOS $4\mu m$, PMOS $8\mu m$) was estimated.
+\textbf{Estimated $C_{in}$:} \textbf{28 fF}
+
+\subsection*{Explanation of Difference}
+The input capacitance of a MOSFET is dominated by the gate oxide capacitance, defined as $C_{gate} = C_{ox} \times W \times L$. In Q1.10, the dimensions of the inverter were doubled (Widths increased from $2\mu m/4\mu m$ to $4\mu m/8\mu m$) compared to Q1.9, while the length $L$ remained constant. This doubling of the gate width results in a doubling of the gate area. Consequently, the input capacitance increases significantly (approx. $2.8\times$), reflecting the increased gate area and associated parasitic capacitances.
 
 \end{document}
