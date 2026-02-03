@@ -408,6 +408,7 @@ h1 {
   --track-height: 6px;
   --thumb-width: 40px;
   --thumb-height: 24px;
+  --thumb-padding: calc(var(--thumb-width) / 2);
   position: relative;
   flex: 1;
   height: 32px;
@@ -433,8 +434,8 @@ h1 {
 
 .glass-slider__track {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: var(--thumb-padding);
+  right: var(--thumb-padding);
   height: var(--track-height);
   background: var(--slider-track);
   border-radius: 999px;

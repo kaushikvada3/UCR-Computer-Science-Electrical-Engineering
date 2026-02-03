@@ -7,6 +7,7 @@ const { gsap } = window;
 // --- Configuration ---
 const MODEL_PATH = "battery_design.fbx";
 const CELL_NAME_PATTERN = /cell|battery|cylinder/i; // Regex to find battery cells in the model
+const AUTO_ROTATE_MODEL = false;
 
 // --- Scene Setup ---
 const canvas = document.getElementById("scene");
@@ -469,8 +470,8 @@ function tick() {
   const delta = clock.getDelta();
   controls.update();
 
-  // Gentle rotation of the whole model
-  if (loadedModel) {
+  // Gentle rotation of the whole model (disabled by default)
+  if (AUTO_ROTATE_MODEL && loadedModel) {
     loadedModel.rotation.y += delta * 0.1; // Slow rotation
   }
 
@@ -551,9 +552,10 @@ function updateSliderUI(input) {
   const slider = input.closest(".glass-slider");
   if (!slider) return;
 
+  const track = slider.querySelector(".glass-slider__track");
   const progress = slider.querySelector(".glass-slider__progress");
   const thumb = slider.querySelector(".glass-slider__thumb");
-  if (!progress || !thumb) return;
+  if (!track || !progress || !thumb) return;
 
   const min = input.min ? parseFloat(input.min) : 0;
   const max = input.max ? parseFloat(input.max) : 100;
@@ -561,9 +563,9 @@ function updateSliderUI(input) {
   const percent = ((val - min) / (max - min)) * 100;
 
   progress.style.width = `${percent}%`;
-  const sliderWidth = slider.clientWidth;
-  if (!sliderWidth) return;
-  const px = (percent / 100) * sliderWidth;
+  const trackWidth = track.clientWidth;
+  if (!trackWidth) return;
+  const px = track.offsetLeft + (percent / 100) * trackWidth;
   thumb.style.left = `${px}px`;
 }
 
