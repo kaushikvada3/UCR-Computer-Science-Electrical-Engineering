@@ -22,7 +22,10 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "sensors.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -260,6 +263,38 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
+  
+  // Basic Command Parsing
+  // Format: "ELOAD:ON", "ELOAD:OFF", "ELOAD:SET:1500" (mA)
+  // Ensure null-termination safe access
+  uint32_t len = *Len;
+  if(len > 0 && len < APP_RX_DATA_SIZE) {
+      Buf[len] = 0; // Null terminate
+      char* cmd = (char*)Buf;
+      
+      if(strncmp(cmd, "ELOAD:ON", 8) == 0) {
+          Sensors_SetELoad(true, bms_state.eload_current_mA);
+      } else if(strncmp(cmd, "ELOAD:OFF", 9) == 0) {
+          Sensors_SetELoad(false, bms_state.eload_current_mA);
+      } else if(strncmp(cmd, "ELOAD:SET:", 10) == 0) {
+           float current_mA = 0.0f;
+           if(sscanf(cmd + 10, "%f", &current_mA) == 1) {
+               Sensors_SetELoad(bms_state.eload_enabled, current_mA);
+           }
+      } else if(strncmp(cmd, "FAN:AUTO", 8) == 0) {
+          Sensors_SetFan(true, 0); // Duty ignored in auto
+      } else if(strncmp(cmd, "FAN:MANUAL", 10) == 0) {
+          Sensors_SetFan(false, bms_state.fan_pwm_duty);
+      } else if(strncmp(cmd, "FAN:SET:", 8) == 0) {
+           int duty = 0;
+           if(sscanf(cmd + 8, "%d", &duty) == 1) {
+               if(duty > 100) duty = 100;
+               if(duty < 0) duty = 0;
+               Sensors_SetFan(false, (uint8_t)duty);
+           }
+      }
+  }
+
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);
   /* USER CODE END 6 */

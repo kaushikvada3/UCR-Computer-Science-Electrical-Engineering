@@ -13,6 +13,9 @@
   --accent-color: #0a84ff;
   --danger-color: #ff453a;
   --success-color: #30d158;
+  --slider-track: rgba(255, 255, 255, 0.18);
+  --slider-thumb-border: rgba(255, 255, 255, 0.55);
+  --slider-thumb-ring: rgba(10, 132, 255, 0.2);
   --font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -167,19 +170,26 @@ h1 {
   grid-row: 2;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  align-items: flex-end;
+  gap: 16px;
+  /* Consistent spacing between cards */
+  width: 320px;
+  /* Specific width to balance UI */
+  pointer-events: auto;
+  /* align-items: flex-end removed to enforce full width stretch */
 }
 
 .status {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0.5rem 1rem;
-  border-radius: 99px;
-  border: 1px solid var(--glass-border);
-  width: fit-content;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
 }
 
 .status__dot {
@@ -393,6 +403,125 @@ h1 {
   }
 }
 
+/* --- Glass Sliders --- */
+.glass-slider {
+  --track-height: 6px;
+  --thumb-width: 40px;
+  --thumb-height: 24px;
+  position: relative;
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  overflow: visible;
+  min-width: 0;
+}
+
+.glass-slider__input {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 4;
+}
+
+.glass-slider__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--track-height);
+  background: var(--slider-track);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+.glass-slider__progress {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(117deg, rgba(73, 163, 252, 0.95) 0%, rgba(54, 129, 238, 0.95) 100%);
+  border-radius: inherit;
+  box-shadow: 0 0 12px rgba(10, 132, 255, 0.45);
+}
+
+.glass-slider__thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+  width: var(--thumb-width);
+  height: var(--thumb-height);
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 3;
+  background-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px) saturate(140%);
+  -webkit-backdrop-filter: blur(4px) saturate(140%);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 0 0 1px rgba(10, 132, 255, 0.12);
+  overflow: hidden;
+  transition: transform 0.15s ease, height 0.15s ease, box-shadow 0.2s ease;
+}
+
+.glass-slider__thumb-filter {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  backdrop-filter: blur(0.6px);
+  -webkit-backdrop-filter: blur(0.6px);
+  filter: url(#mini-liquid-lens);
+}
+
+.glass-slider__thumb-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.glass-slider__thumb-specular {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  box-shadow: inset 1px 1px 0 rgba(69, 168, 243, 0.2),
+    inset 1px 3px 0 rgba(28, 63, 90, 0.12),
+    inset 0 0 22px rgba(255, 255, 255, 0.55),
+    inset -1px -1px 0 rgba(69, 168, 243, 0.12);
+}
+
+.glass-slider__thumb-filter,
+.glass-slider__thumb-overlay,
+.glass-slider__thumb-specular {
+  opacity: 0.55;
+}
+
+.glass-slider__thumb.active {
+  background-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 0 0 2px rgba(10, 132, 255, 0.2);
+  transform: translate(-50%, -50%) scaleY(0.98) scaleX(1.04);
+}
+
+.glass-slider__thumb.active .glass-slider__thumb-filter,
+.glass-slider__thumb.active .glass-slider__thumb-overlay,
+.glass-slider__thumb.active .glass-slider__thumb-specular {
+  opacity: 1;
+}
+
+.control-group.disabled .glass-slider__thumb,
+.control-group.disabled .glass-slider__progress {
+  opacity: 0.45;
+}
+
 .timeline__cursor {
   position: absolute;
   right: 0;
@@ -554,4 +683,130 @@ h1 {
   .detail-panel.is-visible {
     transform: translateY(0);
   }
+}
+
+/* E-Load Controls */
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 20px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* --- Telemetry Grid (Premium Redesign) --- */
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.03);
+  /* Subtle backdrop */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+.stat-box:hover {
+  background: rgba(255, 255, 255, 0.05);
+  /* Interactive feel */
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+/* --- Controls & Inputs --- */
+.control-group {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.control-group.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: saturate(0.8);
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Removed background/border for cleaner, less 'boxed' look */
+  padding: 8px 0;
+  /* Reduced horizontal padding since no border */
+}
+
+/* Custom Numeric Input */
+.numeric-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  width: 70px;
+  text-align: right;
+  padding: 4px 0;
+  border-radius: 0;
+  /* Remove default styling */
+  transition: border-color 0.2s;
+}
+
+.numeric-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent-color);
+}
+
+/* Unit Label */
+.unit {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-left: -8px;
+  /* Pull closer to number */
+}
+
+/* Value Display (for text-only readouts next to sliders) */
+.value-display {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  min-width: 3rem;
+  text-align: right;
+  font-feature-settings: "tnum";
+}
+
+.mode-selector.small .mode-btn {
+  padding: 4px 12px;
+  font-size: 0.8rem;
 }

@@ -29,6 +29,17 @@ typedef struct {
     
     /* Flags (Populated by Safety Layer later, but defined here) */
     uint32_t error_flags;
+
+    /* E-Load State */
+    float eload_current_mA;        // Target Current (I_SET)
+    bool  eload_enabled;           // Output Enable
+    float eload_voltage_mV;        // Input Voltage (V_SENSE)
+    float eload_actual_current_mA; // Actual Current (V_SHUNT)
+    
+    /* Fan State */
+    uint16_t fan_rpm;
+    uint8_t  fan_pwm_duty;         // 0-100%
+    bool     fan_auto_mode;
 } BMS_PackState_t;
 
 /* Global Instance - External access for read-only via getters is preferred, 
@@ -38,5 +49,7 @@ extern volatile BMS_PackState_t bms_state;
 /* Public API */
 void Sensors_Init(void);
 void Sensors_Update_10Hz(void);
+void Sensors_SetELoad(bool enable, float current_mA);
+void Sensors_SetFan(bool auto_mode, uint8_t duty);
 
 #endif // SENSORS_H

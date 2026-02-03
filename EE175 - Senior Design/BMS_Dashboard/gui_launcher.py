@@ -16,13 +16,27 @@ import sys
 import threading
 from pathlib import Path
 
-from PyQt6.QtCore import QFileSystemWatcher, QTimer, QUrl
+from PyQt6.QtCore import QFileSystemWatcher, QTimer, QUrl, pyqtSlot, QThread
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtCore import QThread, pyqtSlot
+from PyQt6.QtWebChannel import QWebChannel
+from PyQt6.QtCore import QObject
 
 from backend.data_stream import SerialWorker
+
+
+class Bridge(QObject):
+    """Bridge between JavaScript and Python."""
+    def __init__(self, serial_worker):
+        super().__init__()
+        self.serial_worker = serial_worker
+
+    @pyqtSlot(str, name="sendCommand")
+    def sendCommand(self, command):
+        """Slot to receive commands from JS and send to Serial."""
+        print(f"Bridge received: {command}")
+        self.serial_worker.send_command(command)
 
 
 class DashboardWindow(QMainWindow):
@@ -44,9 +58,34 @@ class DashboardWindow(QMainWindow):
         self.http_port = 8765
         self.start_http_server()
 
+        # --------------------------------------------------------------------- Serial & Bridge
+        self.serial_worker = SerialWorker()
+        self.serial_thread = QThread()
+        self.serial_worker.moveToThread(self.serial_thread)
+        self.serial_thread.started.connect(self.serial_worker.start_monitoring)
+        self.serial_worker.data_received.connect(self.handle_data)
+        self.serial_thread.start()
+
+        self.bridge = Bridge(self.serial_worker)
+        self.channel = QWebChannel()
+        self.channel.registerObject("backend", self.bridge)
+        self.view.page().setWebChannel(self.channel)
+        
+        # Inject qwebchannel.js
+        # We need to make sure the JS side can talk to QWebChannel. 
+        # Usually we load qwebchannel.js in HTML or inject it here. 
+        # For simplicity, we'll assume the HTML will include it or we inject it.
+
         self._build_toolbar()
         self._install_watcher()
         self.load_page()
+
+    def handle_data(self, data):
+        """Push data to JS."""
+        # We execute JS to update the state
+        import json
+        json_str = json.dumps(data)
+        self.view.page().runJavaScript(f"if(window.updateDashboard) window.updateDashboard({json_str});")
 
     # --------------------------------------------------------------------- HTTP Server
     def start_http_server(self) -> None:
@@ -61,16 +100,33 @@ class DashboardWindow(QMainWindow):
                 # Suppress HTTP server logs
                 pass
         
-        self.httpd = socketserver.TCPServer(("", self.http_port), Handler)
+        # Try finding an available port if 8765 is taken
+        for port in range(8765, 8775):
+            try:
+                # Allow address reuse to prevent "Address already in use" after restarts
+                socketserver.TCPServer.allow_reuse_address = True
+                self.httpd = socketserver.TCPServer(("", port), Handler)
+                self.http_port = port
+                break
+            except OSError:
+                continue
+        
+        if not hasattr(self, 'httpd'):
+            raise RuntimeError("Could not find a free port for the internal server (8765-8774).")
+
         self.server_thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.server_thread.start()
+        print(f"Internal wrapper server started on port {self.http_port}")
 
     # --------------------------------------------------------------------- util
     def load_page(self) -> None:
         """Load the HTML entrypoint into the embedded browser."""
         # Use HTTP instead of file:// to allow loading 3D models
+        # Add timestamp to force reload/bypass cache
+        import time
+        t = int(time.time())
         filename = self.entrypoint.name
-        url = QUrl(f"http://localhost:{self.http_port}/{filename}")
+        url = QUrl(f"http://localhost:{self.http_port}/{filename}?t={t}")
         self.view.load(url)
 
     def reload(self) -> None:

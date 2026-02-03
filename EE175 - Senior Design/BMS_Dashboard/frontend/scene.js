@@ -90,6 +90,13 @@ loader.load(
         child.castShadow = true;
         child.receiveShadow = true;
 
+        // Fix invalid material indices (negative values)
+        if (child.geometry && child.geometry.groups) {
+          child.geometry.groups.forEach(group => {
+            if (group.materialIndex < 0) group.materialIndex = 0;
+          });
+        }
+
         // Apply a nice standard material if it doesn't have one or to unify the look
         // For now, we keep original materials but ensure they react to light
         if (child.material) {
@@ -101,7 +108,7 @@ loader.load(
         // Identify battery cells
         // We try to match by name. If the user didn't name them "Cell", we might need to adjust this.
         if (CELL_NAME_PATTERN.test(child.name)) {
-          console.log("Found cell:", child.name);
+          // console.log("Found cell:", child.name);
 
           // Store reference for data updates
           cellMeshes.push({
@@ -489,60 +496,200 @@ modeButtons.forEach(btn => {
   });
 });
 
-// --- Mock Data Stream ---
-function mockStream() {
-  const nextCells = state.cells.map((cell) => {
-    const voltage = THREE.MathUtils.clamp(
-      cell.voltage + THREE.MathUtils.randFloatSpread(0.035),
-      3.35,
-      4.18
-    );
-    const temperature = THREE.MathUtils.clamp(
-      cell.temperature + THREE.MathUtils.randFloatSpread(0.9),
-      27,
-      45
-    );
-    return { ...cell, voltage, temperature };
-  });
+// --- QWebChannel / Bridge Logic ---
+let backendLink = null;
 
-  // Fan speed varies based on power mode
-  let modeMultiplier = 1.0;
-  if (state.mode === "Low-Power") {
-    modeMultiplier = 0.7; // 70% speed
-  } else if (state.mode === "High-Power") {
-    modeMultiplier = 1.4; // 140% speed
+// Initialize Channel
+if (typeof QWebChannel !== "undefined") {
+  new QWebChannel(qt.webChannelTransport, function (channel) {
+    backendLink = channel.objects.backend;
+    console.log("Connected to backend bridge via QWebChannel");
+    console.log("Backend Link Objects:", channel.objects);
+    console.log("Backend Link Methods:", backendLink);
+  });
+} else {
+  console.warn("QWebChannel not found. Running in standalone/mock mode?");
+}
+
+function sendBackendCommand(cmd) {
+  if (backendLink) {
+    console.log("Sending to backend:", cmd);
+    backendLink.sendCommand(cmd);
+  } else {
+    console.log("Mock Send:", cmd);
+  }
+}
+
+// --- E-Load UI Logic ---
+const eloadToggle = document.getElementById("eload-toggle");
+const eloadSlider = document.getElementById("eload-slider");
+const eloadInput = document.getElementById("eload-input");
+
+// Telemetry Elements
+const telemVoltage = document.getElementById("telem-voltage");
+const telemCurrent = document.getElementById("telem-current");
+const telemPower = document.getElementById("telem-power");
+const telemRPM = document.getElementById("telem-rpm");
+
+// Fan Elements
+const fanAutoBtn = document.getElementById("fan-auto-btn");
+const fanManualBtn = document.getElementById("fan-manual-btn");
+const fanManualControls = document.getElementById("fan-manual-controls");
+const fanSlider = document.getElementById("fan-slider");
+const fanValue = document.getElementById("fan-value");
+
+let isFanAuto = true;
+
+// -- E-Load Control --
+eloadToggle.addEventListener("change", (e) => {
+  const cmd = e.target.checked ? "ELOAD:ON" : "ELOAD:OFF";
+  sendBackendCommand(cmd);
+});
+
+// --- Glass Slider UI Sync ---
+function updateSliderUI(input) {
+  const slider = input.closest(".glass-slider");
+  if (!slider) return;
+
+  const progress = slider.querySelector(".glass-slider__progress");
+  const thumb = slider.querySelector(".glass-slider__thumb");
+  if (!progress || !thumb) return;
+
+  const min = input.min ? parseFloat(input.min) : 0;
+  const max = input.max ? parseFloat(input.max) : 100;
+  const val = parseFloat(input.value);
+  const percent = ((val - min) / (max - min)) * 100;
+
+  progress.style.width = `${percent}%`;
+  const sliderWidth = slider.clientWidth;
+  if (!sliderWidth) return;
+  const px = (percent / 100) * sliderWidth;
+  thumb.style.left = `${px}px`;
+}
+
+const sliderInputs = document.querySelectorAll(".glass-slider input[type=range]");
+
+sliderInputs.forEach((input) => {
+  updateSliderUI(input);
+  input.addEventListener("input", () => updateSliderUI(input));
+  input.addEventListener("change", () => updateSliderUI(input));
+
+  const thumb = input.closest(".glass-slider")?.querySelector(".glass-slider__thumb");
+  if (thumb) {
+    input.addEventListener("pointerdown", () => thumb.classList.add("active"));
+    input.addEventListener("pointercancel", () => thumb.classList.remove("active"));
+    input.addEventListener("blur", () => thumb.classList.remove("active"));
+  }
+});
+
+window.addEventListener("pointerup", () => {
+  document.querySelectorAll(".glass-slider__thumb.active").forEach((thumb) => {
+    thumb.classList.remove("active");
+  });
+});
+
+window.addEventListener("resize", () => {
+  sliderInputs.forEach((input) => updateSliderUI(input));
+});
+
+// Sync Slider -> Input
+eloadSlider.addEventListener("input", (e) => {
+  eloadInput.value = e.target.value;
+  updateSliderUI(e.target);
+});
+
+// Send on release
+eloadSlider.addEventListener("change", (e) => {
+  sendBackendCommand(`ELOAD:SET:${e.target.value}`);
+});
+
+// Sync Input -> Slider & Send
+eloadInput.addEventListener("change", (e) => {
+  let val = parseFloat(e.target.value);
+  if (val < 0) val = 0;
+  if (val > 10) val = 10;
+  eloadInput.value = val;
+  eloadSlider.value = val;
+  updateSliderUI(eloadSlider);
+  sendBackendCommand(`ELOAD:SET:${val}`);
+});
+
+// -- Fan Control --
+fanAutoBtn.addEventListener("click", () => {
+  setFanMode(true);
+  sendBackendCommand("FAN:AUTO");
+});
+
+fanManualBtn.addEventListener("click", () => {
+  setFanMode(false);
+  sendBackendCommand("FAN:MANUAL");
+});
+
+fanSlider.addEventListener("input", (e) => {
+  fanValue.textContent = `${e.target.value}%`;
+  updateSliderUI(e.target);
+});
+
+fanSlider.addEventListener("change", (e) => {
+  sendBackendCommand(`FAN:SET:${e.target.value}`);
+});
+
+function setFanMode(auto) {
+  isFanAuto = auto;
+  if (auto) {
+    fanAutoBtn.classList.add("active");
+    fanManualBtn.classList.remove("active");
+    fanManualControls.classList.add("disabled");
+  } else {
+    fanAutoBtn.classList.remove("active");
+    fanManualBtn.classList.add("active");
+    fanManualControls.classList.remove("disabled");
+  }
+}
+
+// --- Real Data Injection ---
+// This function called by Python: window.updateDashboard(jsonData)
+window.updateDashboard = function (data) {
+  // Merge into current state
+  if (!currentState) currentState = { ...state };
+
+  // Update Cells
+  if (data.cells) currentState.cells = data.cells;
+
+  // Update Telemetry
+  if (data.eload) {
+    telemVoltage.textContent = data.eload.voltage.toFixed(2) + " V";
+    telemCurrent.textContent = data.eload.actual_current.toFixed(2) + " A"; // Use actual current for feedback
+    telemPower.textContent = data.eload.power.toFixed(1) + " W";
+
+    // Optional: Update toggle state if not interacting? 
+    // For now, let's assume UI is master for setpoints, but telemetry is master for readouts.
   }
 
-  const baseFan1 =
-    1200 +
-    Math.sin(Date.now() * 0.0012) * 220 +
-    THREE.MathUtils.randFloatSpread(60);
+  if (data.fan_control) {
+    // Sync Fan Mode from firmware if valid
+    // Only if we haven't touched it recently to avoid jitter? 
+    // For simplicity, just display RPM
+  }
 
-  const baseFan2 =
-    1200 +
-    Math.sin(Date.now() * 0.0010) * 200 + // Slightly different phase
-    THREE.MathUtils.randFloatSpread(60);
-
-  const fan1rpm = baseFan1 * modeMultiplier;
-  const fan2rpm = baseFan2 * modeMultiplier;
-
-  currentState = {
-    ...state,
-    cells: nextCells,
-    fan1: { rpm: fan1rpm },
-    fan2: { rpm: fan2rpm },
-  };
-
-  state.cells = nextCells;
+  if (data.fan1) {
+    telemRPM.textContent = data.fan1.rpm + " RPM";
+  }
 
   updateHud(currentState);
   animateCells(currentState);
-}
+};
 
-// Initialize
+// Start Loop
 populateCellGrid();
-mockStream();
-setInterval(mockStream, 1500);
+tick();
+
+// If we are NOT in the Qt/Python environment, keep the mock stream running for dev
+if (!window.qt) {
+  console.log("Running in dev mode (Mock Stream)");
+  mockStream();
+  setInterval(mockStream, 1500);
+}
 
 // Resize Handler
 // --- 3D Tilt Effect for UI Panels ---
@@ -565,4 +712,3 @@ document.querySelectorAll(".glass-panel").forEach((panel) => {
     panel.style.transform = "perspective(1000px) rotateX(0) rotateY(0) scale(1)";
   });
 });
-

@@ -93,15 +93,39 @@ class SerialWorker(QObject):
                 })
                 
             # 2. Map Fans
-            fans = raw.get("fan", [0, 0])
-            fan1_rpm = fans[0] if len(fans) > 0 else 0
-            fan2_rpm = fans[1] if len(fans) > 1 else 0
+            # New format: "fan_ctrl": {"auto": 1, "duty": 50, "rpm": 1200}
+            fan_ctrl = raw.get("fan_ctrl", {})
+            fan_rpm = fan_ctrl.get("rpm", 0)
             
+            # 3. Map E-Load
+            # New format: "eload_stats": {"en": 1, "i_set": 1.5, "v": 24.0, "i_act": 1.4, "p": 33.6}
+            eload = raw.get("eload_stats", {})
+            
+            # Backward compatibility for old firmware (optional)
+            if not eload and "eload" in raw:
+                 old_eload = raw["eload"]
+                 eload = {
+                     "en": old_eload.get("en", 0),
+                     "i_set": old_eload.get("i", 0.0),
+                     "v": 0.0, "i_act": 0.0, "p": 0.0
+                 }
+
             return {
                 "cells": cells,
-                "fan1": {"rpm": fan1_rpm},
-                "fan2": {"rpm": fan2_rpm},
-                "pack_current": raw.get("i", 0.0)
+                "fan1": {"rpm": fan_rpm}, # Keeping fan1/fan2 struct for now, mapping both to same rpm
+                "fan2": {"rpm": fan_rpm},
+                "pack_current": raw.get("i", 0.0),
+                "eload": {
+                    "enabled": bool(eload.get("en", 0)),
+                    "target_current": float(eload.get("i_set", 0.0)),
+                    "voltage": float(eload.get("v", 0.0)),
+                    "actual_current": float(eload.get("i_act", 0.0)),
+                    "power": float(eload.get("p", 0.0))
+                },
+                "fan_control": {
+                    "auto": bool(fan_ctrl.get("auto", True)),
+                    "duty": int(fan_ctrl.get("duty", 0))
+                }
             }
         except Exception as e:
             logger.error(f"Transformation error: {e}")
@@ -117,7 +141,10 @@ class SerialWorker(QObject):
             for p in ports:
                 # Common VID/PID for ST-Link VCP or STM32 VCP
                 # You might need to adjust this filter based on your specific device
-                if "STM" in p.description or "STMicroelectronics" in p.manufacturer:
+                description = p.description if p.description else ""
+                manufacturer = p.manufacturer if p.manufacturer else ""
+                
+                if "STM" in description or "STMicroelectronics" in manufacturer:
                     target_port = p.device
                     break
         
@@ -137,3 +164,17 @@ class SerialWorker(QObject):
         self.running = False
         if self.serial_conn:
             self.serial_conn.close()
+
+    def send_command(self, cmd_str: str):
+        """Send a command string to the serial device."""
+        if self.serial_conn and self.serial_conn.is_open:
+            try:
+                # Ensure newline termination if not present
+                if not cmd_str.endswith('\n'):
+                    cmd_str += '\n'
+                self.serial_conn.write(cmd_str.encode('utf-8'))
+                logger.info(f"Sent: {cmd_str.strip()}")
+            except Exception as e:
+                logger.error(f"Failed to send command: {e}")
+        else:
+            logger.warning("Cannot send command: Serial not connected")
