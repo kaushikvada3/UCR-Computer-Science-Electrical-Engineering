@@ -205,8 +205,11 @@ void Sensors_JSON_Output(void) {
 
     // 7. Transmit
     // Use printf, which is redirected to USB CDC in main.c via _write()
-    printf("%s", msg_buffer); 
-    // CDC_Transmit_FS((uint8_t*)msg_buffer, strlen(msg_buffer));
+    // printf("%s", msg_buffer); 
+    
+    // Direct USB Transmission (More robust than printf hook)
+    extern uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
+    CDC_Transmit_FS((uint8_t*)msg_buffer, strlen(msg_buffer));
 }
 
 /* -------------------------------------------------------------------------
