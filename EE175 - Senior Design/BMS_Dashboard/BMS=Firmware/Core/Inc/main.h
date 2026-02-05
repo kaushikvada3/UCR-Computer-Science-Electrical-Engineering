@@ -27,7 +27,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f3xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -59,6 +59,52 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
+
+// I2C1 (DAC MCP4725)
+// Schematic: SCL=PB8, SDA=PB9
+#define DAC_I2C_SCL_Pin GPIO_PIN_8
+#define DAC_I2C_SCL_Port GPIOB
+#define DAC_I2C_SDA_Pin GPIO_PIN_9
+#define DAC_I2C_SDA_Port GPIOB
+
+// ADC (Internal)
+// PC2 -> VSENSE (ADC1_IN12 on F4)
+#define VSENSE_Pin GPIO_PIN_2
+#define VSENSE_Port GPIOC
+
+// V_SHUNT (Placeholder - User didn't specify exact pins 1-4, assumng PA0-3)
+#define VSHUNT_1_Pin GPIO_PIN_0
+#define VSHUNT_1_Port GPIOA
+
+// Fan Control
+// Schematic: FAN_PWM = PB6 (TIM4_CH1)
+// Schematic: FAN_TACH = PC6 (Input)
+#define FAN_PWM_Pin GPIO_PIN_6
+#define FAN_PWM_Port GPIOB
+#define FAN_TACH_Pin GPIO_PIN_6
+#define FAN_TACH_Port GPIOC
+
+// Safety / Gate Drive
+// Schematic: OFF/KILL = PB0. 
+// Logic: HIGH = OFF (Kill), LOW = ON (Run).
+// Renamed to match sensors.c checks!
+#define GATE_DISABLE_Pin GPIO_PIN_0 
+#define GATE_DISABLE_Port GPIOB
+
+// Rotary Encoder
+// Schematic: A=PA5, B=PA6, SW=PB7
+#define ENC_A_Pin GPIO_PIN_5
+#define ENC_A_Port GPIOA
+#define ENC_B_Pin GPIO_PIN_6
+#define ENC_B_Port GPIOA
+#define ENC_SW_Pin GPIO_PIN_7
+#define ENC_SW_Port GPIOB
+
+// USB / Debug (Standard)
+#define SWDIO_Pin GPIO_PIN_13
+#define SWDIO_Port GPIOA
+#define SWCLK_Pin GPIO_PIN_14
+#define SWCLK_Port GPIOA
 
 /* USER CODE END Private defines */
 

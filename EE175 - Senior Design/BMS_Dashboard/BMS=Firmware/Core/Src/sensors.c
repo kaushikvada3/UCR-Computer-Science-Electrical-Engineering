@@ -1,55 +1,86 @@
 #include "sensors.h"
+#include "main.h"
+#include "stm32f4xx_hal.h"
+#include "mcp4725.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 
-
-// Include your HAL header here when generating the real project
-// #include "stm32f3xx_hal.h" 
+/* -------------------------------------------------------------------------
+   External Handles
+   ------------------------------------------------------------------------- */
+extern ADC_HandleTypeDef hadc1;
+extern I2C_HandleTypeDef hi2c1;
+extern TIM_HandleTypeDef htim4; // Changed to TIM4
 
 /* -------------------------------------------------------------------------
-   Private Variables & Drivers
+   Private Variables & Constants
    ------------------------------------------------------------------------- */
-
-// Placeholder for the global state
 volatile BMS_PackState_t bms_state;
-
-// Placeholder for SPI Handle - in real code: extern SPI_HandleTypeDef hspi1;
-// extern SPI_HandleTypeDef hspi1;
-
-// Buffer for JSON transmission
 static char msg_buffer[512];
+
+// Safety Thresholds
+#define MAX_CURRENT_MA          3000.0f  // 3A Limit
+#define MAX_VOLTAGE_MV          25000.0f // 25V Limit
+#define MIN_VOLTAGE_MV          3000.0f  // 3V UVLO
+
+// Hardware Constants
+#define SHUNT_RESISTANCE        0.01f    // 10mOhm Shunt
+#define OPAMP_GAIN              50.0f    // Current Sense OpAmp Gain
 
 /* -------------------------------------------------------------------------
    Private Function Prototypes
    ------------------------------------------------------------------------- */
-static void SPI_Read_ADC_Frame(uint16_t *raw_buffer);
-static float Convert_ADC_To_Voltage(uint16_t raw_counts);
-static float Convert_Thermistor_To_Temp(uint16_t raw_counts);
-void Sensors_JSON_Output(void);
+static void Check_Safety_FSM(void);
 
 /* -------------------------------------------------------------------------
    Public API Implementation
    ------------------------------------------------------------------------- */
 
+void Sensors_Init(void) {
+    // 1. Zero out the state
+    memset((void*)&bms_state, 0, sizeof(BMS_PackState_t));
+    
+    // 2. Init Drivers
+    MCP4725_Init(&hi2c1);
+    
+    // 3. Start Peripherals
+    HAL_ADC_Start(&hadc1);
+    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // TIM4 PB6
+    
+    // 4. Default Safe State
+    // Hardware: GATE_KILL (PB0) must be HIGH to DISABLE.
+    // HAL_Init in main.c already sets it HIGH.
+    Sensors_SetELoad(false, 0.0f);
+    Sensors_SetFan(true, 0); // Auto mode
+    
+    bms_state.data_valid = true;
+}
+
 void Sensors_SetELoad(bool enable, float current_mA) {
     bms_state.eload_enabled = enable;
     bms_state.eload_current_mA = current_mA;
     
-    // Hardware Control (Mocked)
-    // -------------------------------------------------------------------------
-    // [SCHEMATIC INTEGRATION REQUIRED]
-    // Signal: "E-LOAD_EN" (or similar from Block Diagram)
-    // Action: Set GPIO Pin to Enable/Disable Load
-    // TODO: User to Fill -> HAL_GPIO_WritePin(ELOAD_PORT, ELOAD_PIN, enable ? GPIO_PIN_SET : GPIO_PIN_RESET);
-    
-    // Signal: "I_SET" (DAC Output)
-    // Action: Set DAC Voltage to control Current Sink
-    // TODO: User to Fill -> HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t)dac_val);
-    
     if (enable) {
-        // Mock indicator
-        // HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+        // 1. Set DAC First
+        float dac_voltage = (current_mA / 10000.0f) * 3.3f; 
+        uint16_t dac_val = (uint16_t)((dac_voltage / 3.3f) * 4095.0f);
+        MCP4725_SetValue(dac_val, 0);
+        
+        // 2. ENABLE Gate Drive (Active LOW)
+        // PB0 = LOW to TURN ON
+        #ifdef GATE_DISABLE_Pin
+        HAL_GPIO_WritePin(GATE_DISABLE_Port, GATE_DISABLE_Pin, GPIO_PIN_RESET); 
+        #endif
+    } else {
+        // 1. DISABLE Gate Drive (Active HIGH Kill)
+        // PB0 = HIGH to KILL
+        #ifdef GATE_DISABLE_Pin
+        HAL_GPIO_WritePin(GATE_DISABLE_Port, GATE_DISABLE_Pin, GPIO_PIN_SET);
+        #endif
+        
+        // 2. Set DAC to 0
+        MCP4725_SetValue(0, 0);
     }
 }
 
@@ -57,90 +88,63 @@ void Sensors_SetFan(bool auto_mode, uint8_t duty) {
     bms_state.fan_auto_mode = auto_mode;
     
     if (!auto_mode) {
-        // Manual Mode
-        bms_state.fan_pwm_duty = duty; 
-        
-        // [SCHEMATIC INTEGRATION REQUIRED]
-        // Signal: "FAN-EN" or "FAN_PWM"
-        // Action: Set Timer PWM Duty Cycle
-        // TODO: User to Fill -> __HAL_TIM_SET_COMPARE(&htimX, TIM_CHANNEL_Y, duty_scaled);
-    } else {
-        // Auto Mode logic
+        bms_state.fan_pwm_duty = duty;
+        // Scale 0-100 to 0-1000 (Timer Period)
+        __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, duty * 10);
     }
 }
-void Sensors_Init(void) {
-    // 1. Zero out the state
-    memset((void*)&bms_state, 0, sizeof(BMS_PackState_t));
-    
-    // 2. Initialize Low-Level Pins (CS lines high) if not done by HAL_MspInit
-    // HAL_GPIO_WritePin(ADC_CS_GPIO_Port, ADC_CS_Pin, GPIO_PIN_SET);
-    
-    // 3. Send initial config to ADC if required (Dummy read to wake up)
-    // SPI_Transmit_Cmd(CMD_WAKEUP);
-    
-    bms_state.data_valid = false;
-}
 
-/**
- * @brief  Main acquisition task. call this at 10Hz (Timer ISR or Main Loop)
- * @note   This is the "Non-RTOS" deterministic signal flow.
- */
 void Sensors_Update_10Hz(void) {
-    uint16_t raw_adc_data[BMS_CELL_COUNT + BMS_THERMISTOR_COUNT];
+    // 1. Read System Voltage
+    HAL_ADC_PollForConversion(&hadc1, 10);
+    uint16_t adc_vsense = HAL_ADC_GetValue(&hadc1);
     
-    /* 1. Hardware Protect: Verify Clock/Power stability (Optional SW check) */
+    // V_IN = (ADC / 4095) * 3.3V * Divider
+    // Divider = 11.0
+    float vin_v = (adc_vsense / 4095.0f) * 3.3f * V_DIVIDER_RATIO;
+    bms_state.eload_voltage_mV = vin_v * 1000.0f;
     
-    /* 2. Acquire Raw Data (Blocking or DMA check) */
-    // In a real DMA system, this function calculates *last* transfer's integrity
-    // For simple bring-up, we do blocking SPI here.
-    SPI_Read_ADC_Frame(raw_adc_data);
-
-    /* 3. Convert & Populate "The Truth" */
-    for(int i = 0; i < BMS_CELL_COUNT; i++) {
-        bms_state.cell_voltages_mV[i] = Convert_ADC_To_Voltage(raw_adc_data[i]);
+    // 2. Read Current
+    // Placeholder: In real logic, switch channel or read 2nd Rank
+    uint16_t adc_ishunt = 0; 
+    
+    // I = V_ADC / (R * G)
+    float v_shunt_v = (adc_ishunt / 4095.0f) * 3.3f;
+    float current_a = v_shunt_v / (SHUNT_RESISTANCE * OPAMP_GAIN);
+    bms_state.eload_actual_current_mA = current_a * 1000.0f;
+    
+    // 3. Safety Check
+    Check_Safety_FSM();
+    
+    // 4. GUI Telemetry Mapping
+    bms_state.pack_current_mA = bms_state.eload_actual_current_mA;
+    bms_state.pack_voltage_mV = bms_state.eload_voltage_mV;
+    
+    float avg_cell = bms_state.pack_voltage_mV / 12.0f;
+    for(int i=0; i<BMS_CELL_COUNT; i++) {
+        bms_state.cell_voltages_mV[i] = avg_cell;
     }
-    
-    // Sum cells for Pack Voltage (or read separate HV divider)
-    float pack_sum = 0.0f;
-    for(int i=0; i<BMS_CELL_COUNT; i++) pack_sum += bms_state.cell_voltages_mV[i];
-    bms_state.pack_voltage_mV = pack_sum;
 
-    /* 4. Telemetry Metadata & Mock E-Load Data */
+    // 5. Updates
     bms_state.sample_counter++;
-    bms_state.data_valid = true;
-
-    // --- MOCK DATA GENERATION START ---
-    // Simulate Input Voltage (Fluctuating around 24V)
-    static float mock_time = 0;
-    mock_time += 0.1f;
-    bms_state.eload_voltage_mV = 24000.0f + (500.0f * sinf(mock_time * 0.5f)); // 23.5V - 24.5V
-
-    // Simulate Actual Current
-    if (bms_state.eload_enabled) {
-        // Current ramps up to target with some noise
-        float diff = bms_state.eload_current_mA - bms_state.eload_actual_current_mA;
-        bms_state.eload_actual_current_mA += diff * 0.1f; // Simple low-pass filter / ramp
-        // Add minimal noise
-        bms_state.eload_actual_current_mA += (rand() % 20) - 10; 
-    } else {
-        bms_state.eload_actual_current_mA *= 0.8f; // Decays to 0
-        if(bms_state.eload_actual_current_mA < 1.0f) bms_state.eload_actual_current_mA = 0;
-    }
-
-    // Simulate Fan RPM
-    // Linearly map duty cycle (0-100) to RPM (0-6000)
-    uint16_t target_rpm = bms_state.fan_pwm_duty * 60; 
-    // Smooth transition
-    int rpm_diff = (int)target_rpm - (int)bms_state.fan_rpm;
-    bms_state.fan_rpm += rpm_diff / 10;
-    // --- MOCK DATA GENERATION END ---
-    
-    // In real code: bms_state.last_update_tick = HAL_GetTick();
-    
-    /* 5. Telemetry Output (JSON) */
-    // Note: In a real RTOS, this would be queued to a separate task.
-    // For non-RTOS, we do it here (watch out for timing budget!)
     Sensors_JSON_Output();
+}
+
+static void Check_Safety_FSM(void) {
+    // Software Over-Current
+    if (bms_state.eload_actual_current_mA > MAX_CURRENT_MA) {
+        bms_state.error_flags |= 0x02;
+    }
+    
+    // Software Over-Voltage
+    if (bms_state.eload_voltage_mV > MAX_VOLTAGE_MV) {
+        bms_state.error_flags |= 0x04;
+    }
+    
+    // Trip Logic
+    if (bms_state.error_flags != 0) {
+        Sensors_SetELoad(false, 0); // Safety Kill (PB0 HIGH)
+    }
 }
 
 /**
@@ -208,34 +212,4 @@ void Sensors_JSON_Output(void) {
 /* -------------------------------------------------------------------------
    Private Helper Functions
    ------------------------------------------------------------------------- */
-
-// STUB: Replace with actual SPI Logic
-static void SPI_Read_ADC_Frame(uint16_t *raw_buffer) {
-    // Toggle CS Low
-    // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-    
-    // Transmit Read Command & Receive Data
-    // HAL_SPI_TransmitReceive(&hspi1, tx_buf, rx_buf, len, 10);
-    
-    // Toggle CS High
-    // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
-    
-    // MOCK DATA FOR BRINGUP VERIFICATION
-    for(int i=0; i<BMS_CELL_COUNT; i++) {
-        // Return ~3.7V in raw counts (assuming 12-bit 0-5V scaled)
-        // This ensures your USB print logic has something to show!
-        raw_buffer[i] = 3031; // random sane value
-    }
-}
-
-static float Convert_ADC_To_Voltage(uint16_t raw_counts) {
-    // V = (Raw / Max) * Vref * Divider
-    // Simple linear scaling
-    float voltage_at_pin = (raw_counts / 4096.0f) * (ADC_VREF_MV / 1000.0f); 
-    return voltage_at_pin * V_DIVIDER_RATIO * 1000.0f; // Return mV
-}
-
-static float Convert_Thermistor_To_Temp(uint16_t raw_counts) {
-    // Implement Steinhart-Hart or Lookup Table here
-    return 25.0f; // Stub 25C
-}
+// (Empty - Helpers integrated or removed)
