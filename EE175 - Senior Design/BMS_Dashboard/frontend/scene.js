@@ -245,6 +245,7 @@ function onMouseClick(event) {
 
 // --- UI & Data Logic ---
 const packVoltageEl = document.querySelector("[data-pack-voltage]");
+const packCurrentEl = document.querySelector("[data-pack-current]");
 const packTempEl = document.querySelector("[data-pack-temp]");
 const fanSpeed1El = document.querySelector("[data-fan-speed-1]");
 const fanSpeed2El = document.querySelector("[data-fan-speed-2]");
@@ -254,12 +255,37 @@ const detailPanel = document.querySelector("[data-detail-panel]");
 const detailTitle = document.querySelector("[data-cell-title]");
 const detailVoltage = document.querySelector("[data-cell-voltage]");
 const detailTemp = document.querySelector("[data-cell-temperature]");
+const detailCurrent = document.querySelector("[data-cell-current]");
 const detailDelta = document.querySelector("[data-cell-delta]");
+const detailTrendLatest = document.querySelector("[data-cell-trend-latest]");
+const detailTrendMin = document.querySelector("[data-cell-trend-min]");
+const detailTrendMax = document.querySelector("[data-cell-trend-max]");
+const detailTrendLine = document.querySelector("[data-cell-trend-line]");
+const detailTrendArea = document.querySelector("[data-cell-trend-area]");
 const closePanelBtn = document.querySelector("[data-close-panel]");
 const modeButtons = document.querySelectorAll(".mode-btn");
+const powerModeCommandMap = {
+  Balanced: "MODE:BALANCED",
+  "Low-Power": "MODE:LOW_POWER",
+  "High-Power": "MODE:HIGH_POWER",
+};
 const dataPulseEl = document.getElementById("data-pulse");
+const STATUS_WAITING = "Waiting for Data";
+const STATUS_CONNECTED = "Connected";
+const CELL_HISTORY_LENGTH = 45;
+const TREND_WIDTH = 260;
+const TREND_HEIGHT = 90;
+const TREND_PADDING = 8;
+const BASE_UI_WIDTH = 1680;
+const BASE_UI_HEIGHT = 980;
+const MIN_UI_SCALE = 0.78;
+const CELL_VOLTAGE_MIN = 3.2;
+const CELL_VOLTAGE_MAX = 4.2;
+const CELL_VOLTAGE_RED_MAX = 3.5;
+const CELL_VOLTAGE_GREEN_MAX = 3.63;
 
 let currentState = null;
+const cellVoltageHistory = new Map();
 
 // Mock State - Will be replaced by real data stream later
 const state = {
@@ -268,6 +294,7 @@ const state = {
     voltage: 3.8 + Math.random() * 0.4,
     temperature: 28 + Math.random() * 6,
   })),
+  pack_current: 0.0,
   mode: "Balanced",
   fan1: { rpm: 1200 },
   fan2: { rpm: 1200 },
@@ -310,11 +337,28 @@ function populateCellGrid() {
 
 function showDetail(cellId) {
   const cell = currentState?.cells.find((c) => c.id === cellId);
-  if (!cell) return;
-  detailTitle.textContent = `Cell ${cell.id.toString().padStart(2, "0")}`;
-  detailVoltage.textContent = `${cell.voltage.toFixed(3)} V`;
-  detailTemp.textContent = `${cell.temperature.toFixed(1)} °C`;
-  detailDelta.textContent = `${((cell.voltage - 3.8) * 1000).toFixed(0)} mV`;
+  const packCurrent = isFiniteNumber(currentState?.pack_current) ? currentState.pack_current : null;
+  if (!Number.isInteger(cellId)) return;
+  detailTitle.textContent = `Cell ${cellId.toString().padStart(2, "0")}`;
+  if (detailCurrent) {
+    detailCurrent.textContent = packCurrent !== null ? `${packCurrent.toFixed(3)} A` : "-- A";
+  }
+
+  if (cell && isFiniteNumber(cell.voltage)) {
+    detailVoltage.textContent = `${cell.voltage.toFixed(3)} V`;
+    detailDelta.textContent = `${((cell.voltage - 3.8) * 1000).toFixed(0)} mV`;
+    if (isFiniteNumber(cell.temperature)) {
+      detailTemp.textContent = `${cell.temperature.toFixed(1)} °C`;
+    } else {
+      detailTemp.textContent = "-- °C";
+    }
+  } else {
+    detailVoltage.textContent = "-- V";
+    detailTemp.textContent = "-- °C";
+    detailDelta.textContent = "-- mV";
+  }
+
+  drawCellTrend(cellId);
   detailPanel.classList.add("is-visible");
 }
 
@@ -377,54 +421,160 @@ function triggerDataPulse(dataRate) {
   dataPulseEl.classList.add('active');
 }
 
+function setConnectionStatus(connected) {
+  if (!thermalTrendEl || !dataPulseEl) return;
+
+  thermalTrendEl.textContent = connected ? STATUS_CONNECTED : STATUS_WAITING;
+  dataPulseEl.classList.toggle("status__dot--connected", connected);
+  dataPulseEl.classList.toggle("status__dot--waiting", !connected);
+}
+
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function updateCellVoltageHistory(cells) {
+  if (!Array.isArray(cells)) return;
+
+  cells.forEach((cell) => {
+    if (!Number.isInteger(cell?.id) || !isFiniteNumber(cell?.voltage)) return;
+
+    if (!cellVoltageHistory.has(cell.id)) {
+      cellVoltageHistory.set(cell.id, []);
+    }
+
+    const history = cellVoltageHistory.get(cell.id);
+    history.push(cell.voltage);
+    if (history.length > CELL_HISTORY_LENGTH) {
+      history.shift();
+    }
+  });
+}
+
+function drawCellTrend(cellId) {
+  if (!detailTrendLine || !detailTrendArea || !detailTrendMin || !detailTrendMax || !detailTrendLatest) return;
+
+  const history = cellVoltageHistory.get(cellId) || [];
+  if (!history.length) {
+    detailTrendLine.setAttribute("d", "");
+    detailTrendArea.setAttribute("d", "");
+    detailTrendMin.textContent = "-- V";
+    detailTrendMax.textContent = "-- V";
+    detailTrendLatest.textContent = "-- V";
+    return;
+  }
+
+  const values = history.slice(-CELL_HISTORY_LENGTH);
+  const latest = values[values.length - 1];
+
+  let minV = Math.min(...values);
+  let maxV = Math.max(...values);
+  if (Math.abs(maxV - minV) < 0.003) {
+    minV -= 0.002;
+    maxV += 0.002;
+  }
+
+  const range = maxV - minV;
+  const usableWidth = TREND_WIDTH - TREND_PADDING * 2;
+  const usableHeight = TREND_HEIGHT - TREND_PADDING * 2;
+
+  const points = values.map((value, idx) => {
+    const t = values.length === 1 ? 0 : idx / (values.length - 1);
+    const x = TREND_PADDING + t * usableWidth;
+    const y = TREND_PADDING + (1 - (value - minV) / range) * usableHeight;
+    return { x, y };
+  });
+
+  const linePath = points
+    .map((pt, idx) => `${idx === 0 ? "M" : "L"}${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
+    .join(" ");
+
+  const floorY = (TREND_HEIGHT - TREND_PADDING).toFixed(2);
+  const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(2)} ${floorY} L${points[0].x.toFixed(2)} ${floorY} Z`;
+
+  detailTrendLine.setAttribute("d", linePath);
+  detailTrendArea.setAttribute("d", areaPath);
+  detailTrendMin.textContent = `${minV.toFixed(3)} V`;
+  detailTrendMax.textContent = `${maxV.toFixed(3)} V`;
+  detailTrendLatest.textContent = `${latest.toFixed(3)} V`;
+}
+
+window.setConnectionStatus = setConnectionStatus;
+setConnectionStatus(false);
+
 function updateHud(data) {
-  const packVoltage = data.cells.reduce((acc, cell) => acc + cell.voltage, 0);
-  const peakTemp = Math.max(...data.cells.map((cell) => cell.temperature));
-  packVoltageEl.textContent = `${packVoltage.toFixed(1)} V`;
-  packTempEl.textContent = `${peakTemp.toFixed(1)} °C`;
+  const cells = Array.isArray(data.cells) ? data.cells : [];
+  const validVoltageCells = cells.filter((cell) => isFiniteNumber(cell?.voltage));
+  const validTemps = cells
+    .map((cell) => cell?.temperature)
+    .filter((temp) => isFiniteNumber(temp));
+  const packCurrent = isFiniteNumber(data.pack_current) ? data.pack_current : null;
 
-  // Update both fan speeds with formatting
-  fanSpeed1El.textContent = `${Math.round(data.fan1.rpm).toLocaleString()} RPM`;
-  fanSpeed2El.textContent = `${Math.round(data.fan2.rpm).toLocaleString()} RPM`;
+  const packVoltage = validVoltageCells.reduce((acc, cell) => acc + cell.voltage, 0);
+  packVoltageEl.textContent = validVoltageCells.length ? `${packVoltage.toFixed(1)} V` : "-- V";
+  if (packCurrentEl) {
+    packCurrentEl.textContent = packCurrent !== null ? `${packCurrent.toFixed(3)} A` : "-- A";
+  }
+  packTempEl.textContent = validTemps.length ? `${Math.max(...validTemps).toFixed(1)} °C` : "-- °C";
 
-
-  // Update data streaming status
-  const streamMessages = [
-    "Streaming data",
-    "Transmitting packets",
-    "Live telemetry",
-    "Data flowing"
-  ];
-  const randomMessage = streamMessages[Math.floor(Date.now() / 3000) % streamMessages.length];
-  thermalTrendEl.textContent = randomMessage;
+  const fan1Rpm = isFiniteNumber(data.fan1?.rpm) ? data.fan1.rpm : 0;
+  const fan2Rpm = isFiniteNumber(data.fan2?.rpm) ? data.fan2.rpm : 0;
+  fanSpeed1El.textContent = fan1Rpm > 0 ? `${Math.round(fan1Rpm).toLocaleString()} RPM` : "-- RPM";
+  fanSpeed2El.textContent = fan2Rpm > 0 ? `${Math.round(fan2Rpm).toLocaleString()} RPM` : "-- RPM";
 
   // Trigger data pulse with speed based on data rate
   // Use average fan speed as a proxy for data transmission rate
-  const avgFanSpeed = (data.fan1.rpm + data.fan2.rpm) / 2;
-  triggerDataPulse(avgFanSpeed);
+  const avgFanSpeed = (fan1Rpm + fan2Rpm) / 2;
+  if (avgFanSpeed > 0) {
+    triggerDataPulse(avgFanSpeed);
+  }
 
+  const cellsById = new Map();
+  cells.forEach((cell) => {
+    if (Number.isInteger(cell?.id)) {
+      cellsById.set(cell.id, cell);
+    }
+  });
 
   document.querySelectorAll(".cell-card").forEach((card) => {
     const id = Number(card.dataset.cellId);
-    const cell = data.cells.find((c) => c.id === id);
-    if (!cell) return;
+    const cell = cellsById.get(id);
+    const valueEl = card.querySelector(".cell-card__value");
+    if (!valueEl) return;
+
+    const levelEl = card.querySelector(".battery-level");
+    if (!cell || !isFiniteNumber(cell.voltage)) {
+      valueEl.textContent = "-- V";
+      if (levelEl) {
+        levelEl.style.height = "0%";
+        levelEl.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
+      }
+      return;
+    }
 
     // Update text
-    card.querySelector(".cell-card__value").textContent = `${cell.voltage.toFixed(2)} V`;
+    valueEl.textContent = `${cell.voltage.toFixed(3)} V`;
 
     // Update Battery Icon
-    const levelEl = card.querySelector(".battery-level");
     if (levelEl) {
-      // Map 3.2V (0%) to 4.2V (100%)
-      const pct = Math.max(0, Math.min(100, ((cell.voltage - 3.2) / (4.2 - 3.2)) * 100));
+      // Map configured minimum/maximum cell voltage to icon fill.
+      const pct = Math.max(
+        0,
+        Math.min(100, ((cell.voltage - CELL_VOLTAGE_MIN) / (CELL_VOLTAGE_MAX - CELL_VOLTAGE_MIN)) * 100)
+      );
       levelEl.style.height = `${pct}%`;
 
-      // Color based on percentage
-      if (pct < 20) levelEl.style.backgroundColor = 'var(--danger-color)';
-      else if (pct < 50) levelEl.style.backgroundColor = 'orange';
-      else levelEl.style.backgroundColor = 'var(--success-color)';
+      // Color thresholds:
+      // < 3.5V -> red, 3.5V to 3.63V -> green, > 3.63V -> orange.
+      if (cell.voltage < CELL_VOLTAGE_RED_MAX) levelEl.style.backgroundColor = 'var(--danger-color)';
+      else if (cell.voltage <= CELL_VOLTAGE_GREEN_MAX) levelEl.style.backgroundColor = 'var(--success-color)';
+      else levelEl.style.backgroundColor = 'orange';
     }
   });
+
+  if (detailPanel.classList.contains("is-visible") && Number.isInteger(highlightedCellId)) {
+    showDetail(highlightedCellId);
+  }
 }
 
 function colorForVoltage(voltage) {
@@ -438,7 +588,10 @@ function colorForVoltage(voltage) {
 }
 
 function animateCells(data) {
+  if (!Array.isArray(data.cells)) return;
+
   data.cells.forEach((cellData) => {
+    if (!isFiniteNumber(cellData?.voltage)) return;
     // Find corresponding mesh
     // Note: If we have more data cells than meshes, some won't show.
     // If we have more meshes than data, we loop through available meshes.
@@ -481,6 +634,21 @@ function tick() {
 
 tick();
 
+function updateResponsiveUiScale() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  if (width <= 900) {
+    document.documentElement.style.setProperty("--ui-scale", "1");
+    return;
+  }
+
+  const scaleByWidth = width / BASE_UI_WIDTH;
+  const scaleByHeight = height / BASE_UI_HEIGHT;
+  const scale = Math.max(MIN_UI_SCALE, Math.min(1, scaleByWidth, scaleByHeight));
+  document.documentElement.style.setProperty("--ui-scale", scale.toFixed(3));
+}
+
 // --- Power Mode Switching ---
 modeButtons.forEach(btn => {
   btn.addEventListener("click", function () {
@@ -494,6 +662,10 @@ modeButtons.forEach(btn => {
     state.mode = this.dataset.mode;
 
     console.log(`Power mode changed to: ${state.mode}`);
+    const command =
+      powerModeCommandMap[state.mode] ||
+      `MODE:${state.mode.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+    sendBackendCommand(command);
   });
 });
 
@@ -652,11 +824,19 @@ function setFanMode(auto) {
 // --- Real Data Injection ---
 // This function called by Python: window.updateDashboard(jsonData)
 window.updateDashboard = function (data) {
+  setConnectionStatus(true);
+
   // Merge into current state
   if (!currentState) currentState = { ...state };
 
   // Update Cells
-  if (data.cells) currentState.cells = data.cells;
+  if (Array.isArray(data.cells) && data.cells.length > 0) currentState.cells = data.cells;
+  if (isFiniteNumber(data.pack_current)) currentState.pack_current = data.pack_current;
+  if (data.fan1) currentState.fan1 = data.fan1;
+  if (data.fan2) currentState.fan2 = data.fan2;
+  if (data.fan_control) currentState.fan_control = data.fan_control;
+  if (data.eload) currentState.eload = data.eload;
+  updateCellVoltageHistory(currentState.cells);
 
   // Update Telemetry
   if (data.eload) {
@@ -666,6 +846,8 @@ window.updateDashboard = function (data) {
 
     // Optional: Update toggle state if not interacting? 
     // For now, let's assume UI is master for setpoints, but telemetry is master for readouts.
+  } else if (isFiniteNumber(data.pack_current)) {
+    telemCurrent.textContent = data.pack_current.toFixed(3) + " A";
   }
 
   if (data.fan_control) {
@@ -695,7 +877,7 @@ if (!window.qt) {
 
 // Resize Handler
 // --- 3D Tilt Effect for UI Panels ---
-document.querySelectorAll(".glass-panel").forEach((panel) => {
+document.querySelectorAll(".glass-panel:not(.detail-panel)").forEach((panel) => {
   panel.addEventListener("mousemove", (e) => {
     const rect = panel.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -714,3 +896,23 @@ document.querySelectorAll(".glass-panel").forEach((panel) => {
     panel.style.transform = "perspective(1000px) rotateX(0) rotateY(0) scale(1)";
   });
 });
+
+// --- Resize Handler ---
+window.addEventListener('resize', onWindowResize, false);
+
+function onWindowResize() {
+  updateResponsiveUiScale();
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+}
+
+updateResponsiveUiScale();
+
+
+
+
+
+
+

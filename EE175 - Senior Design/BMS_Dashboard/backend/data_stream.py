@@ -1,25 +1,64 @@
-import json
 import logging
+import math
+import re
+from collections import deque
+from threading import Lock
+from typing import List, Optional
 import serial
 import serial.tools.list_ports
-from PyQt6.QtCore import QObject, pyqtSignal, QThread
+from PyQt6.QtCore import QObject, pyqtSignal
 import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("SerialMonitor")
+NUMERIC_TOKEN_RE = re.compile(r'(?<![A-Za-z0-9])[-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?')
+CELLS_FRAME_RE = re.compile(r'cells\s*(?:\([^)]+\))?\s*:\s*\[(.*?)\]', re.IGNORECASE)
+FRAME_HEADER_RE = re.compile(r'bms\s+emulator\s+status', re.IGNORECASE)
+NTC_1_4_FRAME_RE = re.compile(r'ntc\s*1\s*-\s*4\s*:\s*\[(.*?)\]', re.IGNORECASE)
+NTC_6_10_FRAME_RE = re.compile(r'ntc\s*6\s*-\s*10\s*:\s*\[(.*?)\]', re.IGNORECASE)
+INDEXED_CELL_TOKEN_RE = re.compile(
+    r'\bC(\d+)\s*:\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)',
+    re.IGNORECASE,
+)
+INDEXED_TEMP_TOKEN_RE = re.compile(
+    r'\bT(\d+)\s*:\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)',
+    re.IGNORECASE,
+)
+CURRENT_FRAME_RE = re.compile(
+    r'\bcurrent\s*:\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)\s*(?:a|amp|amps)?\b',
+    re.IGNORECASE,
+)
+NON_VOLTAGE_HINT_RE = re.compile(
+    r'\b(?:ntc|status|bms|rpm|fan|eload|current|temp|fault|ctrl)\b',
+    re.IGNORECASE,
+)
 
 class SerialWorker(QObject):
     """Worker thread that continuously reads from the serial port."""
     data_received = pyqtSignal(dict)  # Signal to emit parsed JSON/Dict data
-    connection_status = pyqtSignal(bool) # Signal to emit connection status
+    connection_status = pyqtSignal(bool)  # Signal to emit connection status
+    data_activity = pyqtSignal()  # Signal to indicate any non-empty line was received
+    connected_port_changed = pyqtSignal(str)  # Emits current connected port or "" when disconnected
     
     def __init__(self, port=None, baudrate=115200):
         super().__init__()
-        self.port = port
+        self.port = self._normalize_port(port)
         self.baudrate = baudrate
         self.running = False
         self.serial_conn = None
+        self.voltage_buffer = deque(maxlen=10)
+        self.connected_port = ""
+        self._port_lock = Lock()
+        self._saw_structured_frame = False
+
+        # Partial frame assembly for multiline firmware output.
+        self._pending_frame = {}
+        self._pending_started_at = 0.0
+        self._pending_expect_ntc = False
+        self._pending_timeout_s = 0.30
+        self._last_pack_current = 0.0
+        self._has_last_pack_current = False
 
     def start_monitoring(self):
         """Main loop for the worker thread."""
@@ -31,34 +70,430 @@ class SerialWorker(QObject):
             
             if self.serial_conn and self.serial_conn.is_open:
                 try:
-                    line = self.serial_conn.readline().decode('utf-8').strip()
-                    if line:
-                        # Attempt to parse JSON
-                        # Expected format: {"v":[...], "t":[...], "i": 1.0, ...}
-                        if line.startswith('{') and line.endswith('}'):
-                            data = json.loads(line)
-                            
-                            # Transform to Frontend Format
-                            frontend_data = self._transform_data(data)
-                            
-                            self.data_received.emit(frontend_data)
-                        else:
-                            # Log raw lines that aren't JSON (debug messages)
-                            logger.debug(f"RAW: {line}")
-                            
-                except json.JSONDecodeError:
-                    logger.warning(f"Invalid JSON received: {line}")
+                    raw = self.serial_conn.readline()
+                    if raw:
+                        line = raw.decode('utf-8', errors='ignore').rstrip('\r\n')
+                        stripped = line.strip()
+                    else:
+                        stripped = ""
+
+                    if stripped:
+                        self.data_activity.emit()
+
+                    parsed = self._parse_structured_serial_line(stripped)
+                    if parsed:
+                        self._emit_frontend_frame(parsed)
+                        continue
+
+                    if self._is_structured_telemetry_line(stripped):
+                        continue
+
+                    stale = self._finalize_pending_frame_if_stale()
+                    if stale:
+                        self._emit_frontend_frame(stale)
+                        continue
+
+                    if not stripped:
+                        continue
+
+                    if self._saw_structured_frame:
+                        # Once we see structured frames, ignore unrelated lines so
+                        # telemetry labels and thermistor blocks do not pollute fallback parsing.
+                        logger.debug("RAW (ignored non-frame line): %s", stripped)
+                        continue
+
+                    if NON_VOLTAGE_HINT_RE.search(stripped):
+                        logger.debug("RAW (ignored non-voltage line): %s", stripped)
+                        continue
+
+                    # Fallback path: generic numeric stream; accumulate until we have 10.
+                    voltages = self._extract_numeric_values(stripped, limit=64)
+                    # Keep fallback stream constrained to voltage-like values.
+                    voltages = [v for v in voltages if -1.0 <= v <= 6.0]
+                    if not voltages:
+                        logger.debug("RAW (no voltage payload): %s", stripped)
+                        continue
+
+                    self.voltage_buffer.extend(voltages)
+                    buffered_voltages = list(self.voltage_buffer)
+                    logger.info(
+                        "Incoming=%s | Buffer(%d/10)=%s",
+                        ", ".join(f"{v:.3f}" for v in voltages),
+                        len(buffered_voltages),
+                        ", ".join(f"{v:.3f}" for v in buffered_voltages),
+                    )
+
+                    # Only publish once we have a full 10-value group.
+                    if len(buffered_voltages) < 10:
+                        continue
+
+                    frontend_data = self._transform_data({"v": buffered_voltages[:10]})
+                    if frontend_data:
+                        self.data_received.emit(frontend_data)
                 except serial.SerialException as e:
                     logger.error(f"Serial error: {e}")
                     self.connection_status.emit(False)
+                    self.connected_port = ""
+                    self.connected_port_changed.emit("")
                     self.serial_conn.close()
                     self.serial_conn = None
-                    time.sleep(2) # Wait before retry
+                    self.voltage_buffer.clear()
+                    self._saw_structured_frame = False
+                    self._reset_pending_frame()
+                    time.sleep(2)  # Wait before retry
                 except Exception as e:
                     logger.error(f"Unexpected error: {e}")
                     
             else:
-                time.sleep(1) # Wait before retrying connection
+                stale = self._finalize_pending_frame_if_stale()
+                if stale:
+                    self._emit_frontend_frame(stale)
+                time.sleep(1)  # Wait before retrying connection
+
+    @staticmethod
+    def _normalize_port(port):
+        """Return None for auto mode, otherwise a stripped serial port string."""
+        if port is None:
+            return None
+        text = str(port).strip()
+        if not text:
+            return None
+        if text.lower() == "auto":
+            return None
+        return text
+
+    @staticmethod
+    def list_available_ports():
+        """Return a sorted list of currently available serial device paths."""
+        ports = [p.device for p in serial.tools.list_ports.comports() if p.device]
+        return sorted(set(ports))
+
+    def get_target_port(self):
+        with self._port_lock:
+            return self.port
+
+    def get_connected_port(self):
+        return self.connected_port or None
+
+    def set_baudrate(self, baudrate: int):
+        """Update baudrate and reconnect."""
+        try:
+            normalized = int(baudrate)
+        except (TypeError, ValueError):
+            normalized = 115200
+        if normalized <= 0:
+            normalized = 115200
+        with self._port_lock:
+            self.baudrate = normalized
+        if self.serial_conn and self.serial_conn.is_open:
+            try:
+                self.serial_conn.close()
+            except Exception:
+                pass
+            finally:
+                self.serial_conn = None
+        self.connection_status.emit(False)
+        self.connected_port = ""
+        self.connected_port_changed.emit("")
+        logger.info("Serial baudrate updated to %d", normalized)
+
+    def set_target_port(self, port):
+        """Set a new target port (`None`/`auto` for auto-detect) and reconnect."""
+        normalized = self._normalize_port(port)
+        with self._port_lock:
+            self.port = normalized
+        if self.serial_conn and self.serial_conn.is_open:
+            try:
+                self.serial_conn.close()
+            except Exception:
+                pass
+            finally:
+                self.serial_conn = None
+        self.connection_status.emit(False)
+        self.connected_port = ""
+        self.connected_port_changed.emit("")
+        logger.info("Serial target port updated to %s", normalized or "auto")
+
+    def _emit_frontend_frame(self, raw_frame: dict):
+        """Transform and emit a parsed frame to the GUI."""
+        if raw_frame.get("v"):
+            self.voltage_buffer.clear()
+            self.voltage_buffer.extend(raw_frame["v"][:10])
+
+        frontend_data = self._transform_data(raw_frame)
+        if frontend_data:
+            self.data_received.emit(frontend_data)
+
+    def _parse_structured_serial_line(self, line: str) -> Optional[dict]:
+        """Parse multiline BMS status frames and return one complete raw frame."""
+        now = time.time()
+
+        if not line:
+            return self._finalize_pending_frame(force=False)
+
+        current = self._extract_current(line)
+        if current is not None:
+            self._last_pack_current = float(current)
+            self._has_last_pack_current = True
+            if self._pending_frame:
+                self._pending_frame["i"] = self._last_pack_current
+                self._pending_started_at = now
+                return self._finalize_pending_frame(force=False)
+            return {"i": self._last_pack_current}
+
+        indexed_cells = self._extract_indexed_series(line, INDEXED_CELL_TOKEN_RE)
+        indexed_temps = self._extract_indexed_series(line, INDEXED_TEMP_TOKEN_RE)
+        if indexed_cells or indexed_temps:
+            self._ensure_pending_frame(expect_ntc=bool(indexed_cells))
+            if indexed_cells:
+                self._pending_frame["v"] = indexed_cells[:10]
+                self._pending_started_at = now
+            if indexed_temps:
+                self._pending_frame["t"] = indexed_temps[:10]
+                self._pending_started_at = now
+            return self._finalize_pending_frame(force=False)
+
+        if FRAME_HEADER_RE.search(line):
+            self._reset_pending_frame(expect_ntc=True)
+            return None
+
+        cell_values = self._extract_cells_frame(line)
+        if cell_values:
+            self._ensure_pending_frame()
+            self._pending_frame["v"] = cell_values[:10]
+            self._pending_started_at = now
+            if "(v)" in line.lower():
+                self._pending_expect_ntc = True
+            return self._finalize_pending_frame(force=not self._pending_expect_ntc)
+
+        ntc_1_4 = self._extract_ntc_group(line, NTC_1_4_FRAME_RE)
+        if ntc_1_4:
+            self._ensure_pending_frame(expect_ntc=True)
+            self._pending_frame["ntc_1_4"] = ntc_1_4[:4]
+            self._pending_started_at = now
+            return self._finalize_pending_frame(force=False)
+
+        ntc_6_10 = self._extract_ntc_group(line, NTC_6_10_FRAME_RE)
+        if ntc_6_10:
+            self._ensure_pending_frame(expect_ntc=True)
+            self._pending_frame["ntc_6_10"] = ntc_6_10[:5]
+            self._pending_started_at = now
+            return self._finalize_pending_frame(force=False)
+
+        return None
+
+    def _is_structured_telemetry_line(self, line: str) -> bool:
+        """Return true if this line belongs to a known framed telemetry format."""
+        return bool(
+            FRAME_HEADER_RE.search(line)
+            or CELLS_FRAME_RE.search(line)
+            or NTC_1_4_FRAME_RE.search(line)
+            or NTC_6_10_FRAME_RE.search(line)
+            or INDEXED_CELL_TOKEN_RE.search(line)
+            or INDEXED_TEMP_TOKEN_RE.search(line)
+            or CURRENT_FRAME_RE.search(line)
+        )
+
+    def _reset_pending_frame(self, expect_ntc: bool = False):
+        self._pending_frame = {}
+        self._pending_started_at = 0.0
+        self._pending_expect_ntc = expect_ntc
+
+    def _ensure_pending_frame(self, expect_ntc: bool = False):
+        if not self._pending_frame:
+            self._pending_started_at = time.time()
+        self._pending_expect_ntc = self._pending_expect_ntc or expect_ntc
+
+    def _finalize_pending_frame_if_stale(self) -> Optional[dict]:
+        if not self._pending_frame or self._pending_started_at <= 0.0:
+            return None
+        if time.time() - self._pending_started_at < self._pending_timeout_s:
+            return None
+        return self._finalize_pending_frame(force=True)
+
+    def _finalize_pending_frame(self, force: bool) -> Optional[dict]:
+        if "v" not in self._pending_frame:
+            if force:
+                self._reset_pending_frame()
+            return None
+
+        has_ntc_1_4 = "ntc_1_4" in self._pending_frame
+        has_ntc_6_10 = "ntc_6_10" in self._pending_frame
+        has_complete_ntc = has_ntc_1_4 and has_ntc_6_10
+        has_any_ntc = has_ntc_1_4 or has_ntc_6_10
+        has_direct_temps = bool(self._pending_frame.get("t"))
+        has_direct_current = "i" in self._pending_frame
+
+        if not force:
+            if has_direct_temps and has_direct_current:
+                return self._consume_pending_frame()
+            if has_direct_temps and not has_direct_current:
+                return None
+            if has_complete_ntc:
+                return self._consume_pending_frame()
+            if self._pending_expect_ntc:
+                return None
+            if not has_any_ntc:
+                return self._consume_pending_frame()
+            return None
+
+        return self._consume_pending_frame()
+
+    def _consume_pending_frame(self) -> dict:
+        raw_out = {"v": [float(v) for v in self._pending_frame.get("v", [])[:10]]}
+        if "i" in self._pending_frame:
+            raw_out["i"] = float(self._pending_frame["i"])
+        elif self._has_last_pack_current:
+            raw_out["i"] = float(self._last_pack_current)
+
+        if self._pending_frame.get("t"):
+            raw_out["t"] = [float(v) for v in self._pending_frame.get("t", [])[:10]]
+
+        ntc_raw = []
+        ntc_raw.extend(self._pending_frame.get("ntc_1_4", []))
+        ntc_raw.extend(self._pending_frame.get("ntc_6_10", []))
+
+        if ntc_raw:
+            ntc_c = [self._ntc_adc_to_celsius(value) for value in ntc_raw]
+            raw_out["ntc_raw"] = ntc_raw
+            raw_out["ntc_c"] = ntc_c
+            if "t" not in raw_out:
+                raw_out["t"] = self._map_thermistors_to_cells(ntc_c, len(raw_out["v"]))
+
+        self._saw_structured_frame = True
+        self._reset_pending_frame()
+        return raw_out
+
+    def _extract_numeric_values(self, line: str, limit: int = 10):
+        """Extract up to `limit` numeric tokens from a serial line."""
+        values = []
+        for match in NUMERIC_TOKEN_RE.finditer(line):
+            try:
+                values.append(float(match.group(0)))
+            except ValueError:
+                continue
+
+            if len(values) >= limit:
+                break
+        return values
+
+    def _extract_cells_frame(self, line: str):
+        """Extract numeric values from 'Cells: [..]' serial frames."""
+        frame_match = CELLS_FRAME_RE.search(line)
+        if not frame_match:
+            return []
+        frame_payload = frame_match.group(1)
+        return self._extract_numeric_values(frame_payload, limit=64)
+
+    def _extract_ntc_group(self, line: str, regex: re.Pattern) -> List[int]:
+        """Extract integer ADC values from an NTC line."""
+        group_match = regex.search(line)
+        if not group_match:
+            return []
+        payload = group_match.group(1)
+        values = self._extract_numeric_values(payload, limit=16)
+        return [int(round(v)) for v in values]
+
+    def _extract_current(self, line: str) -> Optional[float]:
+        """Extract pack current from lines like 'Current: -0.041 A'."""
+        match = CURRENT_FRAME_RE.search(line)
+        if not match:
+            return None
+        try:
+            return float(match.group(1))
+        except (TypeError, ValueError):
+            return None
+
+    def _extract_indexed_series(self, line: str, regex: re.Pattern, limit: int = 10) -> List[float]:
+        """Extract indexed values like C1: 3.54 ... and return ordered values by index."""
+        values_by_index = {}
+        for match in regex.finditer(line):
+            try:
+                index = int(match.group(1))
+                value = float(match.group(2))
+            except (ValueError, TypeError):
+                continue
+
+            if index < 1:
+                continue
+            if index > limit:
+                continue
+            values_by_index[index] = value
+
+        if not values_by_index:
+            return []
+
+        ordered = []
+        for idx in range(1, limit + 1):
+            if idx in values_by_index:
+                ordered.append(values_by_index[idx])
+        return ordered
+
+    def _ntc_adc_to_celsius(
+        self,
+        adc_raw: float,
+        adc_max: float = 4095.0,
+        pullup_ohms: float = 10000.0,
+        beta: float = 3435.0,
+        r0: float = 10000.0,
+        t0_c: float = 25.0,
+    ) -> float:
+        """
+        Convert ADC reading to Celsius using a standard Beta-model 10K NTC curve.
+        This keeps GUI temperatures meaningful even when firmware streams raw ADC values.
+        """
+        try:
+            adc = float(adc_raw)
+            adc = max(1.0, min(adc_max - 1.0, adc))
+
+            resistance = pullup_ohms * adc / (adc_max - adc)
+            t0_k = t0_c + 273.15
+            inv_t = (1.0 / t0_k) + (math.log(resistance / r0) / beta)
+            temp_c = (1.0 / inv_t) - 273.15
+            return temp_c
+        except Exception:
+            return 25.0
+
+    def _map_thermistors_to_cells(self, therm_c: List[float], cell_count: int) -> List[float]:
+        """Map thermistor temperatures to cell count, including missing NTC5 interpolation."""
+        if cell_count <= 0:
+            return []
+        if not therm_c:
+            return [25.0] * cell_count
+
+        if len(therm_c) >= cell_count:
+            return therm_c[:cell_count]
+
+        # Specific mapping for NTC 1-4 and NTC 6-10 (missing NTC5).
+        if len(therm_c) == 9 and cell_count == 10:
+            sensor_positions = [1, 2, 3, 4, 6, 7, 8, 9, 10]
+            by_cell = {pos: therm_c[idx] for idx, pos in enumerate(sensor_positions)}
+            mapped = []
+            for cell_id in range(1, 11):
+                if cell_id in by_cell:
+                    mapped.append(by_cell[cell_id])
+                    continue
+
+                lower = [pos for pos in by_cell if pos < cell_id]
+                upper = [pos for pos in by_cell if pos > cell_id]
+                if lower and upper:
+                    lo = max(lower)
+                    hi = min(upper)
+                    mapped.append((by_cell[lo] + by_cell[hi]) / 2.0)
+                elif lower:
+                    mapped.append(by_cell[max(lower)])
+                elif upper:
+                    mapped.append(by_cell[min(upper)])
+                else:
+                    mapped.append(25.0)
+            return mapped
+
+        # Generic fallback: extend with nearest available thermistor.
+        mapped = []
+        for idx in range(cell_count):
+            source_idx = min(idx, len(therm_c) - 1)
+            mapped.append(therm_c[source_idx])
+        return mapped
 
     def _transform_data(self, raw):
         """
@@ -82,9 +517,10 @@ class SerialWorker(QObject):
             count = max(len(voltages), len(temps))
             
             for i in range(count):
-                v = voltages[i] if i < len(voltages) else 0.0
-                # Use modulo for temps if we have fewer sensors than cells (common in BMS)
+                v = float(voltages[i]) if i < len(voltages) else None
+                # Use modulo for temps if we have fewer sensors than cells.
                 t = temps[i] if i < len(temps) else (temps[i % len(temps)] if temps else 25.0)
+                t = float(t)
                 
                 cells.append({
                     "id": i + 1,
@@ -112,7 +548,7 @@ class SerialWorker(QObject):
 
             return {
                 "cells": cells,
-                "fan1": {"rpm": fan_rpm}, # Keeping fan1/fan2 struct for now, mapping both to same rpm
+                "fan1": {"rpm": fan_rpm},  # Keeping fan1/fan2 struct for now, mapping both to same rpm
                 "fan2": {"rpm": fan_rpm},
                 "pack_current": raw.get("i", 0.0),
                 "eload": {
@@ -125,7 +561,11 @@ class SerialWorker(QObject):
                 "fan_control": {
                     "auto": bool(fan_ctrl.get("auto", True)),
                     "duty": int(fan_ctrl.get("duty", 0))
-                }
+                },
+                "thermistors": {
+                    "raw": raw.get("ntc_raw", []),
+                    "celsius": raw.get("ntc_c", []),
+                },
             }
         except Exception as e:
             logger.error(f"Transformation error: {e}")
@@ -133,7 +573,8 @@ class SerialWorker(QObject):
 
     def _attempt_connection(self):
         """Tries to connect to the specified port or auto-detect."""
-        target_port = self.port
+        with self._port_lock:
+            target_port = self.port
         
         if target_port is None:
             # Auto-detect logic: Look for STM32 Virtual COM Port
@@ -152,6 +593,8 @@ class SerialWorker(QObject):
             try:
                 self.serial_conn = serial.Serial(target_port, self.baudrate, timeout=1)
                 logger.info(f"Connected to {target_port}")
+                self.connected_port = target_port
+                self.connected_port_changed.emit(target_port)
                 self.connection_status.emit(True)
             except serial.SerialException as e:
                 logger.error(f"Failed to connect to {target_port}: {e}")
@@ -164,6 +607,8 @@ class SerialWorker(QObject):
         self.running = False
         if self.serial_conn:
             self.serial_conn.close()
+        self.connected_port = ""
+        self.connected_port_changed.emit("")
 
     def send_command(self, cmd_str: str):
         """Send a command string to the serial device."""
