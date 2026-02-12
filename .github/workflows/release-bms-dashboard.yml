@@ -19,6 +19,10 @@ jobs:
       WIN_CERT_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            EE175 - Senior Design/BMS_Dashboard
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:
@@ -54,6 +58,10 @@ jobs:
       APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            EE175 - Senior Design/BMS_Dashboard
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:
@@ -95,6 +103,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            EE175 - Senior Design/BMS_Dashboard
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:
@@ -125,6 +137,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            EE175 - Senior Design/BMS_Dashboard
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
         with:
