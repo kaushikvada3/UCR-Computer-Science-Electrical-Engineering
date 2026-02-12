@@ -43,6 +43,9 @@ class UpdateInfo:
     tag_name: str
 
 
+DEFAULT_UPDATE_REPO_SLUG = "kaushikvada3/UCR-Computer-Science-Electrical-Engineering"
+
+
 def detect_repo_slug(project_root: Optional[Path] = None) -> Optional[str]:
     env_value = os.environ.get("BMS_UPDATE_REPO", "").strip()
     if env_value:
@@ -57,10 +60,10 @@ def detect_repo_slug(project_root: Optional[Path] = None) -> Optional[str]:
             text=True,
         ).strip()
     except Exception:
-        return None
+        return DEFAULT_UPDATE_REPO_SLUG
 
     if not output:
-        return None
+        return DEFAULT_UPDATE_REPO_SLUG
 
     ssh_match = re.match(r"git@github\.com:(?P<slug>.+?)(?:\.git)?$", output)
     if ssh_match:
@@ -70,7 +73,8 @@ def detect_repo_slug(project_root: Optional[Path] = None) -> Optional[str]:
     if https_match:
         return https_match.group("slug")
 
-    return None
+    # Packaged builds do not include .git metadata, so keep a stable fallback.
+    return DEFAULT_UPDATE_REPO_SLUG
 
 
 class ReleaseUpdater:
