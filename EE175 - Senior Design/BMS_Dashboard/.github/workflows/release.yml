@@ -40,6 +40,7 @@ jobs:
           path: dist/release/windows-x64/*
 
   build-macos:
+    continue-on-error: true
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -82,6 +83,7 @@ jobs:
           path: dist/release/macos-universal2/*
 
   build-linux:
+    continue-on-error: true
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -110,6 +112,7 @@ jobs:
 
   publish-release:
     needs: [build-windows, build-macos, build-linux]
+    if: ${{ always() && needs.build-windows.result == 'success' }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -132,12 +135,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          WINDOWS_FILE="$(find release-artifacts/windows-release -type f -name '*windows-x64-setup.exe' | head -n1)"
-          MACOS_FILE="$(find release-artifacts/macos-release -type f -name '*.dmg' | head -n1)"
-          LINUX_FILE="$(find release-artifacts/linux-release -type f -name '*.AppImage' | head -n1)"
+          WINDOWS_FILE="$(find release-artifacts/windows-release -type f -name '*windows-x64-setup.exe' | head -n1 || true)"
+          MACOS_FILE="$(find release-artifacts/macos-release -type f -name '*.dmg' | head -n1 || true)"
+          LINUX_FILE="$(find release-artifacts/linux-release -type f -name '*.AppImage' | head -n1 || true)"
 
-          if [[ -z "${WINDOWS_FILE}" || -z "${MACOS_FILE}" || -z "${LINUX_FILE}" ]]; then
-            echo "Missing one or more build artifacts."
+          if [[ -z "${WINDOWS_FILE}" ]]; then
+            echo "Windows artifact missing; cannot publish release."
+            ls -R release-artifacts || true
             exit 1
           fi
 
@@ -149,11 +153,17 @@ jobs:
             KEY_ID="$(gpg --list-secret-keys --keyid-format LONG | awk '/^sec/{print $2}' | head -n1 | sed 's#.*\\/##')"
             if [[ -n "${KEY_ID}" ]]; then
               WIN_SIG="${WINDOWS_FILE}.sig"
-              MAC_SIG="${MACOS_FILE}.sig"
-              LINUX_SIG="${LINUX_FILE}.sig"
               gpg --batch --yes --pinentry-mode loopback --passphrase "${LINUX_GPG_PASSPHRASE}" --local-user "${KEY_ID}" --output "${WIN_SIG}" --detach-sign "${WINDOWS_FILE}"
-              gpg --batch --yes --pinentry-mode loopback --passphrase "${LINUX_GPG_PASSPHRASE}" --local-user "${KEY_ID}" --output "${MAC_SIG}" --detach-sign "${MACOS_FILE}"
-              gpg --batch --yes --pinentry-mode loopback --passphrase "${LINUX_GPG_PASSPHRASE}" --local-user "${KEY_ID}" --output "${LINUX_SIG}" --detach-sign "${LINUX_FILE}"
+
+              if [[ -n "${MACOS_FILE}" ]]; then
+                MAC_SIG="${MACOS_FILE}.sig"
+                gpg --batch --yes --pinentry-mode loopback --passphrase "${LINUX_GPG_PASSPHRASE}" --local-user "${KEY_ID}" --output "${MAC_SIG}" --detach-sign "${MACOS_FILE}"
+              fi
+
+              if [[ -n "${LINUX_FILE}" ]]; then
+                LINUX_SIG="${LINUX_FILE}.sig"
+                gpg --batch --yes --pinentry-mode loopback --passphrase "${LINUX_GPG_PASSPHRASE}" --local-user "${KEY_ID}" --output "${LINUX_SIG}" --detach-sign "${LINUX_FILE}"
+              fi
             fi
           fi
 
@@ -165,9 +175,13 @@ jobs:
             --repo "${REPO_SLUG}"
             --tag "${TAG_NAME}"
             --windows-file "${WINDOWS_FILE}"
-            --macos-file "${MACOS_FILE}"
-            --linux-file "${LINUX_FILE}"
           )
+          if [[ -n "${MACOS_FILE}" ]]; then
+            ARGS+=(--macos-file "${MACOS_FILE}")
+          fi
+          if [[ -n "${LINUX_FILE}" ]]; then
+            ARGS+=(--linux-file "${LINUX_FILE}")
+          fi
           if [[ -n "${WIN_SIG}" ]]; then
             ARGS+=(--windows-signature "${WIN_SIG}")
           fi
@@ -179,11 +193,28 @@ jobs:
           fi
           python scripts/build_release_manifest.py "${ARGS[@]}"
 
+          UPLOAD_DIR="release-artifacts/upload"
+          mkdir -p "${UPLOAD_DIR}"
+          cp -f "${WINDOWS_FILE}" "${UPLOAD_DIR}/"
+          if [[ -n "${MACOS_FILE}" ]]; then
+            cp -f "${MACOS_FILE}" "${UPLOAD_DIR}/"
+          fi
+          if [[ -n "${LINUX_FILE}" ]]; then
+            cp -f "${LINUX_FILE}" "${UPLOAD_DIR}/"
+          fi
+          if [[ -n "${WIN_SIG}" ]]; then
+            cp -f "${WIN_SIG}" "${UPLOAD_DIR}/"
+          fi
+          if [[ -n "${MAC_SIG}" ]]; then
+            cp -f "${MAC_SIG}" "${UPLOAD_DIR}/"
+          fi
+          if [[ -n "${LINUX_SIG}" ]]; then
+            cp -f "${LINUX_SIG}" "${UPLOAD_DIR}/"
+          fi
+          cp -f release-artifacts/release-manifest.json "${UPLOAD_DIR}/"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-artifacts/windows-release/*
-            release-artifacts/macos-release/*
-            release-artifacts/linux-release/*
-            release-artifacts/release-manifest.json
+            release-artifacts/upload/*
