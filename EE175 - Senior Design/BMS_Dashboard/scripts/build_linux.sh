@@ -58,7 +58,19 @@ if [[ -z "$APPIMAGETOOL_BIN" ]]; then
 fi
 
 APPIMAGE_OUT="dist/BMSDashboard-${VERSION}-linux-x64.AppImage"
-ARCH=x86_64 "$APPIMAGETOOL_BIN" "$APPDIR" "$APPIMAGE_OUT"
+if [[ "$APPIMAGETOOL_BIN" == *.AppImage ]]; then
+  chmod +x "$APPIMAGETOOL_BIN"
+fi
+
+if ! ARCH=x86_64 "$APPIMAGETOOL_BIN" "$APPDIR" "$APPIMAGE_OUT"; then
+  if [[ "$APPIMAGETOOL_BIN" == *.AppImage ]]; then
+    echo "appimagetool failed in FUSE mode, retrying with APPIMAGE_EXTRACT_AND_RUN=1"
+    ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL_BIN" "$APPDIR" "$APPIMAGE_OUT"
+  else
+    echo "appimagetool failed and no AppImage fallback is available" >&2
+    exit 1
+  fi
+fi
 
 if [[ -n "${LINUX_GPG_KEY_ID:-}" ]] && command -v gpg >/dev/null 2>&1; then
   gpg --batch --yes --detach-sign --armor -u "$LINUX_GPG_KEY_ID" "$APPIMAGE_OUT"
