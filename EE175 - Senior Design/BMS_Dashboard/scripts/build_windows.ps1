@@ -123,6 +123,8 @@ $releaseDir = Join-Path $projectRoot "dist/release/windows-x64"
 New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
 
 Copy-Item -Force $installerOut $releaseDir
+$latestInstaller = Join-Path $releaseDir "BMSDashboard-windows-x64-setup.exe"
+Copy-Item -Force $installerOut $latestInstaller
 $sha = (Get-FileHash $installerOut -Algorithm SHA256).Hash.ToLower()
 Set-Content -Encoding ASCII (Join-Path $releaseDir "sha256.txt") "$sha  $(Split-Path -Leaf $installerOut)"
 

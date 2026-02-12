@@ -67,6 +67,7 @@ fi
 RELEASE_DIR="dist/release/linux-x64"
 mkdir -p "$RELEASE_DIR"
 cp -f "$APPIMAGE_OUT" "$RELEASE_DIR/"
+cp -f "$APPIMAGE_OUT" "$RELEASE_DIR/BMSDashboard-linux-x64.AppImage"
 if [[ -f "${APPIMAGE_OUT}.asc" ]]; then
   cp -f "${APPIMAGE_OUT}.asc" "$RELEASE_DIR/"
 fi

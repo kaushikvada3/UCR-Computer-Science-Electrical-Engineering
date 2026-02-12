@@ -2,6 +2,18 @@
 
 Desktop launcher for the BMS dashboard UI built with PyQt6 + embedded web frontend.
 
+## Download (Latest)
+
+Direct download links (always target the newest release assets):
+
+- Windows `.exe`: [Download Windows Installer](https://github.com/kaushikvada3/UCR-Computer-Science-Electrical-Engineering/releases/latest/download/BMSDashboard-windows-x64-setup.exe)
+- macOS `.dmg`: [Download macOS DMG](https://github.com/kaushikvada3/UCR-Computer-Science-Electrical-Engineering/releases/latest/download/BMSDashboard-macos-universal2.dmg)
+- Linux `.AppImage`: [Download Linux AppImage](https://github.com/kaushikvada3/UCR-Computer-Science-Electrical-Engineering/releases/latest/download/BMSDashboard-linux-x64.AppImage)
+
+Fallback releases page:
+
+- https://github.com/kaushikvada3/UCR-Computer-Science-Electrical-Engineering/releases
+
 ## Development (VS Code)
 
 The source workflow remains unchanged.

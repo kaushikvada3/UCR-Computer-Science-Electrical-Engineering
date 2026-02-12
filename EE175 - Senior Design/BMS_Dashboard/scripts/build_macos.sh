@@ -46,6 +46,7 @@ fi
 RELEASE_DIR="dist/release/macos-universal2"
 mkdir -p "$RELEASE_DIR"
 cp -f "$DMG_PATH" "$RELEASE_DIR/"
+cp -f "$DMG_PATH" "$RELEASE_DIR/BMSDashboard-macos-universal2.dmg"
 shasum -a 256 "$DMG_PATH" > "$RELEASE_DIR/sha256.txt"
 
 echo "macOS release artifact: $DMG_PATH"
