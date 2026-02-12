@@ -30,6 +30,9 @@ pyinstaller `
   --add-data "assets/icons;assets/icons" `
   gui_launcher.py
 
+$keepLocales = if ($env:KEEP_QTWEBENGINE_LOCALES) { $env:KEEP_QTWEBENGINE_LOCALES } else { "en-US" }
+python scripts/optimize_pyinstaller_bundle.py --bundle-dir "dist/BMSDashboard" --keep-locales "$keepLocales"
+
 $appDir = (Resolve-Path "dist/BMSDashboard").Path
 $appExe = (Resolve-Path "dist/BMSDashboard/BMSDashboard.exe").Path
 $installerOut = Join-Path $projectRoot "dist/BMSDashboard-$Version-windows-x64-setup.exe"

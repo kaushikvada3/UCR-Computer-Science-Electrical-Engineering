@@ -24,6 +24,9 @@ pyinstaller \
   --add-data "assets/icons:assets/icons" \
   gui_launcher.py
 
+KEEP_LOCALES="${KEEP_QTWEBENGINE_LOCALES:-en-US}"
+python scripts/optimize_pyinstaller_bundle.py --bundle-dir "dist/BMSDashboard.app" --keep-locales "${KEEP_LOCALES}"
+
 APP_BUNDLE="dist/BMSDashboard.app"
 DMG_PATH="dist/BMSDashboard-${VERSION}-macos-universal2.dmg"
 
@@ -31,7 +34,7 @@ if [[ -n "${APPLE_SIGN_IDENTITY:-}" ]]; then
   codesign --force --deep --options runtime --sign "$APPLE_SIGN_IDENTITY" "$APP_BUNDLE"
 fi
 
-hdiutil create -volname "BMS Dashboard" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_PATH"
+hdiutil create -volname "BMS Dashboard" -srcfolder "$APP_BUNDLE" -ov -format UDZO -imagekey zlib-level=9 "$DMG_PATH"
 
 if [[ -n "${APPLE_SIGN_IDENTITY:-}" ]]; then
   codesign --force --sign "$APPLE_SIGN_IDENTITY" "$DMG_PATH"

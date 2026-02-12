@@ -24,6 +24,9 @@ pyinstaller \
   --add-data "assets/icons:assets/icons" \
   gui_launcher.py
 
+KEEP_LOCALES="${KEEP_QTWEBENGINE_LOCALES:-en-US}"
+python scripts/optimize_pyinstaller_bundle.py --bundle-dir "dist/BMSDashboard" --keep-locales "${KEEP_LOCALES}"
+
 APPDIR="dist/AppDir"
 mkdir -p "$APPDIR/usr/lib/bms-dashboard" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp -R dist/BMSDashboard/* "$APPDIR/usr/lib/bms-dashboard/"

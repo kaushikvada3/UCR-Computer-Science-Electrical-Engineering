@@ -17,6 +17,8 @@ InstallDir "$PROGRAMFILES\\BMS Dashboard"
 RequestExecutionLevel admin
 ShowInstDetails show
 ShowUnInstDetails show
+SetCompressor /SOLID lzma
+SetCompressorDictSize 64
 
 !if "${ICON_FILE}" != ""
 Icon "${ICON_FILE}"
