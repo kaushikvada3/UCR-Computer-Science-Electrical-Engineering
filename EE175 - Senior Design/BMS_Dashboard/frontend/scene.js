@@ -278,7 +278,10 @@ const TREND_HEIGHT = 90;
 const TREND_PADDING = 8;
 const BASE_UI_WIDTH = 1680;
 const BASE_UI_HEIGHT = 980;
-const MIN_UI_SCALE = 0.78;
+const MIN_UI_SCALE = 0.58;
+const MAX_UI_SCALE = 1.08;
+const COMPACT_LAYOUT_MAX_WIDTH = 980;
+const COMPACT_LAYOUT_MAX_HEIGHT = 760;
 const CELL_VOLTAGE_MIN = 3.2;
 const CELL_VOLTAGE_MAX = 4.2;
 const CELL_VOLTAGE_RED_MAX = 3.5;
@@ -359,6 +362,7 @@ function showDetail(cellId) {
   }
 
   drawCellTrend(cellId);
+  positionDetailPanel();
   detailPanel.classList.add("is-visible");
 }
 
@@ -499,6 +503,43 @@ function drawCellTrend(cellId) {
   detailTrendLatest.textContent = `${latest.toFixed(3)} V`;
 }
 
+function positionDetailPanel() {
+  if (!detailPanel || !cellGridEl) return;
+  const { width, height } = getViewportSize();
+
+  // In compact layout we keep the bottom-sheet behavior defined in CSS.
+  if (document.body.classList.contains("compact-layout")) {
+    detailPanel.style.left = "";
+    detailPanel.style.top = "";
+    detailPanel.style.right = "";
+    detailPanel.style.bottom = "";
+    return;
+  }
+
+  const gridRect = cellGridEl.getBoundingClientRect();
+  const panelWidth = detailPanel.offsetWidth || 340;
+  const panelHeight = detailPanel.offsetHeight || 420;
+  const gap = 16;
+  const viewportPadding = 12;
+
+  // Prefer placing the panel immediately to the right of the 10-cell panel.
+  let left = gridRect.right + gap;
+  const maxLeft = width - panelWidth - viewportPadding;
+  if (left > maxLeft) {
+    const leftOfGrid = gridRect.left - panelWidth - gap;
+    left = leftOfGrid >= viewportPadding ? leftOfGrid : maxLeft;
+  }
+
+  let top = gridRect.top;
+  const maxTop = height - panelHeight - viewportPadding;
+  top = Math.min(Math.max(top, viewportPadding), Math.max(maxTop, viewportPadding));
+
+  detailPanel.style.left = `${Math.round(left)}px`;
+  detailPanel.style.top = `${Math.round(top)}px`;
+  detailPanel.style.right = "auto";
+  detailPanel.style.bottom = "auto";
+}
+
 window.setConnectionStatus = setConnectionStatus;
 setConnectionStatus(false);
 
@@ -634,18 +675,41 @@ function tick() {
 
 tick();
 
-function updateResponsiveUiScale() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+function getViewportSize() {
+  const viewport = window.visualViewport;
+  if (viewport) {
+    return {
+      width: Math.max(320, Math.floor(viewport.width)),
+      height: Math.max(240, Math.floor(viewport.height)),
+    };
+  }
 
-  if (width <= 900) {
+  return {
+    width: Math.max(320, window.innerWidth),
+    height: Math.max(240, window.innerHeight),
+  };
+}
+
+function updateResponsiveUiScale() {
+  const { width, height } = getViewportSize();
+  document.documentElement.style.setProperty("--viewport-width", `${width}px`);
+  document.documentElement.style.setProperty("--viewport-height", `${height}px`);
+
+  const isCompactLayout =
+    width <= COMPACT_LAYOUT_MAX_WIDTH || height <= COMPACT_LAYOUT_MAX_HEIGHT;
+  document.body.classList.toggle("compact-layout", isCompactLayout);
+
+  if (isCompactLayout) {
     document.documentElement.style.setProperty("--ui-scale", "1");
     return;
   }
 
   const scaleByWidth = width / BASE_UI_WIDTH;
   const scaleByHeight = height / BASE_UI_HEIGHT;
-  const scale = Math.max(MIN_UI_SCALE, Math.min(1, scaleByWidth, scaleByHeight));
+  const scale = Math.max(
+    MIN_UI_SCALE,
+    Math.min(MAX_UI_SCALE, scaleByWidth, scaleByHeight),
+  );
   document.documentElement.style.setProperty("--ui-scale", scale.toFixed(3));
 }
 
@@ -866,7 +930,6 @@ window.updateDashboard = function (data) {
 
 // Start Loop
 populateCellGrid();
-tick();
 
 // If we are NOT in the Qt/Python environment, keep the mock stream running for dev
 if (!window.qt) {
@@ -899,16 +962,23 @@ document.querySelectorAll(".glass-panel:not(.detail-panel)").forEach((panel) => 
 
 // --- Resize Handler ---
 window.addEventListener('resize', onWindowResize, false);
-
-function onWindowResize() {
-  updateResponsiveUiScale();
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", onWindowResize);
+  window.visualViewport.addEventListener("scroll", onWindowResize);
 }
 
-updateResponsiveUiScale();
+function onWindowResize() {
+  const { width, height } = getViewportSize();
+  updateResponsiveUiScale();
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  sliderInputs.forEach((input) => updateSliderUI(input));
+  positionDetailPanel();
+}
+
+onWindowResize();
 
 
 

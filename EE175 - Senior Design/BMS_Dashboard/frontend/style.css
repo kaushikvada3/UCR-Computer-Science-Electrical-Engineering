@@ -13,10 +13,17 @@
   --accent-color: #0a84ff;
   --danger-color: #ff453a;
   --success-color: #30d158;
+  --warning-color: #ffd60a;
   --slider-track: rgba(255, 255, 255, 0.18);
   --slider-thumb-border: rgba(255, 255, 255, 0.55);
   --slider-thumb-ring: rgba(10, 132, 255, 0.2);
   --font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --ui-scale: 1;
+  --viewport-width: 100vw;
+  --viewport-height: 100vh;
+  --hud-padding: clamp(1rem, 1.6vw, 2rem);
+  --side-column-width: clamp(250px, 20vw, 320px);
+  --detail-panel-width: clamp(280px, 22vw, 340px);
 }
 
 * {
@@ -76,17 +83,54 @@ body::before {
 .hud {
   position: relative;
   z-index: 10;
-  padding: 2rem;
-  height: 100%;
+  padding: var(--hud-padding);
+  height: calc(var(--viewport-height) / var(--ui-scale));
+  width: calc(var(--viewport-width) / var(--ui-scale));
   display: grid;
-  grid-template-columns: 320px 1fr 320px;
+  grid-template-columns: var(--side-column-width) 1fr var(--side-column-width);
   grid-template-rows: auto 1fr;
   pointer-events: none;
   /* Let clicks pass through to 3D scene */
+  transform-origin: top left;
+  transform: scale(var(--ui-scale));
 }
 
 .hud>* {
   pointer-events: auto;
+}
+
+body.compact-layout {
+  overflow: auto;
+}
+
+body.compact-layout .hud {
+  transform: none;
+  width: 100%;
+  height: auto;
+  min-height: 100vh;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+body.compact-layout .hud__header {
+  grid-column: 1;
+  margin-bottom: 0.5rem;
+}
+
+body.compact-layout .left-column {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+}
+
+body.compact-layout .right-column {
+  grid-column: 1;
+  grid-row: 3;
+  width: 100%;
+  max-width: none;
+  margin-top: 1rem;
 }
 
 /* Glass Panel Utility */
@@ -125,7 +169,7 @@ body::before {
   transition: left 1s ease;
 }
 
-.glass-panel:hover {
+.glass-panel:hover:not(.detail-panel) {
   background: rgba(255, 255, 255, 0.08);
   border-color: var(--glass-highlight);
   box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.6);
@@ -172,7 +216,8 @@ h1 {
   flex-direction: column;
   gap: 16px;
   /* Consistent spacing between cards */
-  width: 320px;
+  width: 100%;
+  max-width: var(--side-column-width);
   /* Specific width to balance UI */
   pointer-events: auto;
   /* align-items: flex-end removed to enforce full width stretch */
@@ -195,10 +240,20 @@ h1 {
 .status__dot {
   width: 8px;
   height: 8px;
-  background-color: var(--success-color);
+  background-color: var(--warning-color);
   border-radius: 50%;
-  box-shadow: 0 0 8px var(--success-color);
+  box-shadow: 0 0 8px var(--warning-color);
   animation: pulse 2s infinite;
+}
+
+.status__dot--waiting {
+  background-color: var(--warning-color);
+  box-shadow: 0 0 8px var(--warning-color);
+}
+
+.status__dot--connected {
+  background-color: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
 }
 
 @keyframes pulse {
@@ -539,19 +594,24 @@ h1 {
 
 
 .detail-panel {
-  position: absolute;
-  right: 2rem;
-  top: 50%;
-  transform: translateY(-50%) translateX(20px);
-  width: 300px;
+  position: fixed;
+  left: calc(var(--hud-padding) + var(--side-column-width) + 1rem);
+  right: auto;
+  top: 7.25rem;
+  transform: translateX(20px);
+  width: clamp(240px, calc(var(--detail-panel-width) * var(--ui-scale)), 360px);
+  max-width: calc(var(--viewport-width) - 2rem);
+  max-height: calc(var(--viewport-height) - 2rem);
+  overflow-y: auto;
   opacity: 0;
   pointer-events: none;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2200;
 }
 
 .detail-panel.is-visible {
   opacity: 1;
-  transform: translateY(-50%) translateX(0);
+  transform: translateX(0);
   pointer-events: auto;
 }
 
@@ -593,6 +653,53 @@ h1 {
 .detail-stat__value {
   font-weight: 600;
   font-size: 1.1rem;
+  font-feature-settings: "tnum";
+}
+
+.detail-graph {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.detail-graph__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.detail-graph__latest {
+  font-size: 1rem;
+}
+
+.detail-graph__svg {
+  width: 100%;
+  height: 96px;
+  margin-top: 0.5rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.detail-graph__area {
+  fill: rgba(10, 132, 255, 0.2);
+}
+
+.detail-graph__line {
+  fill: none;
+  stroke: #49a3fc;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.detail-graph__range {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
   font-feature-settings: "tnum";
 }
 
@@ -660,25 +767,66 @@ h1 {
   transform: translateY(0);
 }
 
+body.compact-layout .detail-panel {
+  position: fixed;
+  top: auto;
+  bottom: 0;
+  width: 100%;
+  max-width: none;
+  max-height: 70vh;
+  right: 0;
+  left: 0;
+  transform: translateY(100%);
+  border-radius: 24px 24px 0 0;
+  border-bottom: none;
+}
+
+body.compact-layout .detail-panel.is-visible {
+  transform: translateY(0);
+}
+
 @media (max-width: 900px) {
-  .hud {
-    top: 16px;
-    left: 16px;
-    right: 16px;
+  :root {
+    --ui-scale: 1;
   }
 
-  .hud__header,
-  .hud__section {
-    padding: 16px;
+  .hud {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    padding: 1rem;
+    overflow-y: auto; /* Allow scrolling if vertical space is tight */
+  }
+
+  .hud__header {
+    grid-column: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .left-column {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .right-column {
+    grid-column: 1;
+    grid-row: 3;
+    width: 100%;
+    margin-top: 1rem;
   }
 
   .detail-panel {
     position: fixed;
     top: auto;
-    bottom: 16px;
-    width: calc(100% - 32px);
-    transform: translateY(120%);
-    right: 16px;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    right: 0;
+    left: 0;
+    transform: translateY(100%);
+    border-radius: 24px 24px 0 0;
+    border-bottom: none;
+    z-index: 1000;
   }
 
   .detail-panel.is-visible {
