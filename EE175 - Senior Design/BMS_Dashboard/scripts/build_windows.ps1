@@ -11,7 +11,12 @@ if (-not $Version) {
     $Version = (python -c "from backend.version import APP_VERSION; print(APP_VERSION)").Trim()
 }
 
-python scripts/generate_icons.py --input "BMS Logo.png" --output-dir "assets/icons"
+$logoPath = Join-Path $projectRoot "BMS Logo.png"
+if (Test-Path $logoPath) {
+    python scripts/generate_icons.py --input "BMS Logo.png" --output-dir "assets/icons"
+} else {
+    Write-Host "BMS Logo.png not found; using existing assets/icons files."
+}
 
 Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 

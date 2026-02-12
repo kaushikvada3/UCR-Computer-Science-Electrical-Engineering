@@ -6,7 +6,11 @@ cd "$ROOT_DIR"
 
 VERSION="${1:-$(python -c 'from backend.version import APP_VERSION; print(APP_VERSION)')}"
 
-python scripts/generate_icons.py --input "BMS Logo.png" --output-dir "assets/icons" --require-icns
+if [[ -f "BMS Logo.png" ]]; then
+  python scripts/generate_icons.py --input "BMS Logo.png" --output-dir "assets/icons" --require-icns
+else
+  echo "BMS Logo.png not found; using existing assets/icons files."
+fi
 
 rm -rf build dist
 
