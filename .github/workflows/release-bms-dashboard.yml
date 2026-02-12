@@ -46,6 +46,12 @@ jobs:
 
   build-macos:
     runs-on: macos-14
+    env:
+      APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+      APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,22 +66,19 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Install signing certificate
-        if: ${{ secrets.APPLE_CERT_P12_BASE64 != '' && secrets.APPLE_CERT_PASSWORD != '' }}
+        if: ${{ env.APPLE_CERT_P12_BASE64 != '' && env.APPLE_CERT_PASSWORD != '' }}
         run: |
-          echo "${{ secrets.APPLE_CERT_P12_BASE64 }}" | base64 --decode > /tmp/bms_cert.p12
+          echo "${APPLE_CERT_P12_BASE64}" | base64 --decode > /tmp/bms_cert.p12
           security create-keychain -p actions build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p actions build.keychain
-          security import /tmp/bms_cert.p12 -k build.keychain -P "${{ secrets.APPLE_CERT_PASSWORD }}" -T /usr/bin/codesign
+          security import /tmp/bms_cert.p12 -k build.keychain -P "${APPLE_CERT_PASSWORD}" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
           IDENTITY="$(security find-identity -v -p codesigning build.keychain | head -n 1 | awk -F'\"' '{print $2}')"
           echo "APPLE_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
 
       - name: Build macOS DMG
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_SIGN_IDENTITY: ${{ env.APPLE_SIGN_IDENTITY }}
         run: |
           cd "${APP_DIR}"
