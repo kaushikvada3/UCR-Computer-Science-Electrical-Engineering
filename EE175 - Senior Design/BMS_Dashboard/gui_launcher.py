@@ -126,6 +126,7 @@ class DashboardWindow(QMainWindow):
     """Main window hosting the WebEngine view."""
     update_check_finished = pyqtSignal(object, object, bool)
     update_install_finished = pyqtSignal(object, object)
+    update_download_progress = pyqtSignal(int, int)
 
     def __init__(
         self,
@@ -148,6 +149,8 @@ class DashboardWindow(QMainWindow):
         self._update_download_thread: Optional[threading.Thread] = None
         self._update_check_dialog: Optional[QProgressDialog] = None
         self._update_download_dialog: Optional[QProgressDialog] = None
+        self._update_download_started_at = 0.0
+        self._update_download_version = ""
         self._has_serial_data = False
         self._current_connected_port = ""
 
@@ -182,6 +185,7 @@ class DashboardWindow(QMainWindow):
         self._build_toolbar()
         self.update_check_finished.connect(self._handle_update_result)
         self.update_install_finished.connect(self._handle_install_handoff)
+        self.update_download_progress.connect(self._handle_download_progress)
         self._install_watcher()
         self.load_page()
         self.statusBar().showMessage("Serial: connecting...")
@@ -454,6 +458,8 @@ class DashboardWindow(QMainWindow):
             label=f"Downloading version {info.version}...",
             dialog_attr="_update_download_dialog",
         )
+        self._update_download_started_at = time.monotonic()
+        self._update_download_version = info.version
         self.statusBar().showMessage(f"Downloading update {info.version}...")
 
         self._update_download_thread = threading.Thread(
@@ -469,7 +475,10 @@ class DashboardWindow(QMainWindow):
         try:
             if not self.updater:
                 raise UpdateError("Updater is not configured")
-            installer = self.updater.download_update(info)
+            installer = self.updater.download_update(
+                info,
+                progress_callback=lambda done, total: self.update_download_progress.emit(done, total),
+            )
             message = self.updater.launch_guided_install(installer)
         except Exception as exc:
             error = exc
@@ -477,8 +486,42 @@ class DashboardWindow(QMainWindow):
 
         self.update_install_finished.emit(message, error)
 
+    def _handle_download_progress(self, downloaded_bytes: int, total_bytes: int):
+        dialog = self._update_download_dialog
+        if dialog is None:
+            return
+
+        downloaded_bytes = max(0, int(downloaded_bytes))
+        total_bytes = max(0, int(total_bytes))
+
+        if total_bytes > 0:
+            if dialog.maximum() != total_bytes or dialog.minimum() != 0:
+                dialog.setRange(0, total_bytes)
+            dialog.setValue(min(downloaded_bytes, total_bytes))
+            percent = (downloaded_bytes / total_bytes) * 100.0
+            label = (
+                f"Downloading version {self._update_download_version}..."
+                f"\n{self._format_bytes(downloaded_bytes)} / {self._format_bytes(total_bytes)}"
+                f" ({percent:.1f}%)"
+            )
+        else:
+            if dialog.minimum() != 0 or dialog.maximum() != 0:
+                dialog.setRange(0, 0)
+            dialog.setValue(0)
+            label = (
+                f"Downloading version {self._update_download_version}..."
+                f"\n{self._format_bytes(downloaded_bytes)} downloaded"
+            )
+
+        elapsed = max(0.001, time.monotonic() - self._update_download_started_at)
+        speed_bps = downloaded_bytes / elapsed
+        label += f" @ {self._format_bytes(speed_bps)}/s"
+        dialog.setLabelText(label)
+
     def _handle_install_handoff(self, message: Optional[str], error: Optional[Exception]):
         self._close_busy_dialog("_update_download_dialog")
+        self._update_download_started_at = 0.0
+        self._update_download_version = ""
         if error:
             self.statusBar().showMessage("Update failed.", 6000)
             QMessageBox.warning(self, "Updates", f"Update failed:\n{error}")
@@ -507,6 +550,17 @@ class DashboardWindow(QMainWindow):
         dialog.close()
         dialog.deleteLater()
         setattr(self, dialog_attr, None)
+
+    @staticmethod
+    def _format_bytes(value: float) -> str:
+        units = ["B", "KB", "MB", "GB", "TB"]
+        size = float(value)
+        for unit in units:
+            if size < 1024.0 or unit == units[-1]:
+                if unit == "B":
+                    return f"{int(size)} {unit}"
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
 
 
 def parse_args() -> argparse.Namespace:

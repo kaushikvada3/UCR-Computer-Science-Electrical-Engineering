@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import hashlib
 import json
 import os
@@ -9,7 +10,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 from urllib.parse import urljoin
 
 import requests
@@ -210,17 +211,39 @@ class ReleaseUpdater:
 
         return None
 
-    def download_update(self, info: UpdateInfo, target_dir: Optional[Path] = None) -> Path:
+    def download_update(
+        self,
+        info: UpdateInfo,
+        target_dir: Optional[Path] = None,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Path:
         destination = target_dir or Path(tempfile.gettempdir()) / "BMSDashboardUpdates"
         destination.mkdir(parents=True, exist_ok=True)
         file_path = destination / info.asset.filename
 
+        if file_path.exists():
+            try:
+                self.verify_sha256(file_path, info.asset.sha256)
+                if progress_callback:
+                    size = int(file_path.stat().st_size)
+                    progress_callback(size, size)
+                return file_path
+            except Exception:
+                file_path.unlink(missing_ok=True)
+
         with self.session.get(info.asset.url, timeout=self.timeout_s, stream=True) as response:
             response.raise_for_status()
+            total_size = int(response.headers.get("Content-Length") or 0)
+            downloaded = 0
+            if progress_callback:
+                progress_callback(0, total_size)
             with file_path.open("wb") as fh:
-                for chunk in response.iter_content(chunk_size=1024 * 256):
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
                     if chunk:
                         fh.write(chunk)
+                        downloaded += len(chunk)
+                        if progress_callback:
+                            progress_callback(downloaded, total_size)
 
         self.verify_sha256(file_path, info.asset.sha256)
         if info.asset.signature:
@@ -268,8 +291,20 @@ class ReleaseUpdater:
     @staticmethod
     def launch_guided_install(installer_path: Path) -> str:
         if sys.platform.startswith("win"):
-            subprocess.Popen([str(installer_path)], shell=False)
-            return "Installer launched. Complete setup, then reopen BMS Dashboard."
+            # ShellExecute handles UAC elevation prompts for installers.
+            result = ctypes.windll.shell32.ShellExecuteW(
+                None,
+                "open",
+                str(installer_path),
+                None,
+                None,
+                1,
+            )
+            if result <= 32:
+                raise UpdateError(
+                    "Unable to launch installer. Please run it manually as Administrator."
+                )
+            return "Installer launched. Approve UAC if prompted, then complete setup."
 
         if sys.platform == "darwin":
             subprocess.Popen(["open", str(installer_path)])
