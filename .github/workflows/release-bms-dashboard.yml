@@ -38,6 +38,12 @@ jobs:
             ${{ env.APP_DIR }}/requirements.txt
             ${{ env.APP_DIR }}/requirements-dev.txt
 
+      - name: Prepare NSIS cache directories
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${env:APP_DIR}\tools\nsis" | Out-Null
+          New-Item -ItemType Directory -Force -Path "${env:APP_DIR}\tools\nsis-extract" | Out-Null
+
       - name: Cache NSIS tools
         uses: actions/cache@v4
         with:
@@ -139,10 +145,13 @@ jobs:
             ${{ env.APP_DIR }}/requirements.txt
             ${{ env.APP_DIR }}/requirements-dev.txt
 
+      - name: Prepare AppImageTool cache directory
+        run: mkdir -p "${APP_DIR}/tools"
+
       - name: Cache AppImageTool
         uses: actions/cache@v4
         with:
-          path: ${{ env.APP_DIR }}/appimagetool.AppImage
+          path: ${{ env.APP_DIR }}/tools
           key: ${{ runner.os }}-appimagetool-continuous-v1
 
       - name: Install dependencies

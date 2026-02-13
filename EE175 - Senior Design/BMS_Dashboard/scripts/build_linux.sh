@@ -55,7 +55,8 @@ if [[ -z "$APPIMAGETOOL_BIN" ]]; then
   if command -v appimagetool >/dev/null 2>&1; then
     APPIMAGETOOL_BIN="$(command -v appimagetool)"
   else
-    APPIMAGETOOL_BIN="$ROOT_DIR/appimagetool.AppImage"
+    mkdir -p "$ROOT_DIR/tools"
+    APPIMAGETOOL_BIN="$ROOT_DIR/tools/appimagetool.AppImage"
     if [[ ! -f "$APPIMAGETOOL_BIN" ]]; then
       curl -L -o "$APPIMAGETOOL_BIN" \
         https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
