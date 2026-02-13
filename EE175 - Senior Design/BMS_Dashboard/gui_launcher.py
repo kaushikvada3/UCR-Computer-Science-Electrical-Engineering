@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import QFileSystemWatcher, QObject, QThread, QTimer, QUrl, pyqtSlot
+from PyQt6.QtCore import QFileSystemWatcher, QObject, QThread, QTimer, Qt, QUrl, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QMainWindow,
     QMessageBox,
+    QProgressDialog,
 )
 
 from backend.data_stream import SerialWorker
@@ -123,6 +124,8 @@ class Bridge(QObject):
 
 class DashboardWindow(QMainWindow):
     """Main window hosting the WebEngine view."""
+    update_check_finished = pyqtSignal(object, object, bool)
+    update_install_finished = pyqtSignal(object, object)
 
     def __init__(
         self,
@@ -143,6 +146,8 @@ class DashboardWindow(QMainWindow):
         self.updater = updater
         self._update_thread: Optional[threading.Thread] = None
         self._update_download_thread: Optional[threading.Thread] = None
+        self._update_check_dialog: Optional[QProgressDialog] = None
+        self._update_download_dialog: Optional[QProgressDialog] = None
         self._has_serial_data = False
         self._current_connected_port = ""
 
@@ -175,6 +180,8 @@ class DashboardWindow(QMainWindow):
         self.view.page().setWebChannel(self.channel)
 
         self._build_toolbar()
+        self.update_check_finished.connect(self._handle_update_result)
+        self.update_install_finished.connect(self._handle_install_handoff)
         self._install_watcher()
         self.load_page()
         self.statusBar().showMessage("Serial: connecting...")
@@ -375,6 +382,14 @@ class DashboardWindow(QMainWindow):
                 QMessageBox.information(self, "Updates", "An update check is already running.")
             return
 
+        if manual:
+            self._show_busy_dialog(
+                title="Updates",
+                label="Checking for updates...",
+                dialog_attr="_update_check_dialog",
+            )
+        self.statusBar().showMessage("Checking for updates...")
+
         self._update_thread = threading.Thread(
             target=self._check_updates_worker,
             args=(manual,),
@@ -393,19 +408,23 @@ class DashboardWindow(QMainWindow):
         finally:
             self.settings.set_last_checked_now()
 
-        QTimer.singleShot(0, lambda: self._handle_update_result(info, error, manual))
+        self.update_check_finished.emit(info, error, manual)
 
     def _handle_update_result(self, info: Optional[UpdateInfo], error: Optional[Exception], manual: bool):
+        self._close_busy_dialog("_update_check_dialog")
         if error:
+            self.statusBar().showMessage("Update check failed.", 6000)
             if manual:
                 QMessageBox.warning(self, "Updates", f"Update check failed:\n{error}")
             return
 
         if info is None:
+            self.statusBar().showMessage("You are on the latest stable release.", 6000)
             if manual:
                 QMessageBox.information(self, "Updates", "You are already on the latest stable release.")
             return
 
+        self.statusBar().showMessage(f"Update available: {info.version}", 6000)
         self._prompt_install_update(info)
 
     def _prompt_install_update(self, info: UpdateInfo):
@@ -430,6 +449,13 @@ class DashboardWindow(QMainWindow):
             QMessageBox.information(self, "Updates", "Update download already in progress.")
             return
 
+        self._show_busy_dialog(
+            title="Updates",
+            label=f"Downloading version {info.version}...",
+            dialog_attr="_update_download_dialog",
+        )
+        self.statusBar().showMessage(f"Downloading update {info.version}...")
+
         self._update_download_thread = threading.Thread(
             target=self._download_and_launch_update_worker,
             args=(info,),
@@ -449,14 +475,38 @@ class DashboardWindow(QMainWindow):
             error = exc
             logger.exception("Update install handoff failed")
 
-        QTimer.singleShot(0, lambda: self._handle_install_handoff(message, error))
+        self.update_install_finished.emit(message, error)
 
     def _handle_install_handoff(self, message: Optional[str], error: Optional[Exception]):
+        self._close_busy_dialog("_update_download_dialog")
         if error:
+            self.statusBar().showMessage("Update failed.", 6000)
             QMessageBox.warning(self, "Updates", f"Update failed:\n{error}")
             return
 
+        self.statusBar().showMessage("Update package is ready.", 6000)
         QMessageBox.information(self, "Updates", message or "Update package launched.")
+
+    def _show_busy_dialog(self, title: str, label: str, dialog_attr: str) -> None:
+        self._close_busy_dialog(dialog_attr)
+        dialog = QProgressDialog(label, "", 0, 0, self)
+        dialog.setWindowTitle(title)
+        dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        dialog.setMinimumDuration(0)
+        dialog.setAutoClose(False)
+        dialog.setAutoReset(False)
+        dialog.setCancelButton(None)
+        dialog.setValue(0)
+        dialog.show()
+        setattr(self, dialog_attr, dialog)
+
+    def _close_busy_dialog(self, dialog_attr: str) -> None:
+        dialog = getattr(self, dialog_attr, None)
+        if dialog is None:
+            return
+        dialog.close()
+        dialog.deleteLater()
+        setattr(self, dialog_attr, None)
 
 
 def parse_args() -> argparse.Namespace:

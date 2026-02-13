@@ -280,8 +280,8 @@ const BASE_UI_WIDTH = 1680;
 const BASE_UI_HEIGHT = 980;
 const MIN_UI_SCALE = 0.58;
 const MAX_UI_SCALE = 1.08;
-const COMPACT_LAYOUT_MAX_WIDTH = 980;
-const COMPACT_LAYOUT_MAX_HEIGHT = 760;
+const COMPACT_LAYOUT_ENTER_WIDTH = 980;
+const COMPACT_LAYOUT_EXIT_WIDTH = 1080;
 const CELL_VOLTAGE_MIN = 3.2;
 const CELL_VOLTAGE_MAX = 4.2;
 const CELL_VOLTAGE_RED_MAX = 3.5;
@@ -289,6 +289,7 @@ const CELL_VOLTAGE_GREEN_MAX = 3.63;
 
 let currentState = null;
 const cellVoltageHistory = new Map();
+let compactLayoutEnabled = false;
 
 // Mock State - Will be replaced by real data stream later
 const state = {
@@ -676,18 +677,24 @@ function tick() {
 tick();
 
 function getViewportSize() {
+  let width = Math.max(
+    320,
+    Math.floor(window.innerWidth || document.documentElement.clientWidth || 0),
+  );
+  let height = Math.max(
+    240,
+    Math.floor(window.innerHeight || document.documentElement.clientHeight || 0),
+  );
+
+  // Prefer the larger viewport reading to avoid false "compact layout" switches
+  // from zoom/visualViewport quirks on desktop WebEngine.
   const viewport = window.visualViewport;
   if (viewport) {
-    return {
-      width: Math.max(320, Math.floor(viewport.width)),
-      height: Math.max(240, Math.floor(viewport.height)),
-    };
+    width = Math.max(width, Math.floor(viewport.width));
+    height = Math.max(height, Math.floor(viewport.height));
   }
 
-  return {
-    width: Math.max(320, window.innerWidth),
-    height: Math.max(240, window.innerHeight),
-  };
+  return { width, height };
 }
 
 function updateResponsiveUiScale() {
@@ -695,8 +702,10 @@ function updateResponsiveUiScale() {
   document.documentElement.style.setProperty("--viewport-width", `${width}px`);
   document.documentElement.style.setProperty("--viewport-height", `${height}px`);
 
-  const isCompactLayout =
-    width <= COMPACT_LAYOUT_MAX_WIDTH || height <= COMPACT_LAYOUT_MAX_HEIGHT;
+  const isCompactLayout = compactLayoutEnabled
+    ? width <= COMPACT_LAYOUT_EXIT_WIDTH
+    : width <= COMPACT_LAYOUT_ENTER_WIDTH;
+  compactLayoutEnabled = isCompactLayout;
   document.body.classList.toggle("compact-layout", isCompactLayout);
 
   if (isCompactLayout) {
