@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BMS Dashboard – Frontend Preview</title>
+  <title>BMS Dashboard - Frontend Preview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -44,8 +44,12 @@
           <p class="metric-card__value" data-pack-voltage>-- V</p>
         </div>
         <div class="metric-card">
+          <p class="metric-card__label">Pack Current</p>
+          <p class="metric-card__value" data-pack-current>-- A</p>
+        </div>
+        <div class="metric-card">
           <p class="metric-card__label">Peak Temperature</p>
-          <p class="metric-card__value" data-pack-temp>-- °C</p>
+          <p class="metric-card__value" data-pack-temp>-- &deg;C</p>
         </div>
         <div class="metric-card">
           <p class="metric-card__label">Fan 1 Speed</p>
@@ -154,8 +158,8 @@
 
     </div>
     <div class="status">
-      <span class="status__dot" id="data-pulse"></span>
-      <span class="status__label" data-thermal-trend>Waiting for Data...</span>
+      <span class="status__dot status__dot--waiting" id="data-pulse"></span>
+      <span class="status__label" data-thermal-trend>Waiting for Data</span>
     </div>
   </div>
 
@@ -174,14 +178,32 @@
       </div>
       <div class="detail-stat">
         <p class="detail-stat__label">Temperature</p>
-        <p class="detail-stat__value" data-cell-temperature>32.5 °C</p>
+        <p class="detail-stat__value" data-cell-temperature>32.5 &deg;C</p>
+      </div>
+      <div class="detail-stat">
+        <p class="detail-stat__label">Current</p>
+        <p class="detail-stat__value" data-cell-current>-- A</p>
       </div>
       <div class="detail-stat">
         <p class="detail-stat__label">Delta</p>
         <p class="detail-stat__value" data-cell-delta>+8 mV</p>
       </div>
+      <div class="detail-graph">
+        <div class="detail-graph__header">
+          <p class="detail-stat__label">Recent Voltage</p>
+          <p class="detail-stat__value detail-graph__latest" data-cell-trend-latest>-- V</p>
+        </div>
+        <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none" data-cell-trend>
+          <path class="detail-graph__area" data-cell-trend-area></path>
+          <path class="detail-graph__line" data-cell-trend-line></path>
+        </svg>
+        <div class="detail-graph__range">
+          <span data-cell-trend-min>-- V</span>
+          <span data-cell-trend-max>-- V</span>
+        </div>
+      </div>
       <div class="detail-panel__note">
-        Animation-only mock data. Backend not required for this preview.
+        Live trace updates while telemetry streams.
       </div>
     </div>
   </aside>
