@@ -19,6 +19,14 @@ CELL_VOLTAGES_FRAME_RE = re.compile(
     r'cell\s*voltages?\s*(?:\((?P<unit>[^)]*)\))?\s*:\s*\[(?P<payload>.*?)\]',
     re.IGNORECASE,
 )
+SHORT_VOLTAGE_FRAME_RE = re.compile(
+    r'^\s*v\s*:\s*(?P<payload>.+?)\s*$',
+    re.IGNORECASE,
+)
+SHORT_TEMP_FRAME_RE = re.compile(
+    r'^\s*t(?:\s*\((?P<unit>[^)]*)\))?\s*:\s*(?P<payload>.+?)\s*$',
+    re.IGNORECASE,
+)
 FRAME_HEADER_RE = re.compile(r'bms(?:\s+\w+){0,3}\s+emulator\s+status', re.IGNORECASE)
 NTC_1_4_FRAME_RE = re.compile(r'ntc\s*1\s*-\s*4\s*:\s*\[(.*?)\]', re.IGNORECASE)
 NTC_1_5_FRAME_RE = re.compile(r'ntc\s*1\s*-\s*5(?:\s*\([^)]+\))?\s*:\s*\[(.*?)\]', re.IGNORECASE)
@@ -32,7 +40,7 @@ INDEXED_TEMP_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 CURRENT_FRAME_RE = re.compile(
-    r'\bcurrent\s*:\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)\s*(?:a|amp|amps)?\b',
+    r'(?:^|\b)(?:current|i)\s*:\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)\s*(?:a|amp|amps)?\b',
     re.IGNORECASE,
 )
 NON_VOLTAGE_HINT_RE = re.compile(
@@ -273,12 +281,24 @@ class SerialWorker(QObject):
 
         cell_values = self._extract_cells_frame(line)
         if cell_values:
+            is_short_v_line = SHORT_VOLTAGE_FRAME_RE.search(line) is not None
             self._ensure_pending_frame()
             self._pending_frame["v"] = cell_values[:10]
             self._pending_started_at = now
             if "(v)" in line.lower():
                 self._pending_expect_ntc = True
-            return self._finalize_pending_frame(force=not self._pending_expect_ntc)
+            if is_short_v_line:
+                # Firmware shorthand frames arrive as V/T/I over multiple lines.
+                self._pending_expect_ntc = True
+            force_finalize = (not self._pending_expect_ntc) and (not is_short_v_line)
+            return self._finalize_pending_frame(force=force_finalize)
+
+        direct_temps = self._extract_temp_frame(line)
+        if direct_temps:
+            self._ensure_pending_frame()
+            self._pending_frame["t"] = direct_temps[:10]
+            self._pending_started_at = now
+            return self._finalize_pending_frame(force=False)
 
         ntc_low = self._extract_ntc_group(line, NTC_1_4_FRAME_RE)
         if not ntc_low:
@@ -308,6 +328,8 @@ class SerialWorker(QObject):
             FRAME_HEADER_RE.search(line)
             or CELLS_FRAME_RE.search(line)
             or CELL_VOLTAGES_FRAME_RE.search(line)
+            or SHORT_VOLTAGE_FRAME_RE.search(line)
+            or SHORT_TEMP_FRAME_RE.search(line)
             or NTC_1_4_FRAME_RE.search(line)
             or NTC_1_5_FRAME_RE.search(line)
             or NTC_6_10_FRAME_RE.search(line)
@@ -571,12 +593,35 @@ class SerialWorker(QObject):
                 return [v / 1000.0 for v in values]
             return values
 
+        shorthand_match = SHORT_VOLTAGE_FRAME_RE.search(line)
+        if shorthand_match:
+            payload = shorthand_match.group("payload")
+            values = self._extract_numeric_values(payload, limit=64)
+            if values and max(abs(v) for v in values) > 50.0:
+                return [v / 1000.0 for v in values]
+            return values
+
         frame_match = CELLS_FRAME_RE.search(line)
         if not frame_match:
             return []
         frame_payload = frame_match.group(1)
         values = self._extract_numeric_values(frame_payload, limit=64)
         if values and max(abs(v) for v in values) > 50.0:
+            return [v / 1000.0 for v in values]
+        return values
+
+    def _extract_temp_frame(self, line: str) -> List[float]:
+        """Extract numeric temperatures from shorthand lines like `T(v): ...`."""
+        match = SHORT_TEMP_FRAME_RE.search(line)
+        if not match:
+            return []
+        payload = match.group("payload")
+        values = self._extract_numeric_values(payload, limit=64)
+        if not values:
+            return []
+
+        unit_text = (match.group("unit") or "").lower()
+        if "mv" in unit_text:
             return [v / 1000.0 for v in values]
         return values
 
