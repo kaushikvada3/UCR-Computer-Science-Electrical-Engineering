@@ -314,8 +314,40 @@ class ReleaseUpdater:
             )
 
     @staticmethod
-    def launch_guided_install(installer_path: Path) -> str:
+    def launch_guided_install(installer_path: Path, wait_for_pid: Optional[int] = None) -> str:
         if sys.platform.startswith("win"):
+            if wait_for_pid and wait_for_pid > 0:
+                escaped_path = str(installer_path).replace("'", "''")
+                script = (
+                    f"$pidToWait = {int(wait_for_pid)}; "
+                    "while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { "
+                    "Start-Sleep -Milliseconds 250 "
+                    "}; "
+                    f"Start-Process -FilePath '{escaped_path}'"
+                )
+                flags = (
+                    getattr(subprocess, "DETACHED_PROCESS", 0)
+                    | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                )
+                try:
+                    subprocess.Popen(
+                        [
+                            "powershell",
+                            "-NoProfile",
+                            "-ExecutionPolicy",
+                            "Bypass",
+                            "-Command",
+                            script,
+                        ],
+                        creationflags=flags,
+                    )
+                    return (
+                        "Update is ready. Close BMS Dashboard now and the installer will start automatically."
+                    )
+                except Exception:
+                    pass
+
             # ShellExecute handles UAC elevation prompts for installers.
             result = ctypes.windll.shell32.ShellExecuteW(
                 None,

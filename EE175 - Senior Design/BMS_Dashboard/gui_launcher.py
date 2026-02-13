@@ -7,6 +7,7 @@ import ctypes
 import http.server
 import json
 import logging
+import os
 import socketserver
 import sys
 import threading
@@ -481,7 +482,7 @@ class DashboardWindow(QMainWindow):
                 info,
                 progress_callback=lambda done, total: self.update_download_progress.emit(done, total),
             )
-            message = self.updater.launch_guided_install(installer)
+            message = self.updater.launch_guided_install(installer, wait_for_pid=os.getpid())
         except Exception as exc:
             error = exc
             logger.exception("Update install handoff failed")
@@ -527,6 +528,23 @@ class DashboardWindow(QMainWindow):
         if error:
             self.statusBar().showMessage("Update failed.", 6000)
             QMessageBox.warning(self, "Updates", f"Update failed:\n{error}")
+            return
+
+        if (
+            sys.platform.startswith("win")
+            and isinstance(message, str)
+            and "Close BMS Dashboard now" in message
+        ):
+            self.statusBar().showMessage("Update is ready. Close the app to continue install.", 6000)
+            close_now = QMessageBox.question(
+                self,
+                "Updates",
+                f"{message}\n\nClose now?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if close_now == QMessageBox.StandardButton.Yes:
+                QTimer.singleShot(150, self.close)
             return
 
         self.statusBar().showMessage("Update package is ready.", 6000)
