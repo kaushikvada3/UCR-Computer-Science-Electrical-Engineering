@@ -265,7 +265,11 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   
   // Basic Command Parsing
-  // Format: "ELOAD:ON", "ELOAD:OFF", "ELOAD:SET:1500" (mA)
+  // Supported:
+  // - "ELOAD:ON", "ELOAD:OFF"
+  // - "ELOAD:SET:<mA>" (legacy current in mA)
+  // - "ELOAD:ISET:<A>" (target current in amps)
+  // - "ELOAD:VSET:<V>" (target voltage in volts)
   // Ensure null-termination safe access
   uint32_t len = *Len;
   if(len > 0 && len < APP_RX_DATA_SIZE) {
@@ -276,6 +280,16 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
           Sensors_SetELoad(true, bms_state.eload_current_mA);
       } else if(strncmp(cmd, "ELOAD:OFF", 9) == 0) {
           Sensors_SetELoad(false, bms_state.eload_current_mA);
+      } else if(strncmp(cmd, "ELOAD:ISET:", 11) == 0) {
+           float current_A = 0.0f;
+           if(sscanf(cmd + 11, "%f", &current_A) == 1) {
+               Sensors_SetELoad(bms_state.eload_enabled, current_A * 1000.0f);
+           }
+      } else if(strncmp(cmd, "ELOAD:VSET:", 11) == 0) {
+           float voltage_V = 0.0f;
+           if(sscanf(cmd + 11, "%f", &voltage_V) == 1) {
+               Sensors_SetELoadVoltage(voltage_V * 1000.0f);
+           }
       } else if(strncmp(cmd, "ELOAD:SET:", 10) == 0) {
            float current_mA = 0.0f;
            if(sscanf(cmd + 10, "%f", &current_mA) == 1) {

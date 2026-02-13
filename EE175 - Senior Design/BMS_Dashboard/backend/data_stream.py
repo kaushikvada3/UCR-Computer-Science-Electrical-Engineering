@@ -47,6 +47,7 @@ NON_VOLTAGE_HINT_RE = re.compile(
     r'\b(?:ntc|status|bms|rpm|fan|eload|current|temp|fault|ctrl)\b',
     re.IGNORECASE,
 )
+EXCLUDED_SERIAL_PORTS = {"COM3"}
 
 class SerialWorker(QObject):
     """Worker thread that continuously reads from the serial port."""
@@ -73,6 +74,7 @@ class SerialWorker(QObject):
         self._pending_timeout_s = 0.30
         self._last_pack_current = 0.0
         self._has_last_pack_current = False
+        self._is_connected = False
 
     def start_monitoring(self):
         """Main loop for the worker thread."""
@@ -146,9 +148,7 @@ class SerialWorker(QObject):
                         self.data_received.emit(frontend_data)
                 except serial.SerialException as e:
                     logger.error(f"Serial error: {e}")
-                    self.connection_status.emit(False)
-                    self.connected_port = ""
-                    self.connected_port_changed.emit("")
+                    self._mark_disconnected()
                     self.serial_conn.close()
                     self.serial_conn = None
                     self.voltage_buffer.clear()
@@ -174,12 +174,19 @@ class SerialWorker(QObject):
             return None
         if text.lower() == "auto":
             return None
+        if text.upper() in EXCLUDED_SERIAL_PORTS:
+            logger.info("Ignoring excluded serial port '%s'; using auto-detect instead.", text)
+            return None
         return text
 
     @staticmethod
     def list_available_ports():
         """Return a sorted list of currently available serial device paths."""
-        ports = [p.device for p in serial.tools.list_ports.comports() if p.device]
+        ports = [
+            p.device
+            for p in serial.tools.list_ports.comports()
+            if p.device and str(p.device).strip().upper() not in EXCLUDED_SERIAL_PORTS
+        ]
         return sorted(set(ports))
 
     def get_target_port(self):
@@ -188,6 +195,19 @@ class SerialWorker(QObject):
 
     def get_connected_port(self):
         return self.connected_port or None
+
+    def _set_connection_state(self, connected: bool):
+        connected = bool(connected)
+        if self._is_connected == connected:
+            return
+        self._is_connected = connected
+        self.connection_status.emit(connected)
+
+    def _mark_disconnected(self):
+        self._set_connection_state(False)
+        if self.connected_port:
+            self.connected_port = ""
+            self.connected_port_changed.emit("")
 
     def set_baudrate(self, baudrate: int):
         """Update baudrate and reconnect."""
@@ -206,9 +226,7 @@ class SerialWorker(QObject):
                 pass
             finally:
                 self.serial_conn = None
-        self.connection_status.emit(False)
-        self.connected_port = ""
-        self.connected_port_changed.emit("")
+        self._mark_disconnected()
         logger.info("Serial baudrate updated to %d", normalized)
 
     def set_target_port(self, port):
@@ -223,9 +241,7 @@ class SerialWorker(QObject):
                 pass
             finally:
                 self.serial_conn = None
-        self.connection_status.emit(False)
-        self.connected_port = ""
-        self.connected_port_changed.emit("")
+        self._mark_disconnected()
         logger.info("Serial target port updated to %s", normalized or "auto")
 
     def _emit_frontend_frame(self, raw_frame: dict):
@@ -523,7 +539,18 @@ class SerialWorker(QObject):
 
         eload_stats = payload.get("eload_stats")
         if isinstance(eload_stats, dict):
-            raw["eload_stats"] = eload_stats
+            normalized_eload_stats = dict(eload_stats)
+            if "v_set" not in normalized_eload_stats:
+                for key in ("target_voltage", "v_target", "voltage_setpoint"):
+                    if key in eload_stats:
+                        normalized_eload_stats["v_set"] = eload_stats.get(key)
+                        break
+            if "i_set" not in normalized_eload_stats:
+                for key in ("target_current", "i_target", "current_setpoint"):
+                    if key in eload_stats:
+                        normalized_eload_stats["i_set"] = eload_stats.get(key)
+                        break
+            raw["eload_stats"] = normalized_eload_stats
         else:
             eload_payload = payload.get("eload")
             if isinstance(eload_payload, dict):
@@ -534,6 +561,10 @@ class SerialWorker(QObject):
                         eload_payload.get("target_current", eload_payload.get("i", 0.0)),
                     ),
                     "v": eload_payload.get("v", eload_payload.get("voltage", 0.0)),
+                    "v_set": eload_payload.get(
+                        "v_set",
+                        eload_payload.get("target_voltage", eload_payload.get("v_target", 0.0)),
+                    ),
                     "i_act": eload_payload.get("i_act", eload_payload.get("actual_current", 0.0)),
                     "p": eload_payload.get("p", eload_payload.get("power", 0.0)),
                 }
@@ -783,20 +814,36 @@ class SerialWorker(QObject):
                  eload = {
                      "en": old_eload.get("en", 0),
                      "i_set": old_eload.get("i", 0.0),
+                     "v_set": old_eload.get(
+                         "v_set",
+                         old_eload.get("target_voltage", old_eload.get("v_target", 0.0)),
+                     ),
                      "v": 0.0, "i_act": 0.0, "p": 0.0
                  }
+
+            target_current = self._coerce_numeric(
+                eload.get("i_set", eload.get("target_current"))
+            )
+            target_voltage = self._coerce_numeric(
+                eload.get("v_set", eload.get("target_voltage", eload.get("v_target")))
+            )
+            measured_voltage = self._coerce_numeric(eload.get("v", eload.get("voltage")))
+            measured_current = self._coerce_numeric(eload.get("i_act", eload.get("actual_current")))
+            power_value = self._coerce_numeric(eload.get("p", eload.get("power")))
+            pack_current = self._coerce_numeric(raw.get("i"))
 
             return {
                 "cells": cells,
                 "fan1": {"rpm": fan_rpm},  # Keeping fan1/fan2 struct for now, mapping both to same rpm
                 "fan2": {"rpm": fan_rpm},
-                "pack_current": raw.get("i", 0.0),
+                "pack_current": float(pack_current if pack_current is not None else 0.0),
                 "eload": {
                     "enabled": bool(eload.get("en", 0)),
-                    "target_current": float(eload.get("i_set", 0.0)),
-                    "voltage": float(eload.get("v", 0.0)),
-                    "actual_current": float(eload.get("i_act", 0.0)),
-                    "power": float(eload.get("p", 0.0))
+                    "target_current": float(target_current if target_current is not None else 0.0),
+                    "target_voltage": float(target_voltage if target_voltage is not None else 0.0),
+                    "voltage": float(measured_voltage if measured_voltage is not None else 0.0),
+                    "actual_current": float(measured_current if measured_current is not None else 0.0),
+                    "power": float(power_value if power_value is not None else 0.0)
                 },
                 "fan_control": {
                     "auto": bool(fan_ctrl.get("auto", True)),
@@ -826,18 +873,26 @@ class SerialWorker(QObject):
                 logger.info(f"Connected to {target_port}")
                 self.connected_port = target_port
                 self.connected_port_changed.emit(target_port)
-                self.connection_status.emit(True)
+                self._set_connection_state(True)
             except serial.SerialException as e:
                 logger.error(f"Failed to connect to {target_port}: {e}")
+                self._mark_disconnected()
                 time.sleep(2)
         else:
-            # logger.debug("No STM32 device found. Retrying...")
-            pass
+            self._mark_disconnected()
 
     @staticmethod
     def _select_auto_port(ports) -> Optional[str]:
         """Choose the best candidate serial port when running in auto mode."""
         if not ports:
+            return None
+
+        candidates = [
+            port_info
+            for port_info in ports
+            if str(getattr(port_info, "device", "") or "").strip().upper() not in EXCLUDED_SERIAL_PORTS
+        ]
+        if not candidates:
             return None
 
         def score_port(port_info):
@@ -865,7 +920,7 @@ class SerialWorker(QObject):
 
             return (score, device)
 
-        best = max(ports, key=score_port)
+        best = max(candidates, key=score_port)
         best_score = score_port(best)[0]
         if best_score < 0:
             return None
@@ -875,8 +930,7 @@ class SerialWorker(QObject):
         self.running = False
         if self.serial_conn:
             self.serial_conn.close()
-        self.connected_port = ""
-        self.connected_port_changed.emit("")
+        self._mark_disconnected()
 
     def send_command(self, cmd_str: str):
         """Send a command string to the serial device."""

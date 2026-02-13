@@ -11,8 +11,8 @@
   <script type="importmap">
       {
         "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/"
+          "three": "./vendor/three/build/three.module.js",
+          "three/addons/": "./vendor/three/addons/"
         }
       }
     </script>
@@ -59,14 +59,6 @@
           <p class="metric-card__label">Fan 2 Speed</p>
           <p class="metric-card__value" data-fan-speed-2>-- RPM</p>
         </div>
-        <div class="metric-card">
-          <p class="metric-card__label">Power Mode</p>
-          <div class="mode-selector">
-            <button class="mode-btn active" data-mode="Balanced">Balanced</button>
-            <button class="mode-btn" data-mode="Low-Power">Low-Power</button>
-            <button class="mode-btn" data-mode="High-Power">High-Power</button>
-          </div>
-        </div>
       </section>
     </div>
 
@@ -109,10 +101,10 @@
         </div>
 
         <div class="control-group">
-          <p class="metric-card__label">Target Current (I_SET)</p>
+          <p class="metric-card__label">Target Voltage (V_SET)</p>
           <div class="input-row">
             <div class="glass-slider" data-glass-slider>
-              <input type="range" min="0" max="10" step="0.01" value="0" id="eload-slider" class="glass-slider__input">
+              <input type="range" min="0" max="40" step="0.01" value="0" id="eload-voltage-slider" class="glass-slider__input">
               <div class="glass-slider__track">
                 <div class="glass-slider__progress"></div>
               </div>
@@ -122,7 +114,26 @@
                 <div class="glass-slider__thumb-specular"></div>
               </div>
             </div>
-            <input type="number" min="0" max="10" step="0.01" value="0" id="eload-input" class="numeric-input">
+            <input type="number" min="0" max="40" step="0.01" value="0.00" id="eload-voltage-input" class="numeric-input">
+            <span class="unit">V</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <p class="metric-card__label">Target Current (I_SET)</p>
+          <div class="input-row">
+            <div class="glass-slider" data-glass-slider>
+              <input type="range" min="0" max="20" step="0.01" value="0" id="eload-current-slider" class="glass-slider__input">
+              <div class="glass-slider__track">
+                <div class="glass-slider__progress"></div>
+              </div>
+              <div class="glass-slider__thumb">
+                <div class="glass-slider__thumb-filter"></div>
+                <div class="glass-slider__thumb-overlay"></div>
+                <div class="glass-slider__thumb-specular"></div>
+              </div>
+            </div>
+            <input type="number" min="0" max="20" step="0.01" value="0.00" id="eload-current-input" class="numeric-input">
             <span class="unit">A</span>
           </div>
         </div>

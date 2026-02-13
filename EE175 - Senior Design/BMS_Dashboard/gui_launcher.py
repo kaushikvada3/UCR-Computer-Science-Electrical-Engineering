@@ -200,14 +200,16 @@ class DashboardWindow(QMainWindow):
         )
 
     def handle_connection_status(self, is_connected: bool):
+        self._set_frontend_connection_state(is_connected)
         if not is_connected:
             self._has_serial_data = False
-            self._set_frontend_connection_state(False)
+            self.view.page().runJavaScript(
+                'if(window.clearDashboardData) window.clearDashboardData("disconnect");'
+            )
         self._refresh_status_bar()
 
     def handle_data_activity(self):
         self._has_serial_data = True
-        self._set_frontend_connection_state(True)
         self._refresh_status_bar()
 
     def handle_connected_port_change(self, connected_port: str):
@@ -606,11 +608,11 @@ def main() -> int:
     args = parse_args()
 
     settings = SettingsStore()
-    stored_port = settings.serial_port()
     stored_baudrate = settings.serial_baudrate()
 
     if args.serial_port == SERIAL_PORT_DEFAULT_SENTINEL:
-        serial_port = stored_port
+        # Default startup behavior is always auto-detect unless explicitly overridden.
+        serial_port = None
     else:
         serial_port = normalize_serial_port_arg(args.serial_port)
 

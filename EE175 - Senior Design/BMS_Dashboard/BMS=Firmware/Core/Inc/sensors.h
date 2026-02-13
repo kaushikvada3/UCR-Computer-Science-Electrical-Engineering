@@ -32,6 +32,7 @@ typedef struct {
 
     /* E-Load State */
     float eload_current_mA;        // Target Current (I_SET)
+    float eload_voltage_setpoint_mV; // Target Voltage (V_SET)
     bool  eload_enabled;           // Output Enable
     float eload_voltage_mV;        // Input Voltage (V_SENSE)
     float eload_actual_current_mA; // Actual Current (V_SHUNT)
@@ -50,6 +51,7 @@ extern volatile BMS_PackState_t bms_state;
 void Sensors_Init(void);
 void Sensors_Update_10Hz(void);
 void Sensors_SetELoad(bool enable, float current_mA);
+void Sensors_SetELoadVoltage(float voltage_mV);
 void Sensors_SetFan(bool auto_mode, uint8_t duty);
 
 #endif // SENSORS_H

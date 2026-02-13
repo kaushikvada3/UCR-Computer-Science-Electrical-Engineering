@@ -84,6 +84,13 @@ void Sensors_SetELoad(bool enable, float current_mA) {
     }
 }
 
+void Sensors_SetELoadVoltage(float voltage_mV) {
+    if (voltage_mV < 0.0f) {
+        voltage_mV = 0.0f;
+    }
+    bms_state.eload_voltage_setpoint_mV = voltage_mV;
+}
+
 void Sensors_SetFan(bool auto_mode, uint8_t duty) {
     bms_state.fan_auto_mode = auto_mode;
     
@@ -196,9 +203,10 @@ void Sensors_JSON_Output(void) {
     float power_W = (bms_state.eload_voltage_mV / 1000.0f) * (bms_state.eload_actual_current_mA / 1000.0f);
     
     offset += snprintf(msg_buffer + offset, sizeof(msg_buffer)-offset, 
-                       "\"eload_stats\":{\"en\":%d,\"i_set\":%.3f,\"v\":%.2f,\"i_act\":%.3f,\"p\":%.2f}}\r\n", 
+                       "\"eload_stats\":{\"en\":%d,\"i_set\":%.3f,\"v_set\":%.2f,\"v\":%.2f,\"i_act\":%.3f,\"p\":%.2f}}\r\n", 
                        bms_state.eload_enabled ? 1 : 0,
                        bms_state.eload_current_mA / 1000.0f,
+                       bms_state.eload_voltage_setpoint_mV / 1000.0f,
                        bms_state.eload_voltage_mV / 1000.0f,
                        bms_state.eload_actual_current_mA / 1000.0f,
                        power_W);
