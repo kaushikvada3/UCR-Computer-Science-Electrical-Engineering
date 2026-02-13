@@ -1,9 +1,10 @@
 import logging
 import math
+import json
 import re
 from collections import deque
 from threading import Lock
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 import serial
 import serial.tools.list_ports
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -14,9 +15,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("SerialMonitor")
 NUMERIC_TOKEN_RE = re.compile(r'(?<![A-Za-z0-9])[-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?')
 CELLS_FRAME_RE = re.compile(r'cells\s*(?:\([^)]+\))?\s*:\s*\[(.*?)\]', re.IGNORECASE)
-FRAME_HEADER_RE = re.compile(r'bms\s+emulator\s+status', re.IGNORECASE)
+CELL_VOLTAGES_FRAME_RE = re.compile(
+    r'cell\s*voltages?\s*(?:\((?P<unit>[^)]*)\))?\s*:\s*\[(?P<payload>.*?)\]',
+    re.IGNORECASE,
+)
+FRAME_HEADER_RE = re.compile(r'bms(?:\s+\w+){0,3}\s+emulator\s+status', re.IGNORECASE)
 NTC_1_4_FRAME_RE = re.compile(r'ntc\s*1\s*-\s*4\s*:\s*\[(.*?)\]', re.IGNORECASE)
-NTC_6_10_FRAME_RE = re.compile(r'ntc\s*6\s*-\s*10\s*:\s*\[(.*?)\]', re.IGNORECASE)
+NTC_1_5_FRAME_RE = re.compile(r'ntc\s*1\s*-\s*5(?:\s*\([^)]+\))?\s*:\s*\[(.*?)\]', re.IGNORECASE)
+NTC_6_10_FRAME_RE = re.compile(r'ntc\s*6\s*-\s*10(?:\s*\([^)]+\))?\s*:\s*\[(.*?)\]', re.IGNORECASE)
 INDEXED_CELL_TOKEN_RE = re.compile(
     r'\bC(\d+)\s*:\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)',
     re.IGNORECASE,
@@ -231,6 +237,14 @@ class SerialWorker(QObject):
         if not line:
             return self._finalize_pending_frame(force=False)
 
+        json_frame = self._try_parse_json_payload(line)
+        if json_frame:
+            if "i" in json_frame:
+                self._last_pack_current = float(json_frame["i"])
+                self._has_last_pack_current = True
+            self._saw_structured_frame = True
+            return json_frame
+
         current = self._extract_current(line)
         if current is not None:
             self._last_pack_current = float(current)
@@ -266,10 +280,12 @@ class SerialWorker(QObject):
                 self._pending_expect_ntc = True
             return self._finalize_pending_frame(force=not self._pending_expect_ntc)
 
-        ntc_1_4 = self._extract_ntc_group(line, NTC_1_4_FRAME_RE)
-        if ntc_1_4:
+        ntc_low = self._extract_ntc_group(line, NTC_1_4_FRAME_RE)
+        if not ntc_low:
+            ntc_low = self._extract_ntc_group(line, NTC_1_5_FRAME_RE)
+        if ntc_low:
             self._ensure_pending_frame(expect_ntc=True)
-            self._pending_frame["ntc_1_4"] = ntc_1_4[:4]
+            self._pending_frame["ntc_1_4"] = ntc_low[:5]
             self._pending_started_at = now
             return self._finalize_pending_frame(force=False)
 
@@ -284,10 +300,16 @@ class SerialWorker(QObject):
 
     def _is_structured_telemetry_line(self, line: str) -> bool:
         """Return true if this line belongs to a known framed telemetry format."""
+        stripped = line.strip()
+        has_json = ("{" in stripped and "}" in stripped)
         return bool(
+            has_json
+            or
             FRAME_HEADER_RE.search(line)
             or CELLS_FRAME_RE.search(line)
+            or CELL_VOLTAGES_FRAME_RE.search(line)
             or NTC_1_4_FRAME_RE.search(line)
+            or NTC_1_5_FRAME_RE.search(line)
             or NTC_6_10_FRAME_RE.search(line)
             or INDEXED_CELL_TOKEN_RE.search(line)
             or INDEXED_TEMP_TOKEN_RE.search(line)
@@ -377,13 +399,186 @@ class SerialWorker(QObject):
                 break
         return values
 
+    def _try_parse_json_payload(self, line: str) -> Optional[dict]:
+        """
+        Parse a JSON object embedded in a serial line.
+        Supports raw JSON lines and prefixed logs containing `{...}` payloads.
+        """
+        text = line.strip()
+        if "{" not in text or "}" not in text:
+            return None
+
+        start = text.find("{")
+        end = text.rfind("}")
+        if start < 0 or end <= start:
+            return None
+
+        candidate = text[start : end + 1]
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError:
+            return None
+
+        if not isinstance(payload, dict):
+            return None
+
+        return self._normalize_json_payload(payload)
+
+    def _normalize_json_payload(self, payload: Dict[str, Any]) -> Optional[dict]:
+        """Normalize varied firmware JSON payload shapes into the raw transform format."""
+        raw: Dict[str, Any] = {}
+
+        voltages = self._coerce_numeric_list(payload.get("v"), limit=10)
+        if not voltages:
+            for key in ("voltages", "cell_voltages", "cell_voltage", "cells_v"):
+                voltages = self._coerce_numeric_list(payload.get(key), limit=10)
+                if voltages:
+                    break
+        if not voltages:
+            cells_value = payload.get("cells")
+            if isinstance(cells_value, list):
+                if cells_value and isinstance(cells_value[0], dict):
+                    parsed_voltages = []
+                    parsed_temps = []
+                    for cell in cells_value:
+                        if not isinstance(cell, dict):
+                            continue
+                        voltage = self._coerce_numeric(
+                            cell.get("voltage", cell.get("v", cell.get("cell_voltage")))
+                        )
+                        if voltage is not None:
+                            parsed_voltages.append(voltage)
+                        temp = self._coerce_numeric(
+                            cell.get("temperature", cell.get("temp", cell.get("t")))
+                        )
+                        if temp is not None:
+                            parsed_temps.append(temp)
+                    voltages = parsed_voltages[:10]
+                    if parsed_temps:
+                        raw["t"] = parsed_temps[:10]
+                else:
+                    voltages = self._coerce_numeric_list(cells_value, limit=10)
+
+        if voltages:
+            # If telemetry is streamed in mV, normalize to volts.
+            if max(abs(v) for v in voltages) > 50.0:
+                voltages = [v / 1000.0 for v in voltages]
+            raw["v"] = voltages[:10]
+
+        if "t" not in raw:
+            for key in ("t", "temps", "temperatures", "cell_temps", "cell_temperatures"):
+                temps = self._coerce_numeric_list(payload.get(key), limit=10)
+                if temps:
+                    raw["t"] = temps[:10]
+                    break
+
+        for key in ("i", "current", "pack_current", "current_a"):
+            current = self._coerce_numeric(payload.get(key))
+            if current is not None:
+                raw["i"] = current
+                break
+
+        fan_ctrl = payload.get("fan_ctrl")
+        if isinstance(fan_ctrl, dict):
+            raw["fan_ctrl"] = fan_ctrl
+        else:
+            normalized_fan_ctrl: Dict[str, Any] = {}
+            auto = payload.get("fan_auto")
+            duty = payload.get("fan_duty")
+            rpm = self._coerce_numeric(payload.get("fan_rpm"))
+            if rpm is None:
+                fan_values = self._coerce_numeric_list(payload.get("fan"), limit=2)
+                if fan_values:
+                    rpm = fan_values[0]
+            if isinstance(auto, bool) or isinstance(auto, int):
+                normalized_fan_ctrl["auto"] = int(bool(auto))
+            if isinstance(duty, (int, float)):
+                normalized_fan_ctrl["duty"] = int(round(float(duty)))
+            if rpm is not None:
+                normalized_fan_ctrl["rpm"] = float(rpm)
+            if normalized_fan_ctrl:
+                raw["fan_ctrl"] = normalized_fan_ctrl
+
+        eload_stats = payload.get("eload_stats")
+        if isinstance(eload_stats, dict):
+            raw["eload_stats"] = eload_stats
+        else:
+            eload_payload = payload.get("eload")
+            if isinstance(eload_payload, dict):
+                raw["eload_stats"] = {
+                    "en": eload_payload.get("en", eload_payload.get("enabled", 0)),
+                    "i_set": eload_payload.get(
+                        "i_set",
+                        eload_payload.get("target_current", eload_payload.get("i", 0.0)),
+                    ),
+                    "v": eload_payload.get("v", eload_payload.get("voltage", 0.0)),
+                    "i_act": eload_payload.get("i_act", eload_payload.get("actual_current", 0.0)),
+                    "p": eload_payload.get("p", eload_payload.get("power", 0.0)),
+                }
+
+        ntc_raw = self._coerce_numeric_list(payload.get("ntc_raw"), limit=16)
+        if ntc_raw:
+            raw["ntc_raw"] = [int(round(v)) for v in ntc_raw]
+        ntc_c = self._coerce_numeric_list(payload.get("ntc_c"), limit=16)
+        if ntc_c:
+            raw["ntc_c"] = ntc_c
+
+        return raw if raw else None
+
+    @staticmethod
+    def _coerce_numeric(value: Any) -> Optional[float]:
+        if isinstance(value, (int, float)):
+            value_f = float(value)
+            if math.isfinite(value_f):
+                return value_f
+            return None
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            try:
+                value_f = float(text)
+            except ValueError:
+                return None
+            if math.isfinite(value_f):
+                return value_f
+        return None
+
+    def _coerce_numeric_list(self, value: Any, limit: int) -> List[float]:
+        if not isinstance(value, list):
+            return []
+        out: List[float] = []
+        for item in value:
+            parsed = self._coerce_numeric(item)
+            if parsed is None:
+                continue
+            out.append(parsed)
+            if len(out) >= limit:
+                break
+        return out
+
     def _extract_cells_frame(self, line: str):
         """Extract numeric values from 'Cells: [..]' serial frames."""
+        explicit_match = CELL_VOLTAGES_FRAME_RE.search(line)
+        if explicit_match:
+            payload = explicit_match.group("payload")
+            values = self._extract_numeric_values(payload, limit=64)
+            unit_text = (explicit_match.group("unit") or "").lower()
+            if "mv" in unit_text:
+                return [v / 1000.0 for v in values]
+            # Defensive fallback for unlabeled millivolt payloads.
+            if values and max(abs(v) for v in values) > 50.0:
+                return [v / 1000.0 for v in values]
+            return values
+
         frame_match = CELLS_FRAME_RE.search(line)
         if not frame_match:
             return []
         frame_payload = frame_match.group(1)
-        return self._extract_numeric_values(frame_payload, limit=64)
+        values = self._extract_numeric_values(frame_payload, limit=64)
+        if values and max(abs(v) for v in values) > 50.0:
+            return [v / 1000.0 for v in values]
+        return values
 
     def _extract_ntc_group(self, line: str, regex: re.Pattern) -> List[int]:
         """Extract integer ADC values from an NTC line."""
@@ -577,17 +772,8 @@ class SerialWorker(QObject):
             target_port = self.port
         
         if target_port is None:
-            # Auto-detect logic: Look for STM32 Virtual COM Port
             ports = list(serial.tools.list_ports.comports())
-            for p in ports:
-                # Common VID/PID for ST-Link VCP or STM32 VCP
-                # You might need to adjust this filter based on your specific device
-                description = p.description if p.description else ""
-                manufacturer = p.manufacturer if p.manufacturer else ""
-                
-                if "STM" in description or "STMicroelectronics" in manufacturer:
-                    target_port = p.device
-                    break
+            target_port = self._select_auto_port(ports)
         
         if target_port:
             try:
@@ -602,6 +788,43 @@ class SerialWorker(QObject):
         else:
             # logger.debug("No STM32 device found. Retrying...")
             pass
+
+    @staticmethod
+    def _select_auto_port(ports) -> Optional[str]:
+        """Choose the best candidate serial port when running in auto mode."""
+        if not ports:
+            return None
+
+        def score_port(port_info):
+            description = (port_info.description or "").lower()
+            manufacturer = (port_info.manufacturer or "").lower()
+            hwid = (port_info.hwid or "").lower()
+            device = str(port_info.device or "")
+            vid = getattr(port_info, "vid", None)
+
+            score = 0
+            if vid == 0x0483:
+                score += 120  # STMicroelectronics USB VID
+            if "stm" in description or "stmicroelectronics" in manufacturer:
+                score += 100
+            if any(token in description for token in ("usb", "cdc", "virtual com", "serial")):
+                score += 35
+            if any(token in manufacturer for token in ("ftdi", "silicon", "wch", "arduino", "stmicroelectronics")):
+                score += 20
+            if any(token in hwid for token in ("usb", "vid", "pid")):
+                score += 10
+            if "bluetooth" in description:
+                score -= 120
+            if device.upper() in ("COM1", "COM2"):
+                score -= 30
+
+            return (score, device)
+
+        best = max(ports, key=score_port)
+        best_score = score_port(best)[0]
+        if best_score < 0:
+            return None
+        return best.device
 
     def stop(self):
         self.running = False
