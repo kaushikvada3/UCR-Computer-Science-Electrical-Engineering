@@ -13,8 +13,8 @@
 
 Name "BMS Dashboard ${APP_VERSION}"
 OutFile "${OUT_FILE}"
-InstallDir "$PROGRAMFILES\\BMS Dashboard"
-RequestExecutionLevel admin
+InstallDir "$LOCALAPPDATA\\Programs\\BMS Dashboard"
+RequestExecutionLevel user
 ShowInstDetails show
 ShowUnInstDetails show
 SetCompressor /SOLID lzma
@@ -39,13 +39,13 @@ Section "Install"
   CreateShortcut "$DESKTOP\\BMS Dashboard.lnk" "$INSTDIR\\BMSDashboard.exe"
 
   WriteUninstaller "$INSTDIR\\Uninstall.exe"
-  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "DisplayName" "BMS Dashboard"
-  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "DisplayVersion" "${APP_VERSION}"
-  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "Publisher" "UCR"
-  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "UninstallString" '"$INSTDIR\\Uninstall.exe"'
-  WriteRegDWORD HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "NoModify" 1
-  WriteRegDWORD HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "NoRepair" 1
+  WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "DisplayName" "BMS Dashboard"
+  WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "DisplayVersion" "${APP_VERSION}"
+  WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "Publisher" "UCR"
+  WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "InstallLocation" "$INSTDIR"
+  WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "UninstallString" '"$INSTDIR\\Uninstall.exe"'
+  WriteRegDWORD HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "NoModify" 1
+  WriteRegDWORD HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard" "NoRepair" 1
 SectionEnd
 
 Section "Uninstall"
@@ -54,5 +54,5 @@ Section "Uninstall"
   RMDir "$SMPROGRAMS\\BMS Dashboard"
 
   RMDir /r "$INSTDIR"
-  DeleteRegKey HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard"
+  DeleteRegKey HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\BMSDashboard"
 SectionEnd

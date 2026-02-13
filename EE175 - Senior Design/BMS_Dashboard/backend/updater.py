@@ -87,7 +87,11 @@ class ReleaseUpdater:
         timeout_s: int = 15,
     ):
         self.repo_slug = (repo_slug or "").strip()
-        self.current_version = self._to_version(current_version)
+        try:
+            self.current_version = self._to_version(current_version)
+        except UpdateError:
+            # Backwards compatibility for legacy/non-semver version strings.
+            self.current_version = Version("0")
         self.channel = (channel or "stable").strip().lower() or "stable"
         self.timeout_s = timeout_s
         self.session = requests.Session()
@@ -231,13 +235,33 @@ class ReleaseUpdater:
             except Exception:
                 file_path.unlink(missing_ok=True)
 
-        with self.session.get(info.asset.url, timeout=self.timeout_s, stream=True) as response:
+        partial_path = file_path.with_suffix(file_path.suffix + ".part")
+        resume_from = partial_path.stat().st_size if partial_path.exists() else 0
+        headers: Dict[str, str] = {}
+        if resume_from > 0:
+            headers["Range"] = f"bytes={resume_from}-"
+
+        with self.session.get(
+            info.asset.url,
+            timeout=self.timeout_s,
+            stream=True,
+            headers=headers or None,
+        ) as response:
             response.raise_for_status()
-            total_size = int(response.headers.get("Content-Length") or 0)
-            downloaded = 0
+            is_resume_response = response.status_code == 206 and resume_from > 0
+            if resume_from > 0 and not is_resume_response:
+                # Server ignored range; restart download from scratch.
+                resume_from = 0
+                partial_path.unlink(missing_ok=True)
+
+            content_length = int(response.headers.get("Content-Length") or 0)
+            total_size = content_length + resume_from if content_length > 0 else 0
+            downloaded = resume_from
             if progress_callback:
-                progress_callback(0, total_size)
-            with file_path.open("wb") as fh:
+                progress_callback(downloaded, total_size)
+
+            mode = "ab" if resume_from > 0 else "wb"
+            with partial_path.open(mode) as fh:
                 for chunk in response.iter_content(chunk_size=1024 * 1024):
                     if chunk:
                         fh.write(chunk)
@@ -245,6 +269,7 @@ class ReleaseUpdater:
                         if progress_callback:
                             progress_callback(downloaded, total_size)
 
+        partial_path.replace(file_path)
         self.verify_sha256(file_path, info.asset.sha256)
         if info.asset.signature:
             self.verify_signature(file_path, info.asset.signature)
@@ -301,8 +326,13 @@ class ReleaseUpdater:
                 1,
             )
             if result <= 32:
-                raise UpdateError(
-                    "Unable to launch installer. Please run it manually as Administrator."
+                try:
+                    subprocess.Popen(["explorer", "/select,", str(installer_path)])
+                except Exception:
+                    pass
+                return (
+                    "Installer downloaded but could not be auto-launched. "
+                    f"Please run it manually:\n{installer_path}"
                 )
             return "Installer launched. Approve UAC if prompted, then complete setup."
 
