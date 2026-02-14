@@ -2098,6 +2098,8 @@ let hasRealTelemetry = false;
 let simulationEnabled = false;
 let simulationIntervalId = null;
 let simulationStatusResetTimer = 0;
+let lastRealDashboardPayload = null;
+let simulationRestoreTimer = 0;
 
 function createBlankState() {
   return {
@@ -2925,7 +2927,7 @@ fanSlider.addEventListener("change", (e) => {
 
 if (simulateDataToggle) {
   simulateDataToggle.addEventListener("change", (event) => {
-    setSimulationMode(Boolean(event.target.checked), "toggle");
+    setSimulationMode(Boolean(event.target.checked));
   });
 }
 
@@ -3109,20 +3111,14 @@ window.updateDashboard = function (data) {
   const payload = data && typeof data === "object" ? data : {};
   const isSimulatedPayload = Boolean(payload.__simulated);
 
-  if (simulationEnabled && !isSimulatedPayload) {
-    hasRealTelemetry = true;
-    backendConnectionState = true;
-    setSimulationMode(false, "real-data");
-  }
-
-  if (!simulationEnabled && isSimulatedPayload) {
-    return;
-  }
-
   if (!isSimulatedPayload) {
     hasRealTelemetry = true;
     backendConnectionState = true;
+    lastRealDashboardPayload = payload;
   }
+
+  if (simulationEnabled && !isSimulatedPayload) return;
+  if (!simulationEnabled && isSimulatedPayload) return;
 
   queueDashboardData(payload);
 };
@@ -3167,7 +3163,7 @@ function updateSimulationToggleUi() {
   }
 }
 
-function setSimulationMode(enabled, reason = "manual") {
+function setSimulationMode(enabled) {
   const shouldEnable = Boolean(enabled);
   if (simulationEnabled === shouldEnable) {
     updateSimulationToggleUi();
@@ -3183,6 +3179,10 @@ function setSimulationMode(enabled, reason = "manual") {
   if (simulationStatusResetTimer) {
     window.clearTimeout(simulationStatusResetTimer);
     simulationStatusResetTimer = 0;
+  }
+  if (simulationRestoreTimer) {
+    window.clearTimeout(simulationRestoreTimer);
+    simulationRestoreTimer = 0;
   }
 
   if (simulationEnabled) {
@@ -3200,12 +3200,22 @@ function setSimulationMode(enabled, reason = "manual") {
     simulationIntervalId = null;
   }
 
-  if (reason !== "real-data") {
-    clearDashboardData("manual");
-    const restoreConnected = backendConnectionState && hasRealTelemetry;
-    setConnectionStatus(restoreConnected, "simulation");
-  } else {
-    setConnectionStatus(true, "simulation");
+  // Always transition back to the original/default pose when simulation is turned off.
+  clearDashboardData("manual");
+  setConnectionStatus(false, "simulation");
+
+  const restoreConnected = backendConnectionState && hasRealTelemetry;
+  if (restoreConnected) {
+    const restoreDelayMs = Math.max(CONNECTION_TRANSITION_MS + 80, 300);
+    simulationRestoreTimer = window.setTimeout(() => {
+      simulationRestoreTimer = 0;
+      if (simulationEnabled) return;
+      if (!(backendConnectionState && hasRealTelemetry)) return;
+      setConnectionStatus(true, "simulation");
+      if (lastRealDashboardPayload) {
+        queueDashboardData(lastRealDashboardPayload);
+      }
+    }, restoreDelayMs);
   }
   return false;
 }
@@ -3243,12 +3253,12 @@ if (window.visualViewport) {
 
 onWindowResize();
 
-window.__bmsSetSimulation = (enabled) => setSimulationMode(Boolean(enabled), "debug");
-window.__bmsStartSimulation = () => setSimulationMode(true, "debug");
-window.__bmsStopSimulation = () => setSimulationMode(false, "debug");
+window.__bmsSetSimulation = (enabled) => setSimulationMode(Boolean(enabled));
+window.__bmsStartSimulation = () => setSimulationMode(true);
+window.__bmsStopSimulation = () => setSimulationMode(false);
 window.__bmsGetSimulationState = () => Boolean(simulationEnabled);
 
-setSimulationMode(false, "startup");
+setSimulationMode(false);
 console.log("[BMS] Simulation toggle initialized in Actual Testing Mode.");
 
 
