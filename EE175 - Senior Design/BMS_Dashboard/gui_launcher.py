@@ -494,8 +494,8 @@ class DashboardWindow(QMainWindow):
             )
             message = self.updater.launch_guided_install(
                 installer,
-                wait_for_pid=None,
-                autoclose_app=True,
+                wait_for_pid=os.getpid(),
+                autoclose_app=False,
                 update_mode=True,
             )
         except Exception as exc:

@@ -79,8 +79,8 @@ wait_pid_loop:
   Pop $0
   ${If} $0 == "0"
     ${If} $AutoCloseApp == "1"
-      DetailPrint "Detected running BMSDashboard.exe. Force-closing process tree..."
-      nsExec::ExecToLog "cmd /c taskkill /F /T /IM BMSDashboard.exe >NUL 2>NUL"
+      DetailPrint "Detected running BMSDashboard.exe. Force-closing process..."
+      nsExec::ExecToLog "cmd /c taskkill /F /IM BMSDashboard.exe >NUL 2>NUL"
       Pop $1
       Sleep 700
     ${Else}
