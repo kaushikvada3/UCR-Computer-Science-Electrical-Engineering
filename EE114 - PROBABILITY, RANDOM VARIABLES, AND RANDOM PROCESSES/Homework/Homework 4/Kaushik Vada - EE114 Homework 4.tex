@@ -1,0 +1,736 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{multicol}
+\usepackage{tikz}
+
+
+\title{EE114 Homework 3}
+\author{Kaushik Vada}
+\date{\today}
+\begin{document}
+\maketitle
+
+\onehalfspacing
+
+% Adjust this to increase/decrease the blank space under each question.
+\newcommand{\answerspace}{\vspace{2.0in}}
+
+\section*{Responses}
+
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=*]
+
+\item \textbf{Question 2.5.2}
+
+\textbf{Question:} Voice calls cost 20 cents each and data calls cost 30 cents each. $C$ is the cost of one telephone call. The probability that a call is a voice call is $P[V]=0.6$. The probability of a data call is $P[D]=0.4$.
+\begin{itemize}
+  \item[(a)] Find $P_C(c)$, the PMF of $C$.
+  \item[(b)] What is $E[C]$, the expected value of $C$?
+\end{itemize}
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+\begin{itemize}
+  \item[(a)] Find $P_C(c)$, the PMF of $C$. The random variable $C$ maps the outcome of the call type to its cost. If the call is a voice call, $C=20$. If the call is a data call, $C=30$. The Probability Mass Function (PMF), $P_C(c)$, is the probability that the random variable $C$ takes on a specific value $c$.
+
+  \[
+  P_C(20)=P[V]=0.6,\qquad P_C(30)=P[D]=0.4,
+  \]
+  and $P_C(c)=0$ for all other values.
+
+  \textbf{Answer:} The PMF can be written as
+  \[
+  P_C(c)=
+  \begin{cases}
+  0.6, & \text{for } c=20,\\
+  0.4, & \text{for } c=30,\\
+  0, & \text{otherwise.}
+  \end{cases}
+  \]
+
+  \item[(b)] What is $E[C]$, the expected value of $C$? The expected value $E[C]$ is the probability-weighted average of all possible values.
+  \[
+  E[C]=\sum_c c\cdot P_C(c).
+  \]
+  Substituting the values from the PMF:
+  \[
+  E[C]=(20\cdot 0.6)+(30\cdot 0.4)=12+12=24.
+  \]
+  \textbf{Answer:} The expected value of $C$ is $24$ cents.
+\end{itemize}
+
+\newpage
+
+\item \textbf{Question 2.5.4}
+
+\textbf{Question:} Find the expected value of the random variable $X$ in Problem 2.4.2. (For reference, the random variable $X$ from Problem 2.4.2 is defined by the following CDF:)
+\[
+F_X(x)=
+\begin{cases}
+0, & x<-1,\\
+0.2, & -1\le x<0,\\
+0.7, & 0\le x<1,\\
+1, & x\ge 1.
+\end{cases}
+\]
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+At $x=-1$: The CDF jumps from $0$ to $0.2$.
+\[
+P_X(-1)=0.2-0=0.2.
+\]
+At $x=0$: The CDF jumps from $0.2$ to $0.7$.
+\[
+P_X(0)=0.7-0.2=0.5.
+\]
+At $x=1$: The CDF jumps from $0.7$ to $1$.
+\[
+P_X(1)=1-0.7=0.3.
+\]
+
+So, the PMF is:
+\[
+P_X(-1)=0.2,\qquad P_X(0)=0.5,\qquad P_X(1)=0.3.
+\]
+
+\textbf{Step 2: Calculate the expected value $E[X]$.} The expected value is the sum of each value multiplied by its probability:
+\[
+E[X]=\sum_x x\cdot P_X(x).
+\]
+Substituting our values:
+\[
+E[X]=(-1\cdot 0.2)+(0\cdot 0.5)+(1\cdot 0.3).
+\]
+Calculate the terms:
+\[
+E[X]=-0.2+0+0.3=0.1.
+\]
+
+\textbf{Answer:} The expected value of the random variable $X$ is $0.1$.
+
+\newpage
+\item \textbf{Question 2.5.9}
+
+\textbf{Question:} Suppose you go to a casino with exactly \$63. At this casino, the only game is roulette and the only bets allowed are red and green. In addition, the wheel is fair so that $P[\text{red}]=P[\text{green}]=1/2$. You have the following strategy: First, you bet \$1. If you win the bet, you leave the casino with \$64. If you lose, you then bet \$2. If you win, you quit and go home. If you lose, you bet \$4. In fact, whenever you lose, you double your bet until either you win a bet or you lose all of your money. However, as soon as you win a bet, you quit and go home. Let $Y$ equal the amount of money that you take home. Find $P_Y(y)$ and $E[Y]$. Would you like to play this game every day?
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+\textbf{1. Find $P_Y(y)$, the PMF of $Y$}
+
+You begin with \$63. The strategy of doubling bets (Martingale) allows for a maximum sequence of 6 bets ($1 + 2 + 4 + 8 + 16 + 32 = 63$).
+
+\textbf{Case 1: You lose everything ($Y=0$).}
+
+This occurs only if you lose 6 consecutive bets.
+\[
+P(Y=0) = \left(\frac{1}{2}\right)^6 = \frac{1}{64}
+\]
+
+\textbf{Case 2: You win ($Y=64$).}
+
+This occurs if you win any single bet before running out of money.
+\[
+P(Y=64) = 1 - P(Y=0) = 1 - \frac{1}{64} = \frac{63}{64}
+\]
+
+The PMF is:
+\[
+P_Y(y) =
+\begin{cases}
+\frac{63}{64} & y = 64 \\
+\frac{1}{64} & y = 0 \\
+0 & \text{otherwise}
+\end{cases}
+\]
+
+\textbf{2. Find $E[Y]$}
+
+\[
+E[Y] = \sum y \cdot P_Y(y)
+\]
+\[
+E[Y] = \left(64 \cdot \frac{63}{64}\right) + \left(0 \cdot \frac{1}{64}\right)
+\]
+\[
+E[Y] = 63 + 0
+\]
+\[
+E[Y] = 63
+\]
+
+\textbf{3. Would you like to play this game every day?}
+
+No. Even though the probability of winning is high ($98.4\%$), the expected profit is zero ($E[Y] = \$63$, which is exactly what you started with). You are risking your entire bankroll of \$63 to gain just \$1. Over time, the single catastrophic loss of \$63 (which happens on average once every 64 days) will wipe out all the small \$1 wins accumulated.
+
+
+
+\newpage
+\item \textbf{Question 3.1.1}
+
+\textbf{Question:} The cumulative distribution function of random variable $X$ is
+\[
+F_X(x) = \begin{cases}
+0, & x < -1, \\
+(x+1)/2, & -1 \le x < 1, \\
+1, & x \ge 1.
+\end{cases}
+\]
+\begin{enumerate}[label=(\alph*)]
+    \item What is $P[X > 1/2]$?
+    \item What is $P[-1/2 < X \le 3/4]$?
+    \item What is $P[|X| \le 1/2]$?
+    \item What is the value of $a$ such that $P[X \le a] = 0.8$?
+\end{enumerate}
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{What is $P[X > 1/2]$?}
+
+    Using the property $P[X > x] = 1 - P[X \le x] = 1 - F_X(x)$:
+    \[ P[X > 1/2] = 1 - F_X(1/2) \]
+    Since $-1 \le 1/2 < 1$, we use the formula $\frac{x+1}{2}$:
+    \[ F_X(1/2) = \frac{0.5 + 1}{2} = \frac{1.5}{2} = 0.75 \]
+    \[ P[X > 1/2] = 1 - 0.75 = 0.25 \]
+    \textbf{Answer:} $0.25$
+
+    \item \textbf{What is $P[-1/2 < X \le 3/4]$?}
+
+    Using the property $P[a < X \le b] = F_X(b) - F_X(a)$:
+    \[ P[-1/2 < X \le 3/4] = F_X(3/4) - F_X(-1/2) \]
+    Calculate $F_X(3/4)$:
+    \[ F_X(3/4) = \frac{0.75 + 1}{2} = \frac{1.75}{2} = 0.875 \]
+    Calculate $F_X(-1/2)$:
+    \[ F_X(-1/2) = \frac{-0.5 + 1}{2} = \frac{0.5}{2} = 0.25 \]
+    Subtract the two:
+    \[ P[-1/2 < X \le 3/4] = 0.875 - 0.25 = 0.625 \]
+    \textbf{Answer:} $0.625$
+
+    \item \textbf{What is $P[|X| \le 1/2]$?}
+
+    The inequality $|X| \le 1/2$ is equivalent to $-1/2 \le X \le 1/2$.
+    \[ P[-1/2 \le X \le 1/2] = F_X(1/2) - F_X(-1/2) \]
+    Calculate $F_X(1/2)$:
+    \[ F_X(1/2) = \frac{0.5 + 1}{2} = 0.75 \]
+    Calculate $F_X(-1/2)$:
+    \[ F_X(-1/2) = \frac{-0.5 + 1}{2} = 0.25 \]
+    Subtract the two:
+    \[ P[|X| \le 1/2] = 0.75 - 0.25 = 0.5 \]
+    \textbf{Answer:} $0.5$
+
+    \item \textbf{What is the value of $a$ such that $P[X \le a] = 0.8$?}
+
+    We are looking for $a$ where $F_X(a) = 0.8$.
+    Since $0 \le 0.8 \le 1$, the value $a$ must fall within the range $[-1, 1)$. We use the middle part of the function definition:
+    \[ \frac{a + 1}{2} = 0.8 \]
+    Multiply both sides by 2:
+    \[ a + 1 = 1.6 \]
+    Subtract 1 from both sides:
+    \[ a = 0.6 \]
+    \textbf{Answer:} $a = 0.6$
+\end{enumerate}
+
+\newpage
+\item \textbf{Question 3.1.2}
+
+\textbf{Question:} The cumulative distribution function of the continuous random variable $V$ is
+\[
+F_V(v) = \begin{cases}
+0, & v < -5, \\
+c(v+5)^2, & -5 \le v < 7, \\
+1, & v \ge 7.
+\end{cases}
+\]
+\begin{enumerate}[label=(\alph*)]
+    \item What is $c$?
+    \item What is $P[V > 4]$?
+    \item $P[-3 < V \le 0]$?
+    \item What is the value of $a$ such that $P[V > a] = 2/3$?
+\end{enumerate}
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{What is $c$?}
+
+    For a valid CDF, the function must be continuous (no jumps) and approach 1 at the maximum value of the range.
+    Therefore, at the upper boundary $v = 7$, $F_V(7)$ must equal $1$.
+    \[ c(7 + 5)^2 = 1 \]
+    \[ c(12)^2 = 1 \]
+    \[ 144c = 1 \]
+    \[ c = \frac{1}{144} \]
+
+    \item \textbf{What is $P[V > 4]$?}
+
+    Using the complement rule: $P[V > 4] = 1 - P[V \le 4] = 1 - F_V(4)$.
+    First, calculate $F_V(4)$ using $c = \frac{1}{144}$:
+    \[ F_V(4) = \frac{1}{144}(4 + 5)^2 \]
+    \[ F_V(4) = \frac{1}{144}(9)^2 \]
+    \[ F_V(4) = \frac{81}{144} \]
+    Simplify the fraction (divide by 9):
+    \[ F_V(4) = \frac{9}{16} \]
+    Now, find the probability:
+    \[ P[V > 4] = 1 - \frac{9}{16} = \frac{7}{16} \]
+    \textbf{Answer:} $\frac{7}{16}$
+
+    \item \textbf{What is $P[-3 < V \le 0]$?}
+
+    The probability for an interval is $F_V(b) - F_V(a)$.
+    \[ P[-3 < V \le 0] = F_V(0) - F_V(-3) \]
+    Calculate $F_V(0)$:
+    \[ F_V(0) = \frac{1}{144}(0 + 5)^2 = \frac{25}{144} \]
+    Calculate $F_V(-3)$:
+    \[ F_V(-3) = \frac{1}{144}(-3 + 5)^2 = \frac{1}{144}(2)^2 = \frac{4}{144} \]
+    Subtract the two:
+    \[ P[-3 < V \le 0] = \frac{25}{144} - \frac{4}{144} = \frac{21}{144} \]
+    Simplify the fraction (divide by 3):
+    \[ \frac{21}{144} = \frac{7}{48} \]
+    \textbf{Answer:} $\frac{7}{48}$
+
+    \item \textbf{What is the value of $a$ such that $P[V > a] = 2/3$?}
+
+    We know that $P[V > a] = 1 - F_V(a)$. So:
+    \[ 1 - F_V(a) = \frac{2}{3} \]
+    \[ F_V(a) = \frac{1}{3} \]
+    Substitute the formula for $F_V(a)$:
+    \[ \frac{1}{144}(a + 5)^2 = \frac{1}{3} \]
+    Multiply both sides by 144:
+    \[ (a + 5)^2 = \frac{144}{3} \]
+    \[ (a + 5)^2 = 48 \]
+    Take the square root of both sides (we take the positive root because $a$ must be greater than -5):
+    \[ a + 5 = \sqrt{48} \]
+    \[ a + 5 = \sqrt{16 \cdot 3} \]
+    \[ a + 5 = 4\sqrt{3} \]
+    Solve for $a$:
+    \[ a = 4\sqrt{3} - 5 \]
+    (Note: $\sqrt{3} \approx 1.732$, so $a \approx 1.93$, which is within the valid range of $-5$ to $7$.)
+    \textbf{Answer:} $a = 4\sqrt{3} - 5$
+\end{enumerate}
+
+\newpage
+\item \textbf{Question 3.2.1}
+
+\textbf{Question:} The random variable $X$ has probability density function
+\[
+f_X(x) = \begin{cases}
+cx, & 0 \le x \le 2, \\
+0, & \text{otherwise.}
+\end{cases}
+\]
+Use the PDF to find
+\begin{enumerate}[label=(\alph*)]
+    \item the constant $c$,
+    \item $P[0 \le X \le 1]$,
+    \item $P[-1/2 \le X \le 1/2]$,
+    \item the CDF $F_X(x)$.
+\end{enumerate}
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{Find the constant $c$.}
+
+    A fundamental property of any PDF is that the total area under the curve must equal 1.
+    \[ \int_{-\infty}^{\infty} f_X(x) \, dx = 1 \]
+    Substitute the given function:
+    \[ \int_{0}^{2} cx \, dx = 1 \]
+    Evaluate the integral:
+    \[ \left[ \frac{cx^2}{2} \right]_{0}^{2} = 1 \]
+    \[ \frac{c(2)^2}{2} - \frac{c(0)^2}{2} = 1 \]
+    \[ \frac{4c}{2} = 1 \]
+    \[ 2c = 1 \]
+    \[ c = \frac{1}{2} \]
+
+    \item \textbf{Find $P[0 \le X \le 1]$.}
+
+    To find the probability over an interval, integrate the PDF over that interval. Using $c = 1/2$:
+    \[ P[0 \le X \le 1] = \int_{0}^{1} \frac{1}{2}x \, dx \]
+    \[ = \left[ \frac{x^2}{4} \right]_{0}^{1} \]
+    \[ = \frac{1^2}{4} - \frac{0^2}{4} \]
+    \[ = \frac{1}{4} \]
+    \textbf{Answer:} $0.25$ (or $1/4$)
+
+    \item \textbf{Find $P[-1/2 \le X \le 1/2]$.}
+
+    The PDF is non-zero only for $x \ge 0$. Therefore, the probability for the range $[-1/2, 0)$ is 0. We effectively calculate the probability from 0 to 1/2.
+    \[ P[-1/2 \le X \le 1/2] = \int_{-1/2}^{1/2} f_X(x) \, dx \]
+    \[ = \int_{-1/2}^{0} 0 \, dx + \int_{0}^{1/2} \frac{1}{2}x \, dx \]
+    \[ = 0 + \left[ \frac{x^2}{4} \right]_{0}^{1/2} \]
+    \[ = \frac{(1/2)^2}{4} - 0 \]
+    \[ = \frac{1/4}{4} \]
+    \[ = \frac{1}{16} \]
+    \textbf{Answer:} $0.0625$ (or $1/16$)
+
+    \item \textbf{Find the CDF $F_X(x)$.}
+
+    The Cumulative Distribution Function (CDF) is defined as $F_X(x) = \int_{-\infty}^{x} f_X(t) \, dt$. We calculate this for each region:
+
+    \textbf{For $x < 0$:}
+    The PDF is 0, so the area is 0.
+    \[ F_X(x) = 0 \]
+
+    \textbf{For $0 \le x \le 2$:}
+    We integrate from the start of the support (0) to $x$.
+    \[ F_X(x) = \int_{0}^{x} \frac{1}{2}t \, dt \]
+    \[ F_X(x) = \left[ \frac{t^2}{4} \right]_{0}^{x} = \frac{x^2}{4} \]
+
+    \textbf{For $x > 2$:}
+    The total probability has been accumulated.
+    \[ F_X(x) = 1 \]
+
+    \textbf{Answer:}
+    \[
+    F_X(x) =
+    \begin{cases}
+    0 & x < 0 \\
+    \frac{x^2}{4} & 0 \le x \le 2 \\
+    1 & x > 2
+    \end{cases}
+    \]
+\end{enumerate}
+
+\newpage
+\item \textbf{Question 3.2.2}
+
+\textbf{Question:} The cumulative distribution function of random variable $X$ is
+\[
+F_X(x) = \begin{cases}
+0, & x < -1, \\
+(x+1)/2, & -1 \le x < 1, \\
+1, & x \ge 1.
+\end{cases}
+\]
+Find the PDF $f_X(x)$ of $X$.
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+We differentiate $F_X(x)$ piece by piece for each interval:
+
+\textbf{For $x < -1$:}
+\[ F_X(x) = 0 \implies \frac{d}{dx}(0) = 0 \]
+
+\textbf{For $-1 < x < 1$:}
+\[ F_X(x) = \frac{x + 1}{2} = \frac{1}{2}x + \frac{1}{2} \]
+\[ \frac{d}{dx}\left(\frac{1}{2}x + \frac{1}{2}\right) = \frac{1}{2} \]
+
+\textbf{For $x > 1$:}
+\[ F_X(x) = 1 \implies \frac{d}{dx}(1) = 0 \]
+
+(Note: Since the CDF is continuous at the boundaries $x=-1$ and $x=1$, there are no impulses (delta functions) in the PDF.)
+
+\textbf{Answer:}
+Combining these results, the PDF is:
+\[
+f_X(x) =
+\begin{cases}
+\frac{1}{2}, & -1 \le x < 1, \\
+0, & \text{otherwise.}
+\end{cases}
+\]
+
+\newpage
+\item \textbf{Question 3.2.3}
+
+\textbf{Question:} Find the PDF $f_U(u)$ of the random variable $U$ in Problem 3.1.3.
+
+(Note: In the original text, Problem 3.1.3 likely defines a random variable labeled $W$. Since 3.2.3 asks for the random variable $U$, it is generally assumed that $U$ is the same variable as $W$ from the previous problem. I will solve for the variable $W$.)
+
+\textbf{Reference Problem 3.1.3 (Given Information):}
+The Cumulative Distribution Function (CDF) of the random variable $W$ is:
+\[
+F_W(w) = \begin{cases}
+0, & w < -5, \\
+\frac{w+5}{8}, & -5 \le w < -3, \\
+\frac{1}{4}, & -3 \le w < 3, \\
+\frac{1}{4} + \frac{3(w-3)}{8}, & 3 \le w < 5, \\
+1, & w \ge 5.
+\end{cases}
+\]
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+We differentiate $F_W(w)$ in each interval:
+
+\textbf{For $w < -5$:}
+\[ F_W(w) = 0 \implies f_W(w) = 0 \]
+
+\textbf{For $-5 \le w < -3$:}
+\[ F_W(w) = \frac{w + 5}{8} = \frac{1}{8}w + \frac{5}{8} \]
+\[ f_W(w) = \frac{d}{dw}\left(\frac{1}{8}w + \frac{5}{8}\right) = \frac{1}{8} \]
+
+\textbf{For $-3 \le w < 3$:}
+\[ F_W(w) = \frac{1}{4} \]
+\[ f_W(w) = \frac{d}{dw}\left(\frac{1}{4}\right) = 0 \]
+
+\textbf{For $3 \le w < 5$:}
+\[ F_W(w) = \frac{1}{4} + \frac{3(w - 3)}{8} = \frac{1}{4} + \frac{3}{8}w - \frac{9}{8} \]
+\[ f_W(w) = \frac{d}{dw}\left(\frac{3}{8}w + \text{constant}\right) = \frac{3}{8} \]
+
+\textbf{For $w \ge 5$:}
+\[ F_W(w) = 1 \implies f_W(w) = 0 \]
+
+\textbf{Answer:}
+The PDF is:
+\[
+f_W(w) =
+\begin{cases}
+\frac{1}{8}, & -5 \le w < -3, \\
+0, & -3 \le w < 3, \\
+\frac{3}{8}, & 3 \le w < 5, \\
+0, & \text{otherwise.}
+\end{cases}
+\]
+
+\newpage
+\item \textbf{Question 3.3.1}
+\textbf{Question:} Continuous random variable $X$ has PDF
+\[
+f_X(x) = \begin{cases}
+1/4, & -1 \le x \le 3, \\
+0, & \text{otherwise.}
+\end{cases}
+\]
+Define the random variable $Y$ by $Y = h(X) = X^2$.
+\begin{enumerate}[label=(\alph*)]
+    \item Find $E[X]$ and $\text{Var}[X]$.
+    \item Find $h(E[X])$ and $E[h(X)]$.
+    \item Find $E[Y]$ and $\text{Var}[Y]$.
+\end{enumerate}
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{Find $E[X]$ and $\text{Var}[X]$.}
+
+    Since $X$ is a uniform random variable on the interval $[a, b]$ where $a = -1$ and $b = 3$, we can use the standard formulas for the mean and variance of a uniform distribution.
+
+    \textbf{Expected Value $E[X]$:}
+    \[ E[X] = \frac{a + b}{2} = \frac{-1 + 3}{2} = \frac{2}{2} = 1 \]
+
+    \textbf{Variance $\text{Var}[X]$:}
+    \[ \text{Var}[X] = \frac{(b - a)^2}{12} = \frac{(3 - (-1))^2}{12} = \frac{4^2}{12} = \frac{16}{12} = \frac{4}{3} \]
+
+    \textbf{Answer:}
+    $E[X] = 1$
+    $\text{Var}[X] = 4/3$
+
+    \item \textbf{Find $h(E[X])$ and $E[h(X)]$.}
+
+    1. \textbf{Calculate $h(E[X])$:}
+    This is the function $h$ evaluated at the expected value of $X$.
+    From part (a), $E[X] = 1$.
+    Since $h(x) = x^2$:
+    \[ h(E[X]) = (E[X])^2 = (1)^2 = 1 \]
+
+    2. \textbf{Calculate $E[h(X)]$:}
+    This is the expected value of the random variable $X^2$.
+    We can calculate this using the formula $\text{Var}[X] = E[X^2] - (E[X])^2$, which rearranges to:
+    \[ E[X^2] = \text{Var}[X] + (E[X])^2 \]
+    Substituting the values from part (a):
+    \[ E[X^2] = \frac{4}{3} + (1)^2 = \frac{4}{3} + 1 = \frac{7}{3} \]
+    (Alternatively, you can compute it via integration: $\int_{-1}^{3} x^2 \cdot \frac{1}{4} dx = \frac{7}{3}$)
+
+    \textbf{Answer:}
+    $h(E[X]) = 1$
+    $E[h(X)] = 7/3$
+
+    \item \textbf{Find $E[Y]$ and $\text{Var}[Y]$.}
+
+    Since $Y = X^2$, the term $E[Y]$ is exactly what we calculated in part (b) as $E[h(X)]$.
+
+    1. \textbf{Calculate $E[Y]$:}
+    \[ E[Y] = E[X^2] = \frac{7}{3} \]
+
+    2. \textbf{Calculate $\text{Var}[Y]$:}
+    To find the variance of $Y$, we use the standard variance formula:
+    \[ \text{Var}[Y] = E[Y^2] - (E[Y])^2 \]
+    First, we need to find $E[Y^2]$.
+    Since $Y = X^2$, then $Y^2 = (X^2)^2 = X^4$.
+    \[ E[Y^2] = E[X^4] = \int_{-\infty}^{\infty} x^4 f_X(x) \, dx \]
+    Substitute the PDF ($1/4$ between -1 and 3):
+    \[ E[X^4] = \int_{-1}^{3} x^4 \cdot \frac{1}{4} \, dx \]
+    \[ = \frac{1}{4} \left[ \frac{x^5}{5} \right]_{-1}^{3} \]
+    \[ = \frac{1}{20} \left( 3^5 - (-1)^5 \right) \]
+    \[ = \frac{1}{20} (243 - (-1)) \]
+    \[ = \frac{244}{20} = \frac{61}{5} \]
+
+    Now, substitute $E[Y^2]$ and $E[Y]$ back into the variance formula:
+    \[ \text{Var}[Y] = \frac{61}{5} - \left( \frac{7}{3} \right)^2 \]
+    \[ \text{Var}[Y] = \frac{61}{5} - \frac{49}{9} \]
+    Find a common denominator (45):
+    \[ = \frac{61 \cdot 9}{45} - \frac{49 \cdot 5}{45} \]
+    \[ = \frac{549}{45} - \frac{245}{45} \]
+    \[ = \frac{304}{45} \]
+
+    \textbf{Answer:}
+    $E[Y] = 7/3$
+    $\text{Var}[Y] = 304/45$ (approx 6.756)
+\end{enumerate}
+
+\newpage
+\item \textbf{Question 3.3.2}
+
+\textbf{Question:} Let $X$ be a continuous random variable with PDF
+\[
+f_X (x) = \begin{cases}
+1/8 & 1 \le x \le 9, \\
+0 & \text{otherwise.}
+\end{cases}
+\]
+Let $Y = h(X) = 1/\sqrt{X}$.
+\begin{enumerate}[label=(\alph*)]
+    \item Find $E[X]$ and $\text{Var}[X]$.
+    \item Find $h(E[X])$ and $E[h(X)]$.
+    \item Find $E[Y]$ and $\text{Var}[Y]$.
+\end{enumerate}
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{Find $E[X]$ and $\text{Var}[X]$.}
+
+    Since $X$ is a uniform random variable on the interval $[a, b]$ where $a = 1$ and $b = 9$:
+
+    \textbf{Expected Value $E[X]$:}
+    \[ E[X] = \frac{a + b}{2} = \frac{1 + 9}{2} = \frac{10}{2} = 5 \]
+
+    \textbf{Variance $\text{Var}[X]$:}
+    \[ \text{Var}[X] = \frac{(b - a)^2}{12} = \frac{(9 - 1)^2}{12} = \frac{8^2}{12} = \frac{64}{12} \]
+    Simplify the fraction (divide by 4):
+    \[ \text{Var}[X] = \frac{16}{3} \]
+
+    \textbf{Answer:}
+    $E[X] = 5$
+    $\text{Var}[X] = 16/3$ (approx 5.33)
+
+    \item \textbf{Find $h(E[X])$ and $E[h(X)]$.}
+
+    1. \textbf{Calculate $h(E[X])$:}
+    This is the function $h$ evaluated at the expected value of $X$ (which is 5).
+    \[ h(E[X]) = \frac{1}{\sqrt{E[X]}} = \frac{1}{\sqrt{5}} \]
+
+    2. \textbf{Calculate $E[h(X)]$:}
+    This is the expected value of the transformed variable $1/\sqrt{X}$.
+    \[ E[h(X)] = \int_{-\infty}^{\infty} h(x) f_X(x) \, dx \]
+    \[ E[h(X)] = \int_{1}^{9} \frac{1}{\sqrt{x}} \cdot \frac{1}{8} \, dx \]
+    \[ = \frac{1}{8} \int_{1}^{9} x^{-1/2} \, dx \]
+    Integrate using the power rule $\int x^n dx = \frac{x^{n+1}}{n+1}$:
+    \[ = \frac{1}{8} \left[ \frac{x^{1/2}}{1/2} \right]_{1}^{9} \]
+    \[ = \frac{1}{8} \cdot 2 \left[ \sqrt{x} \right]_{1}^{9} \]
+    \[ = \frac{1}{4} (\sqrt{9} - \sqrt{1}) \]
+    \[ = \frac{1}{4} (3 - 1) = \frac{2}{4} = \frac{1}{2} \]
+
+    \textbf{Answer:}
+    $h(E[X]) = 1/\sqrt{5}$
+    $E[h(X)] = 0.5$
+
+    \item \textbf{Find $E[Y]$ and $\text{Var}[Y]$.}
+
+    Since $Y = h(X)$, $E[Y]$ is the same as $E[h(X)]$ calculated above.
+
+    1. \textbf{Calculate $E[Y]$:}
+    \[ E[Y] = 0.5 \]
+
+    2. \textbf{Calculate $\text{Var}[Y]$:}
+    Use the formula $\text{Var}[Y] = E[Y^2] - (E[Y])^2$.
+    First, find $E[Y^2]$. Note that $Y^2 = (1/\sqrt{X})^2 = 1/X$.
+    \[ E[Y^2] = E[1/X] = \int_{1}^{9} \frac{1}{x} \cdot \frac{1}{8} \, dx \]
+    \[ = \frac{1}{8} \left[ \ln(x) \right]_{1}^{9} \]
+    \[ = \frac{1}{8} (\ln(9) - \ln(1)) \]
+    Since $\ln(1) = 0$:
+    \[ E[Y^2] = \frac{\ln(9)}{8} \]
+
+    Now substitute back into the variance formula:
+    \[ \text{Var}[Y] = \frac{\ln(9)}{8} - (0.5)^2 \]
+    \[ \text{Var}[Y] = \frac{\ln(9)}{8} - 0.25 \]
+    (Using approximations: $\ln(9) \approx 2.197$, so $E[Y^2] \approx 0.2746$. $\text{Var}[Y] \approx 0.2746 - 0.25 = 0.0246$)
+
+    \textbf{Answer:}
+    $E[Y] = 0.5$
+    $\text{Var}[Y] = \frac{\ln(9)}{8} - \frac{1}{4}$
+\end{enumerate}
+
+\newpage
+\item \textbf{Question 3.3.5}
+
+\textbf{Question:} The cumulative distribution function of the random variable $Y$ is
+\[
+F_Y(y) = \begin{cases}
+0, & y < -1, \\
+(y+1)/2, & -1 \le y \le 1, \\
+1, & y > 1.
+\end{cases}
+\]
+\begin{enumerate}[label=(\alph*)]
+    \item What is $E[Y]$?
+    \item What is $\text{Var}[Y]$?
+\end{enumerate}
+
+\vspace{0.3in}
+
+\textbf{Response:}
+
+Note that differentiating the CDF for $-1 \le y \le 1$ gives $f_Y(y) = \frac{d}{dy}(\frac{y+1}{2}) = \frac{1}{2}$, which corresponds to a uniform distribution on $[-1, 1]$.
+
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{What is $E[Y]$?}
+
+    Since $Y$ is uniformly distributed on $[a, b]$ where $a = -1$ and $b = 1$, the expected value is simply the midpoint of the interval.
+
+    \textbf{Method 1: Using the Uniform Distribution Formula}
+    \[ E[Y] = \frac{a + b}{2} = \frac{-1 + 1}{2} = \frac{0}{2} = 0 \]
+
+    \textbf{Method 2: Using Integration}
+    \[ E[Y] = \int_{-\infty}^{\infty} y \cdot f_Y(y) \, dy \]
+    \[ E[Y] = \int_{-1}^{1} y \cdot \frac{1}{2} \, dy \]
+    \[ E[Y] = \frac{1}{2} \left[ \frac{y^2}{2} \right]_{-1}^{1} \]
+    \[ E[Y] = \frac{1}{4} (1^2 - (-1)^2) = \frac{1}{4}(1 - 1) = 0 \]
+
+    \textbf{Answer:} $E[Y] = 0$
+
+    \item \textbf{What is $\text{Var}[Y]$?}
+
+    \textbf{Method 1: Using the Uniform Distribution Formula}
+    For a uniform distribution on $[a, b]$, the variance is $\frac{(b - a)^2}{12}$.
+    \[ \text{Var}[Y] = \frac{(1 - (-1))^2}{12} = \frac{(2)^2}{12} = \frac{4}{12} = \frac{1}{3} \]
+
+    \textbf{Method 2: Using the Definition}
+    $\text{Var}[Y] = E[Y^2] - (E[Y])^2$.
+    Since $E[Y] = 0$, we just need to find $E[Y^2]$.
+    \[ E[Y^2] = \int_{-1}^{1} y^2 \cdot \frac{1}{2} \, dy \]
+    \[ E[Y^2] = \frac{1}{2} \left[ \frac{y^3}{3} \right]_{-1}^{1} \]
+    \[ E[Y^2] = \frac{1}{6} (1^3 - (-1)^3) \]
+    \[ E[Y^2] = \frac{1}{6} (1 - (-1)) = \frac{1}{6}(2) = \frac{1}{3} \]
+
+    So, $\text{Var}[Y] = \frac{1}{3} - 0^2 = \frac{1}{3}$.
+
+    \textbf{Answer:} $\text{Var}[Y] = 1/3$
+\end{enumerate}
+
+\end{enumerate}
+
+\end{document}
