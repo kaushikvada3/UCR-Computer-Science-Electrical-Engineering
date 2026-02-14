@@ -196,6 +196,10 @@ function startViewResetTransition() {
   viewResetToPosition.copy(DEFAULT_CAMERA_POSITION);
   viewResetToTarget.copy(DEFAULT_CAMERA_TARGET);
 
+  // Ensure maxDistance allows the default camera position
+  const defaultCameraDistance = DEFAULT_CAMERA_POSITION.length();
+  controls.maxDistance = Math.max(controls.maxDistance || Infinity, defaultCameraDistance * 1.5);
+
   if (
     viewResetFromPosition.distanceToSquared(viewResetToPosition) < 1e-8 &&
     viewResetFromTarget.distanceToSquared(viewResetToTarget) < 1e-8
@@ -1666,6 +1670,11 @@ loader.load(
 
     camera.position.copy(controls.target).sub(direction);
     controls.update();
+
+    // Save the actual launch position for view reset
+    DEFAULT_CAMERA_POSITION.copy(camera.position);
+    DEFAULT_CAMERA_TARGET.copy(controls.target);
+
     updateConnectionVisualState(performance.now());
 
     console.log(`Loaded model with ${cellMeshes.length} detected cells.`);
@@ -3211,7 +3220,7 @@ function setSimulationMode(enabled) {
       simulationRestoreTimer = 0;
       if (simulationEnabled) return;
       if (!(backendConnectionState && hasRealTelemetry)) return;
-      setConnectionStatus(true, "simulation");
+      // Just restore the data - don't call setConnectionStatus which would cancel view reset
       if (lastRealDashboardPayload) {
         queueDashboardData(lastRealDashboardPayload);
       }
