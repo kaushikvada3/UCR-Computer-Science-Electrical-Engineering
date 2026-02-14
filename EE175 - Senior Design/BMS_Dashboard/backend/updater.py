@@ -386,6 +386,7 @@ class ReleaseUpdater:
                         f"Updater log: {log_file}"
                     ),
                     "log_path": str(log_file),
+                    "installer_path": str(installer_path),
                 }
             _append_update_log("Installer launch dispatched successfully", log_file)
             if wait_for_pid and wait_for_pid > 0 and not autoclose_app:
@@ -397,6 +398,7 @@ class ReleaseUpdater:
                         "locked, setup may ask for a restart."
                     ),
                     "log_path": str(log_file),
+                    "installer_path": str(installer_path),
                 }
             return {
                 "status": "launched",
@@ -406,6 +408,7 @@ class ReleaseUpdater:
                     "request a restart if Windows still locks files."
                 ),
                 "log_path": str(log_file),
+                "installer_path": str(installer_path),
             }
 
         if sys.platform == "darwin":

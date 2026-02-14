@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 from PyQt6.QtCore import QFileSystemWatcher, QObject, QThread, QTimer, Qt, QUrl, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtGui import QAction, QDesktopServices, QIcon
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
@@ -494,8 +494,8 @@ class DashboardWindow(QMainWindow):
             )
             message = self.updater.launch_guided_install(
                 installer,
-                wait_for_pid=os.getpid(),
-                autoclose_app=False,
+                wait_for_pid=None,
+                autoclose_app=True,
                 update_mode=True,
             )
         except Exception as exc:
@@ -556,14 +556,16 @@ class DashboardWindow(QMainWindow):
 
         status = ""
         status_message = message or "Update package launched."
+        installer_path = ""
         if isinstance(message, dict):
             status = str(message.get("status", "")).strip().lower()
             status_message = str(message.get("message", status_message))
+            installer_path = str(message.get("installer_path", "")).strip()
 
         if (
             sys.platform.startswith("win")
             and (
-                status in {"auto_close_pending", "close_required"}
+                status in {"auto_close_pending", "close_required", "launched"}
                 or (isinstance(message, str) and "Close BMS Dashboard now" in message)
             )
         ):
@@ -571,15 +573,39 @@ class DashboardWindow(QMainWindow):
                 "Installer is open. Close this app to continue update (restart may be required).",
                 7000,
             )
-            close_now = QMessageBox.question(
-                self,
-                "Updates",
-                f"{status_message}\n\nInstaller is now running. Close BMS Dashboard now?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
+            prompt = QMessageBox(self)
+            prompt.setWindowTitle("Updates")
+            prompt.setIcon(QMessageBox.Icon.Information)
+            prompt.setText("Installer is running.")
+            prompt.setInformativeText(
+                f"{status_message}\n\n"
+                "Look for the setup window titled similar to:\n"
+                '"BMS Dashboard <version> Setup"\n\n'
+                "If you do not see it, click Re-open Installer."
             )
-            if close_now == QMessageBox.StandardButton.Yes:
+            close_btn = prompt.addButton("Close App and Continue", QMessageBox.ButtonRole.AcceptRole)
+            reopen_btn = prompt.addButton("Re-open Installer", QMessageBox.ButtonRole.ActionRole)
+            cancel_btn = prompt.addButton(QMessageBox.StandardButton.Cancel)
+            prompt.setDefaultButton(close_btn)
+            prompt.exec()
+
+            clicked = prompt.clickedButton()
+            if clicked is reopen_btn:
+                if installer_path and self._open_installer_file(installer_path):
+                    self.statusBar().showMessage("Installer re-opened.", 5000)
+                else:
+                    QMessageBox.warning(
+                        self,
+                        "Updates",
+                        "Could not re-open installer automatically.\n"
+                        "Use Check Updates again, or launch installer manually from Downloads/temp.",
+                    )
+                return
+            if clicked is close_btn:
                 QTimer.singleShot(150, self.close)
+                return
+            if clicked is cancel_btn:
+                self.statusBar().showMessage("Update paused. Close app later to continue installer.", 7000)
             return
 
         if sys.platform.startswith("win") and status == "manual_required":
@@ -589,6 +615,15 @@ class DashboardWindow(QMainWindow):
 
         self.statusBar().showMessage("Update package is ready.", 6000)
         QMessageBox.information(self, "Updates", status_message)
+
+    @staticmethod
+    def _open_installer_file(path: str) -> bool:
+        if not path:
+            return False
+        installer = Path(path)
+        if not installer.exists():
+            return False
+        return QDesktopServices.openUrl(QUrl.fromLocalFile(str(installer)))
 
     def _show_busy_dialog(self, title: str, label: str, dialog_attr: str) -> None:
         self._close_busy_dialog(dialog_attr)
