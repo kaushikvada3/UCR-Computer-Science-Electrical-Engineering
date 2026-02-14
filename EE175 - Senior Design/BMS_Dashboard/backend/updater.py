@@ -3,11 +3,13 @@ from __future__ import annotations
 import ctypes
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
@@ -15,6 +17,8 @@ from urllib.parse import urljoin
 
 import requests
 from packaging.version import InvalidVersion, Version
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateError(RuntimeError):
@@ -45,6 +49,27 @@ class UpdateInfo:
 
 
 DEFAULT_UPDATE_REPO_SLUG = "kaushikvada3/UCR-Computer-Science-Electrical-Engineering"
+
+
+def default_update_log_path() -> Path:
+    local_appdata = os.environ.get("LOCALAPPDATA", "").strip()
+    if local_appdata:
+        base_dir = Path(local_appdata)
+    else:
+        base_dir = Path.home() / "AppData" / "Local"
+    return base_dir / "BMS Dashboard" / "logs" / "update.log"
+
+
+def _append_update_log(message: str, log_path: Optional[Path] = None) -> Path:
+    target = log_path or default_update_log_path()
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        with target.open("a", encoding="utf-8") as fh:
+            fh.write(f"[{timestamp}] {message}\n")
+    except Exception:
+        logger.exception("Failed to write updater log")
+    return target
 
 
 def detect_repo_slug(project_root: Optional[Path] = None) -> Optional[str]:
@@ -314,16 +339,43 @@ class ReleaseUpdater:
             )
 
     @staticmethod
-    def launch_guided_install(installer_path: Path, wait_for_pid: Optional[int] = None) -> str:
+    def launch_guided_install(
+        installer_path: Path,
+        wait_for_pid: Optional[int] = None,
+        autoclose_app: bool = False,
+        update_mode: bool = False,
+        log_path: Optional[Path] = None,
+    ) -> Dict[str, str]:
+        installer_path = installer_path.resolve()
+        log_file = _append_update_log(f"Preparing guided install launch: {installer_path}", log_path)
+
         if sys.platform.startswith("win"):
+            launch_args: list[str] = []
+            if autoclose_app:
+                launch_args.append("/AUTOCLOSEAPP=1")
+            if wait_for_pid and wait_for_pid > 0:
+                launch_args.append(f"/WAITPID={int(wait_for_pid)}")
+            if update_mode:
+                launch_args.append("/UPDATE_MODE=1")
+
             if wait_for_pid and wait_for_pid > 0:
                 escaped_path = str(installer_path).replace("'", "''")
+                if launch_args:
+                    escaped_args = ", ".join(
+                        "'" + arg.replace("'", "''") + "'" for arg in launch_args
+                    )
+                    launch_cmd = (
+                        f"$installerArgs = @({escaped_args}); "
+                        f"Start-Process -FilePath '{escaped_path}' -ArgumentList $installerArgs"
+                    )
+                else:
+                    launch_cmd = f"Start-Process -FilePath '{escaped_path}'"
                 script = (
                     f"$pidToWait = {int(wait_for_pid)}; "
                     "while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { "
                     "Start-Sleep -Milliseconds 250 "
                     "}; "
-                    f"Start-Process -FilePath '{escaped_path}'"
+                    + launch_cmd
                 )
                 flags = (
                     getattr(subprocess, "DETACHED_PROCESS", 0)
@@ -331,6 +383,10 @@ class ReleaseUpdater:
                     | getattr(subprocess, "CREATE_NO_WINDOW", 0)
                 )
                 try:
+                    _append_update_log(
+                        f"Launching detached installer handoff with args: {' '.join(launch_args) or '(none)'}",
+                        log_file,
+                    )
                     subprocess.Popen(
                         [
                             "powershell",
@@ -342,37 +398,69 @@ class ReleaseUpdater:
                         ],
                         creationflags=flags,
                     )
-                    return (
-                        "Update is ready. Close BMS Dashboard now and the installer will start automatically."
-                    )
-                except Exception:
-                    pass
+                    return {
+                        "status": "auto_close_pending",
+                        "message": (
+                            "Update is ready. Close BMS Dashboard now and the installer will "
+                            "start automatically.\n\nIf Windows keeps a file locked, setup will "
+                            "stage the update and may ask for a restart."
+                        ),
+                        "log_path": str(log_file),
+                    }
+                except Exception as exc:
+                    _append_update_log(f"Detached handoff failed: {exc}", log_file)
 
             # ShellExecute handles UAC elevation prompts for installers.
+            parameters = " ".join(launch_args) if launch_args else None
+            _append_update_log(
+                f"Launching installer via ShellExecuteW. Args: {parameters or '(none)'}",
+                log_file,
+            )
             result = ctypes.windll.shell32.ShellExecuteW(
                 None,
                 "open",
                 str(installer_path),
-                None,
+                parameters,
                 None,
                 1,
             )
             if result <= 32:
+                _append_update_log(f"ShellExecuteW failed with code {result}", log_file)
                 try:
                     subprocess.Popen(["explorer", "/select,", str(installer_path)])
                 except Exception:
                     pass
-                return (
-                    "Installer downloaded but could not be auto-launched. "
-                    f"Please run it manually:\n{installer_path}"
-                )
-            return "Installer launched. Approve UAC if prompted, then complete setup."
+                return {
+                    "status": "manual_required",
+                    "message": (
+                        "Installer downloaded but could not be auto-launched.\n"
+                        f"Please run it manually:\n{installer_path}\n\n"
+                        f"Updater log: {log_file}"
+                    ),
+                    "log_path": str(log_file),
+                }
+            _append_update_log("Installer launch dispatched successfully", log_file)
+            return {
+                "status": "launched",
+                "message": (
+                    "Installer launched. Approve UAC if prompted, then complete setup.\n\n"
+                    "Setup will close running BMS Dashboard processes automatically and may "
+                    "request a restart if Windows still locks files."
+                ),
+                "log_path": str(log_file),
+            }
 
         if sys.platform == "darwin":
             subprocess.Popen(["open", str(installer_path)])
-            return "DMG opened. Drag BMS Dashboard to Applications, then relaunch."
+            return {
+                "status": "launched",
+                "message": "DMG opened. Drag BMS Dashboard to Applications, then relaunch.",
+            }
 
         # Linux AppImage flow
         installer_path.chmod(installer_path.stat().st_mode | 0o111)
         subprocess.Popen([str(installer_path)])
-        return "AppImage launched. Confirm and restart into the new version."
+        return {
+            "status": "launched",
+            "message": "AppImage launched. Confirm and restart into the new version.",
+        }

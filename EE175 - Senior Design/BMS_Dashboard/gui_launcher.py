@@ -30,7 +30,13 @@ from PyQt6.QtWidgets import (
 
 from backend.data_stream import SerialWorker
 from backend.settings_store import SettingsStore
-from backend.updater import ReleaseUpdater, UpdateError, UpdateInfo, detect_repo_slug
+from backend.updater import (
+    ReleaseUpdater,
+    UpdateError,
+    UpdateInfo,
+    default_update_log_path,
+    detect_repo_slug,
+)
 from backend.version import APP_VERSION
 
 logger = logging.getLogger("DashboardLauncher")
@@ -444,7 +450,11 @@ class DashboardWindow(QMainWindow):
         msg.setWindowTitle("Update Available")
         msg.setIcon(QMessageBox.Icon.Information)
         msg.setText(f"Version {info.version} is available.")
-        details = "Download and start guided install now?"
+        details = (
+            "Download and start guided install now?\n\n"
+            "The app will close to complete installation. If Windows keeps files locked, "
+            "setup may ask for a restart."
+        )
         if notes_preview:
             details += f"\n\nRelease notes:\n{notes_preview}"
         msg.setInformativeText(details)
@@ -482,7 +492,12 @@ class DashboardWindow(QMainWindow):
                 info,
                 progress_callback=lambda done, total: self.update_download_progress.emit(done, total),
             )
-            message = self.updater.launch_guided_install(installer, wait_for_pid=os.getpid())
+            message = self.updater.launch_guided_install(
+                installer,
+                wait_for_pid=os.getpid(),
+                autoclose_app=True,
+                update_mode=True,
+            )
         except Exception as exc:
             error = exc
             logger.exception("Update install handoff failed")
@@ -521,25 +536,45 @@ class DashboardWindow(QMainWindow):
         label += f" @ {self._format_bytes(speed_bps)}/s"
         dialog.setLabelText(label)
 
-    def _handle_install_handoff(self, message: Optional[str], error: Optional[Exception]):
+    def _handle_install_handoff(self, message: Optional[object], error: Optional[Exception]):
         self._close_busy_dialog("_update_download_dialog")
         self._update_download_started_at = 0.0
         self._update_download_version = ""
         if error:
             self.statusBar().showMessage("Update failed.", 6000)
-            QMessageBox.warning(self, "Updates", f"Update failed:\n{error}")
+            fallback_log = default_update_log_path()
+            QMessageBox.warning(
+                self,
+                "Updates",
+                "Update failed.\n\n"
+                f"{error}\n\n"
+                "Please close BMS Dashboard and retry Check Updates.\n"
+                f"If it still fails, run the downloaded installer manually.\n"
+                f"Updater log: {fallback_log}",
+            )
             return
+
+        status = ""
+        status_message = message or "Update package launched."
+        if isinstance(message, dict):
+            status = str(message.get("status", "")).strip().lower()
+            status_message = str(message.get("message", status_message))
 
         if (
             sys.platform.startswith("win")
-            and isinstance(message, str)
-            and "Close BMS Dashboard now" in message
+            and (
+                status in {"auto_close_pending", "close_required"}
+                or (isinstance(message, str) and "Close BMS Dashboard now" in message)
+            )
         ):
-            self.statusBar().showMessage("Update is ready. Close the app to continue install.", 6000)
+            self.statusBar().showMessage(
+                "Update ready. Close the app to continue install (restart may be required).",
+                7000,
+            )
             close_now = QMessageBox.question(
                 self,
                 "Updates",
-                f"{message}\n\nClose now?",
+                f"{status_message}\n\nClose now?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes,
             )
@@ -547,8 +582,13 @@ class DashboardWindow(QMainWindow):
                 QTimer.singleShot(150, self.close)
             return
 
+        if sys.platform.startswith("win") and status == "manual_required":
+            self.statusBar().showMessage("Installer is ready to run manually.", 7000)
+            QMessageBox.warning(self, "Updates", status_message)
+            return
+
         self.statusBar().showMessage("Update package is ready.", 6000)
-        QMessageBox.information(self, "Updates", message or "Update package launched.")
+        QMessageBox.information(self, "Updates", status_message)
 
     def _show_busy_dialog(self, title: str, label: str, dialog_attr: str) -> None:
         self._close_busy_dialog(dialog_attr)
