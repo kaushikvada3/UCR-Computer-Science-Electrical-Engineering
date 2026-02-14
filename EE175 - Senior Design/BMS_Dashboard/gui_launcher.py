@@ -492,12 +492,8 @@ class DashboardWindow(QMainWindow):
                 info,
                 progress_callback=lambda done, total: self.update_download_progress.emit(done, total),
             )
-            message = self.updater.launch_guided_install(
-                installer,
-                wait_for_pid=os.getpid(),
-                autoclose_app=False,
-                update_mode=True,
-            )
+            # Use seamless auto-update for all platforms
+            message = self.updater.install_update_and_restart(installer)
         except Exception as exc:
             error = exc
             logger.exception("Update install handoff failed")
@@ -557,10 +553,34 @@ class DashboardWindow(QMainWindow):
         status = ""
         status_message = message or "Update package launched."
         installer_path = ""
+        requires_quit = False
         if isinstance(message, dict):
             status = str(message.get("status", "")).strip().lower()
             status_message = str(message.get("message", status_message))
             installer_path = str(message.get("installer_path", "")).strip()
+            requires_quit = str(message.get("requires_quit", "")).lower() == "true"
+
+        # Handle seamless auto-update (macOS)
+        if status == "installing" and requires_quit:
+            self.statusBar().showMessage("Installing update and restarting...", 10000)
+
+            # Show a brief dialog with progress indicator
+            progress = QProgressDialog(
+                "Installing update...\n\nThe application will restart automatically.",
+                None,  # No cancel button
+                0, 0,  # Indeterminate progress
+                self
+            )
+            progress.setWindowTitle("Installing Update")
+            progress.setWindowModality(Qt.WindowModality.WindowModal)
+            progress.setMinimumDuration(0)
+            progress.setValue(0)
+            progress.show()
+            QApplication.processEvents()
+
+            # Give user a moment to see the message, then quit
+            QTimer.singleShot(1500, lambda: [progress.close(), self.close()])
+            return
 
         if (
             sys.platform.startswith("win")
