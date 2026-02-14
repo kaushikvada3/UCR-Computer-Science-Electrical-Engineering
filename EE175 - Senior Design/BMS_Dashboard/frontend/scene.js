@@ -2064,6 +2064,8 @@ const closePanelBtn = document.querySelector("[data-close-panel]");
 const dataPulseEl = document.getElementById("data-pulse");
 const STATUS_WAITING = "Waiting for Data";
 const STATUS_CONNECTED = "Connected";
+const STATUS_SIMULATION = "Simulation Mode";
+const STATUS_SIM_COMMAND_BLOCKED = "Simulation ON: hardware commands blocked";
 const CELL_HISTORY_LENGTH = 45;
 const TREND_WIDTH = 260;
 const TREND_HEIGHT = 90;
@@ -2091,6 +2093,11 @@ let detailRefreshTimer = 0;
 let detailPendingForceGraph = false;
 let lastDetailRenderTs = 0;
 let lastPulseDurationSec = null;
+let backendConnectionState = false;
+let hasRealTelemetry = false;
+let simulationEnabled = false;
+let simulationIntervalId = null;
+let simulationStatusResetTimer = 0;
 
 function createBlankState() {
   return {
@@ -2309,19 +2316,39 @@ function triggerDataPulse(dataRate) {
   dataPulseEl.style.animationDuration = `${durationSec}s`;
 }
 
-function setConnectionStatus(connected) {
+function applySimulationStatusIndicator(label = STATUS_SIMULATION) {
+  if (!thermalTrendEl || !dataPulseEl) return;
+  thermalTrendEl.textContent = label;
+  dataPulseEl.classList.remove("status__dot--connected");
+  dataPulseEl.classList.remove("status__dot--waiting");
+  dataPulseEl.classList.add("status__dot--simulation");
+}
+
+function setConnectionStatus(connected, source = "backend") {
   if (!thermalTrendEl || !dataPulseEl) return;
 
-  isBackendConnected = Boolean(connected);
+  const nextConnected = Boolean(connected);
+  if (source === "backend") {
+    backendConnectionState = nextConnected;
+    if (!nextConnected) {
+      hasRealTelemetry = false;
+    }
+    if (simulationEnabled) {
+      return;
+    }
+  }
+
+  isBackendConnected = nextConnected;
   startConnectionTransition(isBackendConnected);
   if (isBackendConnected) {
     cancelViewResetTransition();
   } else {
     startViewResetTransition();
   }
-  thermalTrendEl.textContent = connected ? STATUS_CONNECTED : STATUS_WAITING;
-  dataPulseEl.classList.toggle("status__dot--connected", connected);
-  dataPulseEl.classList.toggle("status__dot--waiting", !connected);
+  thermalTrendEl.textContent = isBackendConnected ? STATUS_CONNECTED : STATUS_WAITING;
+  dataPulseEl.classList.toggle("status__dot--connected", isBackendConnected);
+  dataPulseEl.classList.toggle("status__dot--waiting", !isBackendConnected);
+  dataPulseEl.classList.remove("status__dot--simulation");
 
   if (!isBackendConnected) {
     fanSpinRpm = 0;
@@ -2735,6 +2762,21 @@ if (typeof QWebChannel !== "undefined" && window.qt?.webChannelTransport) {
 }
 
 function sendBackendCommand(cmd) {
+  if (simulationEnabled) {
+    console.warn(`[BMS] Simulation ON: blocked hardware command -> ${cmd}`);
+    if (simulationStatusResetTimer) {
+      window.clearTimeout(simulationStatusResetTimer);
+    }
+    applySimulationStatusIndicator(STATUS_SIM_COMMAND_BLOCKED);
+    simulationStatusResetTimer = window.setTimeout(() => {
+      simulationStatusResetTimer = 0;
+      if (simulationEnabled) {
+        applySimulationStatusIndicator(STATUS_SIMULATION);
+      }
+    }, 1600);
+    return;
+  }
+
   if (backendLink) {
     console.log("Sending to backend:", cmd);
     backendLink.sendCommand(cmd);
@@ -2762,6 +2804,8 @@ const fanManualBtn = document.getElementById("fan-manual-btn");
 const fanManualControls = document.getElementById("fan-manual-controls");
 const fanSlider = document.getElementById("fan-slider");
 const fanValue = document.getElementById("fan-value");
+const simulateDataToggle = document.getElementById("simulate-data-toggle");
+const simulateDataModeEl = document.getElementById("simulate-data-mode");
 
 let isFanAuto = true;
 
@@ -2878,6 +2922,12 @@ fanSlider.addEventListener("change", (e) => {
   updateSliderUI(fanSlider);
   sendBackendCommand(`FAN:SET:${duty}`);
 });
+
+if (simulateDataToggle) {
+  simulateDataToggle.addEventListener("change", (event) => {
+    setSimulationMode(Boolean(event.target.checked), "toggle");
+  });
+}
 
 function setFanMode(auto) {
   isFanAuto = auto;
@@ -3056,7 +3106,25 @@ function queueDashboardData(data) {
 
 // This function is called by Python: window.updateDashboard(jsonData)
 window.updateDashboard = function (data) {
-  queueDashboardData(data);
+  const payload = data && typeof data === "object" ? data : {};
+  const isSimulatedPayload = Boolean(payload.__simulated);
+
+  if (simulationEnabled && !isSimulatedPayload) {
+    hasRealTelemetry = true;
+    backendConnectionState = true;
+    setSimulationMode(false, "real-data");
+  }
+
+  if (!simulationEnabled && isSimulatedPayload) {
+    return;
+  }
+
+  if (!isSimulatedPayload) {
+    hasRealTelemetry = true;
+    backendConnectionState = true;
+  }
+
+  queueDashboardData(payload);
 };
 
 function mockStream() {
@@ -3070,6 +3138,7 @@ function mockStream() {
   const mockActualCurrent = Math.max(0, Math.abs(mockCurrent));
 
   window.updateDashboard({
+    __simulated: true,
     cells,
     pack_current: mockCurrent,
     fan1: { rpm: 900 + Math.round(Math.random() * 500) },
@@ -3087,6 +3156,58 @@ function mockStream() {
       power: Number((mockVoltage * mockActualCurrent).toFixed(2)),
     },
   });
+}
+
+function updateSimulationToggleUi() {
+  if (simulateDataToggle) {
+    simulateDataToggle.checked = simulationEnabled;
+  }
+  if (simulateDataModeEl) {
+    simulateDataModeEl.textContent = simulationEnabled ? STATUS_SIMULATION : "Actual Testing Mode";
+  }
+}
+
+function setSimulationMode(enabled, reason = "manual") {
+  const shouldEnable = Boolean(enabled);
+  if (simulationEnabled === shouldEnable) {
+    updateSimulationToggleUi();
+    if (simulationEnabled) {
+      applySimulationStatusIndicator(STATUS_SIMULATION);
+    }
+    return simulationEnabled;
+  }
+
+  simulationEnabled = shouldEnable;
+  updateSimulationToggleUi();
+
+  if (simulationStatusResetTimer) {
+    window.clearTimeout(simulationStatusResetTimer);
+    simulationStatusResetTimer = 0;
+  }
+
+  if (simulationEnabled) {
+    setConnectionStatus(true, "simulation");
+    applySimulationStatusIndicator(STATUS_SIMULATION);
+    mockStream();
+    if (!simulationIntervalId) {
+      simulationIntervalId = window.setInterval(mockStream, 1500);
+    }
+    return true;
+  }
+
+  if (simulationIntervalId) {
+    window.clearInterval(simulationIntervalId);
+    simulationIntervalId = null;
+  }
+
+  if (reason !== "real-data") {
+    clearDashboardData("manual");
+    const restoreConnected = backendConnectionState && hasRealTelemetry;
+    setConnectionStatus(restoreConnected, "simulation");
+  } else {
+    setConnectionStatus(true, "simulation");
+  }
+  return false;
 }
 
 function onWindowResize() {
@@ -3122,13 +3243,13 @@ if (window.visualViewport) {
 
 onWindowResize();
 
-// If we are NOT in the Qt/Python environment, keep the mock stream running for dev
-if (!window.qt) {
-  console.log("Running in dev mode (Mock Stream)");
-  setConnectionStatus(true);
-  mockStream();
-  setInterval(mockStream, 1500);
-}
+window.__bmsSetSimulation = (enabled) => setSimulationMode(Boolean(enabled), "debug");
+window.__bmsStartSimulation = () => setSimulationMode(true, "debug");
+window.__bmsStopSimulation = () => setSimulationMode(false, "debug");
+window.__bmsGetSimulationState = () => Boolean(simulationEnabled);
+
+setSimulationMode(false, "startup");
+console.log("[BMS] Simulation toggle initialized in Actual Testing Mode.");
 
 
 
