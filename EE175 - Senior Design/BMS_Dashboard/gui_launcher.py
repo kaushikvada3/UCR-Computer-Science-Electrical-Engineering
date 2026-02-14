@@ -495,7 +495,7 @@ class DashboardWindow(QMainWindow):
             message = self.updater.launch_guided_install(
                 installer,
                 wait_for_pid=os.getpid(),
-                autoclose_app=True,
+                autoclose_app=False,
                 update_mode=True,
             )
         except Exception as exc:
@@ -568,13 +568,13 @@ class DashboardWindow(QMainWindow):
             )
         ):
             self.statusBar().showMessage(
-                "Update ready. Close the app to continue install (restart may be required).",
+                "Installer is open. Close this app to continue update (restart may be required).",
                 7000,
             )
             close_now = QMessageBox.question(
                 self,
                 "Updates",
-                f"{status_message}\n\nClose now?",
+                f"{status_message}\n\nInstaller is now running. Close BMS Dashboard now?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes,
             )

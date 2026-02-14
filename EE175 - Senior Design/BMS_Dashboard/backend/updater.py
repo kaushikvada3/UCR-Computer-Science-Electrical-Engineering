@@ -358,58 +358,6 @@ class ReleaseUpdater:
             if update_mode:
                 launch_args.append("/UPDATE_MODE=1")
 
-            if wait_for_pid and wait_for_pid > 0:
-                escaped_path = str(installer_path).replace("'", "''")
-                if launch_args:
-                    escaped_args = ", ".join(
-                        "'" + arg.replace("'", "''") + "'" for arg in launch_args
-                    )
-                    launch_cmd = (
-                        f"$installerArgs = @({escaped_args}); "
-                        f"Start-Process -FilePath '{escaped_path}' -ArgumentList $installerArgs"
-                    )
-                else:
-                    launch_cmd = f"Start-Process -FilePath '{escaped_path}'"
-                script = (
-                    f"$pidToWait = {int(wait_for_pid)}; "
-                    "while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { "
-                    "Start-Sleep -Milliseconds 250 "
-                    "}; "
-                    + launch_cmd
-                )
-                flags = (
-                    getattr(subprocess, "DETACHED_PROCESS", 0)
-                    | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
-                )
-                try:
-                    _append_update_log(
-                        f"Launching detached installer handoff with args: {' '.join(launch_args) or '(none)'}",
-                        log_file,
-                    )
-                    subprocess.Popen(
-                        [
-                            "powershell",
-                            "-NoProfile",
-                            "-ExecutionPolicy",
-                            "Bypass",
-                            "-Command",
-                            script,
-                        ],
-                        creationflags=flags,
-                    )
-                    return {
-                        "status": "auto_close_pending",
-                        "message": (
-                            "Update is ready. Close BMS Dashboard now and the installer will "
-                            "start automatically.\n\nIf Windows keeps a file locked, setup will "
-                            "stage the update and may ask for a restart."
-                        ),
-                        "log_path": str(log_file),
-                    }
-                except Exception as exc:
-                    _append_update_log(f"Detached handoff failed: {exc}", log_file)
-
             # ShellExecute handles UAC elevation prompts for installers.
             parameters = " ".join(launch_args) if launch_args else None
             _append_update_log(
@@ -440,10 +388,20 @@ class ReleaseUpdater:
                     "log_path": str(log_file),
                 }
             _append_update_log("Installer launch dispatched successfully", log_file)
+            if wait_for_pid and wait_for_pid > 0 and not autoclose_app:
+                return {
+                    "status": "close_required",
+                    "message": (
+                        "Installer window is open and waiting for BMS Dashboard to close.\n\n"
+                        "Close the app now to continue installation. If Windows keeps files "
+                        "locked, setup may ask for a restart."
+                    ),
+                    "log_path": str(log_file),
+                }
             return {
                 "status": "launched",
                 "message": (
-                    "Installer launched. Approve UAC if prompted, then complete setup.\n\n"
+                    "Installer launched. Approve UAC if prompted, then follow the setup window.\n\n"
                     "Setup will close running BMS Dashboard processes automatically and may "
                     "request a restart if Windows still locks files."
                 ),
