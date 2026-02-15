@@ -174,7 +174,16 @@ class DashboardWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self.setWindowTitle("BMS Command Surface")
-        self.resize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+
+        # Size the window to fit the screen, capping at the default max
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            w = min(DEFAULT_WINDOW_WIDTH, avail.width() - 40)
+            h = min(DEFAULT_WINDOW_HEIGHT, avail.height() - 40)
+            self.resize(w, h)
+        else:
+            self.resize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
 
         self.settings = settings
         self.baudrate = baudrate
@@ -300,10 +309,12 @@ class DashboardWindow(QMainWindow):
         screen = QApplication.primaryScreen()
         if screen is None:
             return QRect(self.x(), self.y(), DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
-        geometry = screen.availableGeometry()
-        x = geometry.x() + (geometry.width() - DEFAULT_WINDOW_WIDTH) // 2
-        y = geometry.y() + (geometry.height() - DEFAULT_WINDOW_HEIGHT) // 2
-        return QRect(x, y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+        avail = screen.availableGeometry()
+        w = min(DEFAULT_WINDOW_WIDTH, avail.width() - 40)
+        h = min(DEFAULT_WINDOW_HEIGHT, avail.height() - 40)
+        x = avail.x() + (avail.width() - w) // 2
+        y = avail.y() + (avail.height() - h) // 2
+        return QRect(x, y, w, h)
 
     def _enter_startup_shell_mode(self) -> None:
         startup_flags = Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint
@@ -311,7 +322,14 @@ class DashboardWindow(QMainWindow):
         self.setAutoFillBackground(False)
         self.setStyleSheet("QMainWindow { background: transparent; }")
         self.setWindowFlags(startup_flags)
-        self.resize(STARTUP_SHELL_WIDTH, STARTUP_SHELL_HEIGHT)
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            sw = min(STARTUP_SHELL_WIDTH, avail.width() - 40)
+            sh = min(STARTUP_SHELL_HEIGHT, avail.height() - 40)
+            self.resize(sw, sh)
+        else:
+            self.resize(STARTUP_SHELL_WIDTH, STARTUP_SHELL_HEIGHT)
         self._center_window()
         self.view.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.view.setStyleSheet("background: transparent;")
