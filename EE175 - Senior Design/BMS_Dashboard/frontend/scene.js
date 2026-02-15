@@ -35,7 +35,7 @@ const BOOT_STAGE_WEIGHTS = {
   finalize: 0.05,
 };
 const BOOT_REVEAL_HOLD_MS = 450;
-const BOOT_REVEAL_DURATION_MS = 1800;
+const BOOT_REVEAL_DURATION_MS = 2400;
 const STARTUP_HANDOFF_TARGET = {
   windowWidth: 1400,
   windowHeight: 900,
@@ -253,10 +253,6 @@ function runRevealSequence() {
   document.body.classList.remove("is-booting");
 
   const revealDuration = BOOT_REVEAL_DURATION_MS / 1000;
-  const contentFadeDuration = revealDuration * 0.32;
-  const logoGrowDuration = revealDuration * 0.64;
-  const sceneFadeDuration = revealDuration * 0.56;
-  const hudEntranceDuration = revealDuration * 0.38;
   const handoffPoint = getModelHandoffScreenPoint();
   const logoRect = logoEl?.getBoundingClientRect() || null;
   const logoCenterX = logoRect ? (logoRect.left + (logoRect.width * 0.5)) : (window.innerWidth * 0.5);
@@ -267,7 +263,7 @@ function runRevealSequence() {
     ? { x: loadedModel.scale.x, y: loadedModel.scale.y, z: loadedModel.scale.z }
     : null;
   const modelPulseFrom = modelPulseTo
-    ? { x: modelPulseTo.x * 0.96, y: modelPulseTo.y * 0.96, z: modelPulseTo.z * 0.96 }
+    ? { x: modelPulseTo.x * 0.88, y: modelPulseTo.y * 0.88, z: modelPulseTo.z * 0.88 }
     : null;
 
   const tl = gsap.timeline({
@@ -300,108 +296,138 @@ function runRevealSequence() {
 
   tl.set([sceneCanvas, hudRoot].filter(Boolean), { visibility: "visible" }, 0);
 
+  // Phase 1: Glass card collapses — text slides down and fades, bar shrinks
   tl.to(
-    [loaderTitleEl, bootStageEl, loaderBarEl, loaderMetaEl].filter(Boolean),
+    [loaderTitleEl, bootStageEl, loaderMetaEl].filter(Boolean),
     {
       opacity: 0,
-      y: 10,
-      duration: contentFadeDuration,
-      stagger: 0.04,
-      ease: "power2.out",
+      y: 18,
+      duration: 0.35,
+      stagger: 0.05,
+      ease: "power3.in",
     },
     0,
   );
 
+  tl.to(
+    [loaderBarEl].filter(Boolean),
+    {
+      opacity: 0,
+      scaleX: 0.3,
+      duration: 0.3,
+      ease: "power3.in",
+    },
+    0.05,
+  );
+
+  // Phase 2: Logo lifts and morphs toward the 3D model position
   if (logoEl) {
     tl.to(
       logoEl,
       {
         x: logoMoveX,
         y: logoMoveY,
-        scale: 1.46,
+        scale: 1.6,
         opacity: 0,
-        duration: logoGrowDuration,
+        duration: revealDuration * 0.55,
         ease: "expo.inOut",
       },
-      0.05,
+      0.15,
     );
   }
 
+  // Phase 2b: Glass card scales down and dissolves
+  if (loaderContent) {
+    tl.to(
+      loaderContent,
+      {
+        opacity: 0,
+        scale: 0.92,
+        y: 20,
+        duration: 0.5,
+        ease: "power2.inOut",
+      },
+      0.2,
+    );
+  }
+
+  // Phase 3: 3D scene fades in with a soft bloom
   if (sceneCanvas) {
     tl.fromTo(
       sceneCanvas,
-      { opacity: 0 },
-      { opacity: 1, duration: sceneFadeDuration, ease: "sine.inOut" },
-      revealDuration * 0.16,
+      { opacity: 0, filter: "brightness(1.4) blur(4px)" },
+      {
+        opacity: 1,
+        filter: "brightness(1) blur(0px)",
+        duration: revealDuration * 0.5,
+        ease: "sine.out",
+      },
+      revealDuration * 0.22,
     );
   }
 
+  // Phase 3b: Model scales up from slightly smaller with a satisfying pop
   if (loadedModel && modelPulseFrom && modelPulseTo) {
     tl.fromTo(
       loadedModel.scale,
       modelPulseFrom,
       {
         ...modelPulseTo,
-        duration: sceneFadeDuration,
-        ease: "power2.out",
+        duration: revealDuration * 0.45,
+        ease: "back.out(1.4)",
       },
-      revealDuration * 0.18,
+      revealDuration * 0.25,
     );
   }
 
-  if (loaderContent) {
-    tl.to(
-      loaderContent,
-      { opacity: 0, duration: revealDuration * 0.2, ease: "power2.out" },
-      revealDuration * 0.68,
-    );
-  }
-
+  // Phase 4: HUD elements enter with staggered cascading slide
   tl.add(() => {
     if (hudRoot) gsap.set(hudRoot, { visibility: "visible", opacity: 1 });
-  }, revealDuration * 0.62);
+  }, revealDuration * 0.52);
 
   if (header) {
     tl.fromTo(
       header,
-      { opacity: 0, y: -14 },
-      { opacity: 1, y: 0, duration: hudEntranceDuration, ease: "expo.out" },
-      revealDuration * 0.66,
+      { opacity: 0, y: -20 },
+      { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" },
+      revealDuration * 0.54,
     );
   }
 
   tl.fromTo(
     leftPanels,
-    { opacity: 0, x: -20 },
+    { opacity: 0, x: -40, scale: 0.95 },
     {
       opacity: 1,
       x: 0,
-      duration: hudEntranceDuration,
-      stagger: 0.07,
+      scale: 1,
+      duration: 0.65,
+      stagger: 0.09,
       ease: "expo.out",
     },
-    revealDuration * 0.71,
+    revealDuration * 0.58,
   );
 
   tl.fromTo(
     rightPanels,
-    { opacity: 0, x: 20 },
+    { opacity: 0, x: 40, scale: 0.95 },
     {
       opacity: 1,
       x: 0,
-      duration: hudEntranceDuration,
-      stagger: 0.07,
+      scale: 1,
+      duration: 0.65,
+      stagger: 0.09,
       ease: "expo.out",
     },
-    revealDuration * 0.74,
+    revealDuration * 0.62,
   );
 
   if (statusEl) {
     tl.fromTo(
       statusEl,
-      { opacity: 0, y: 10 },
-      { opacity: 1, y: 0, duration: revealDuration * 0.25, ease: "expo.out" },
-      revealDuration * 0.82,
+      { opacity: 0, y: 16, scale: 0.9 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(2)" },
+      revealDuration * 0.78,
     );
   }
 }
