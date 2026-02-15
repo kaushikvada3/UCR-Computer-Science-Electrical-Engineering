@@ -1,0 +1,64 @@
+('C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+ '- Senior Design\\BMS_Dashboard\\build\\BMSDashboard\\BMSDashboard.pkg',
+ {'BINARY': True,
+  'DATA': True,
+  'EXECUTABLE': True,
+  'EXTENSION': True,
+  'PYMODULE': True,
+  'PYSOURCE': True,
+  'PYZ': False,
+  'SPLASH': True,
+  'SYMLINK': False},
+ [('pyi-contents-directory _internal', '', 'OPTION'),
+  ('PYZ-00.pyz',
+   'C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+   '- Senior Design\\BMS_Dashboard\\build\\BMSDashboard\\PYZ-00.pyz',
+   'PYZ'),
+  ('struct',
+   'C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+   '- Senior Design\\BMS_Dashboard\\build\\BMSDashboard\\localpycs\\struct.pyc',
+   'PYMODULE'),
+  ('pyimod01_archive',
+   'C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+   '- Senior '
+   'Design\\BMS_Dashboard\\build\\BMSDashboard\\localpycs\\pyimod01_archive.pyc',
+   'PYMODULE'),
+  ('pyimod02_importers',
+   'C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+   '- Senior '
+   'Design\\BMS_Dashboard\\build\\BMSDashboard\\localpycs\\pyimod02_importers.pyc',
+   'PYMODULE'),
+  ('pyimod03_ctypes',
+   'C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+   '- Senior '
+   'Design\\BMS_Dashboard\\build\\BMSDashboard\\localpycs\\pyimod03_ctypes.pyc',
+   'PYMODULE'),
+  ('pyimod04_pywin32',
+   'C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+   '- Senior '
+   'Design\\BMS_Dashboard\\build\\BMSDashboard\\localpycs\\pyimod04_pywin32.pyc',
+   'PYMODULE'),
+  ('pyiboot01_bootstrap',
+   'c:\\python38\\lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
+   'PYSOURCE'),
+  ('pyi_rth_inspect',
+   'C:\\Python38\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_inspect.py',
+   'PYSOURCE'),
+  ('pyi_rth_pyqt6',
+   'C:\\Python38\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pyqt6.py',
+   'PYSOURCE'),
+  ('pyi_rth_pkgutil',
+   'C:\\Python38\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pkgutil.py',
+   'PYSOURCE'),
+  ('gui_launcher',
+   'C:\\Users\\EndUser\\Documents\\Github\\UCR-Computer-Science-Electrical-Engineering\\EE175 '
+   '- Senior Design\\BMS_Dashboard\\gui_launcher.py',
+   'PYSOURCE')],
+ 'python38.dll',
+ True,
+ False,
+ False,
+ [],
+ None,
+ None,
+ None)

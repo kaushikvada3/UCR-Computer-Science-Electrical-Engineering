@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BMS Dashboard – Frontend Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/"
+        }
+      }
+    </script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="qwebchannel.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+</head>
+
+<body>
+  <canvas id="scene"></canvas>
+
+  <div class="hud">
+    <header class="hud__header">
+      <div>
+        <p class="eyebrow">UCR EV Lab</p>
+        <h1>BMS Command Surface</h1>
+      </div>
+    </header>
+
+    <!-- Left Column: Cell Grid + Metrics -->
+    <div class="left-column">
+      <section class="hud__section cell-grid glass-panel">
+        <!-- Filled dynamically -->
+      </section>
+
+      <section class="hud__section metrics glass-panel">
+        <div class="metric-card">
+          <p class="metric-card__label">Pack Voltage</p>
+          <p class="metric-card__value" data-pack-voltage>-- V</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Pack Current</p>
+          <p class="metric-card__value" data-pack-current>-- A</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Peak Temperature</p>
+          <p class="metric-card__value" data-pack-temp>-- °C</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Fan 1 Speed</p>
+          <p class="metric-card__value" data-fan-speed-1>-- RPM</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Fan 2 Speed</p>
+          <p class="metric-card__value" data-fan-speed-2>-- RPM</p>
+        </div>
+        <div class="metric-card">
+          <p class="metric-card__label">Power Mode</p>
+          <div class="mode-selector">
+            <button class="mode-btn active" data-mode="Balanced">Balanced</button>
+            <button class="mode-btn" data-mode="Low-Power">Low-Power</button>
+            <button class="mode-btn" data-mode="High-Power">High-Power</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Right Column: Telemetry + E-Load + Fan -->
+    <div class="right-column">
+
+      <!-- 1. Live Telemetry Grid -->
+      <section class="hud__section glass-panel">
+        <div class="timeline__header">
+          <p class="eyebrow">ELoad Telemetry</p>
+        </div>
+        <div class="telemetry-grid">
+          <div class="stat-box">
+            <span class="stat-label">Input Voltage</span>
+            <span class="stat-value" id="telem-voltage">-- V</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Actual Current</span>
+            <span class="stat-value" id="telem-current">-- A</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Dissipation</span>
+            <span class="stat-value" id="telem-power">-- W</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Fan RPM</span>
+            <span class="stat-value" id="telem-rpm">--</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. E-Load Control -->
+      <section class="hud__section eload glass-panel">
+        <div class="timeline__header">
+          <p class="eyebrow">E-Load Control</p>
+          <div class="toggle-switch">
+            <input type="checkbox" id="eload-toggle" />
+            <label for="eload-toggle"></label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <p class="metric-card__label">Target Current (I_SET)</p>
+          <div class="input-row">
+            <div class="glass-slider" data-glass-slider>
+              <input type="range" min="0" max="10" step="0.01" value="0" id="eload-slider" class="glass-slider__input">
+              <div class="glass-slider__track">
+                <div class="glass-slider__progress"></div>
+              </div>
+              <div class="glass-slider__thumb">
+                <div class="glass-slider__thumb-filter"></div>
+                <div class="glass-slider__thumb-overlay"></div>
+                <div class="glass-slider__thumb-specular"></div>
+              </div>
+            </div>
+            <input type="number" min="0" max="10" step="0.01" value="0" id="eload-input" class="numeric-input">
+            <span class="unit">A</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Fan Control -->
+      <section class="hud__section glass-panel">
+        <div class="timeline__header">
+          <p class="eyebrow">Fan Cooling</p>
+          <div class="mode-selector small">
+            <button class="mode-btn active" id="fan-auto-btn">Auto</button>
+            <button class="mode-btn" id="fan-manual-btn">Manual</button>
+          </div>
+        </div>
+        <div class="control-group disabled" id="fan-manual-controls">
+          <p class="metric-card__label">PWM Duty Cycle</p>
+          <div class="input-row">
+            <div class="glass-slider" data-glass-slider>
+              <input type="range" min="0" max="100" step="5" value="0" id="fan-slider" class="glass-slider__input">
+              <div class="glass-slider__track">
+                <div class="glass-slider__progress"></div>
+              </div>
+              <div class="glass-slider__thumb">
+                <div class="glass-slider__thumb-filter"></div>
+                <div class="glass-slider__thumb-overlay"></div>
+                <div class="glass-slider__thumb-specular"></div>
+              </div>
+            </div>
+            <span class="value-display" id="fan-value">0%</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+    <div class="status">
+      <span class="status__dot status__dot--waiting" id="data-pulse"></span>
+      <span class="status__label" data-thermal-trend>Waiting for Data</span>
+    </div>
+  </div>
+
+  <aside class="detail-panel glass-panel" data-detail-panel>
+    <div class="detail-panel__header">
+      <div>
+        <p class="eyebrow detail-panel__eyebrow">Cell Focus</p>
+        <h2 data-cell-title>Cell 1</h2>
+      </div>
+      <button class="detail-panel__close" data-close-panel>Close</button>
+    </div>
+    <div class="detail-panel__body">
+      <div class="detail-stat">
+        <p class="detail-stat__label">Voltage</p>
+        <p class="detail-stat__value" data-cell-voltage>4.10 V</p>
+      </div>
+      <div class="detail-stat">
+        <p class="detail-stat__label">Temperature</p>
+        <p class="detail-stat__value" data-cell-temperature>32.5 °C</p>
+      </div>
+      <div class="detail-stat">
+        <p class="detail-stat__label">Current</p>
+        <p class="detail-stat__value" data-cell-current>-- A</p>
+      </div>
+      <div class="detail-stat">
+        <p class="detail-stat__label">Delta</p>
+        <p class="detail-stat__value" data-cell-delta>+8 mV</p>
+      </div>
+      <div class="detail-graph">
+        <div class="detail-graph__header">
+          <p class="detail-stat__label">Recent Voltage</p>
+          <p class="detail-stat__value detail-graph__latest" data-cell-trend-latest>-- V</p>
+        </div>
+        <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none" data-cell-trend>
+          <path class="detail-graph__area" data-cell-trend-area></path>
+          <path class="detail-graph__line" data-cell-trend-line></path>
+        </svg>
+        <div class="detail-graph__range">
+          <span data-cell-trend-min>-- V</span>
+          <span data-cell-trend-max>-- V</span>
+        </div>
+      </div>
+      <div class="detail-panel__note">
+        Live trace updates while telemetry streams.
+      </div>
+    </div>
+  </aside>
+
+  <svg width="0" height="0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink">
+    <filter id="mini-liquid-lens" x="-50%" y="-50%" width="200%" height="200%">
+      <feImage x="0" y="0" result="normalMap"
+        xlink:href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><radialGradient id='invmap' cx='50%' cy='50%' r='75%'><stop offset='0%' stop-color='rgb(128,128,255)'/><stop offset='90%' stop-color='rgb(255,255,255)'/></radialGradient><rect width='100%' height='100%' fill='url(%23invmap)'/></svg>" />
+      <feDisplacementMap in="SourceGraphic" in2="normalMap" scale="-252" xChannelSelector="R" yChannelSelector="G"
+        result="displaced" />
+      <feMerge>
+        <feMergeNode in="displaced" />
+      </feMerge>
+    </filter>
+  </svg>
+
+  <script src="scene.js" type="module"></script>
+</body>
+
+</html>
+

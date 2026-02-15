@@ -1,0 +1,4 @@
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:61:5:main	1
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:128:6:SystemClock_Config	4
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:175:13:MX_GPIO_Init	1
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:218:6:Error_Handler	1

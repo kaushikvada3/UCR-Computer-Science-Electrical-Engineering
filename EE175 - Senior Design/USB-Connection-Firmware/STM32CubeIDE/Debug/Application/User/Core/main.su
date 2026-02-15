@@ -1,0 +1,17 @@
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:81:10:Read_ADC	48	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:106:7:convert_adc	16	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:114:7:voltage_to_temperature	32	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:137:9:CRC8	32	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:150:6:BQ_WriteReg	40	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:168:6:BQ_ReadRegs	168	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:183:7:BQ_ReadCurrent	24	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:200:6:BQ_Init	8	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:208:6:Discover_BMS	16	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:233:5:main	352	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:370:6:SystemClock_Config	128	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:422:13:MX_ADC1_Init	48	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:524:13:MX_ADC2_Init	32	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:617:13:MX_I2C1_Init	8	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:663:13:MX_DMA_Init	16	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:685:13:MX_GPIO_Init	48	static
+C:/Users/EndUser/STM32CubeIDE/workspace_2.0.0/USB-Connection-Firmware/Core/Src/main.c:729:6:Error_Handler	4	static,ignoring_inline_asm
