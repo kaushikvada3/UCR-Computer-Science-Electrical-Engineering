@@ -28,6 +28,439 @@ const SHELL_TARGET_MAX = 8;
 const BOARD_PLANE_MARGIN_RATIO = 0.03;
 const BOARD_PLANE_MARGIN_MIN = 0.02;
 
+const BOOT_STAGE_WEIGHTS = {
+  bootstrap: 0.10,
+  modelDownload: 0.65,
+  modelProcess: 0.20,
+  finalize: 0.05,
+};
+const BOOT_REVEAL_HOLD_MS = 450;
+const BOOT_REVEAL_DURATION_MS = 1800;
+const STARTUP_HANDOFF_TARGET = {
+  windowWidth: 1400,
+  windowHeight: 900,
+  chromeHeight: 64,
+  focusLiftRatio: 0.06,
+  yBiasRatio: 0.08,
+};
+
+const bootLoaderEl = document.getElementById("boot-loader");
+const bootProgressFillEl = document.getElementById("boot-progress-fill");
+const bootPercentEl = document.getElementById("boot-percent");
+const bootStageEl = document.getElementById("boot-stage");
+const bootDetailEl = document.getElementById("boot-detail");
+
+const bootState = {
+  stage: "bootstrap",
+  stageProgress: {
+    bootstrap: 0,
+    modelDownload: 0,
+    modelProcess: 0,
+    finalize: 0,
+  },
+  detail: "Waiting to start...",
+  uiReady: false,
+  modelReady: false,
+  bytesLoaded: 0,
+  bytesTotal: 0,
+  hidden: false,
+  errored: false,
+  hideStarted: false,
+  phase: "loading",
+};
+let bootRevealHoldTimer = 0;
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, Number(value) || 0));
+}
+
+function waitForNextFrame() {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+function formatBootBytes(bytes) {
+  const size = Number(bytes) || 0;
+  if (size <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const exponent = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
+  const scaled = size / (1024 ** exponent);
+  if (exponent === 0) return `${Math.round(scaled)} ${units[exponent]}`;
+  return `${scaled.toFixed(1)} ${units[exponent]}`;
+}
+
+function computeBootPercent() {
+  return (
+    clamp01(bootState.stageProgress.bootstrap) * BOOT_STAGE_WEIGHTS.bootstrap +
+    clamp01(bootState.stageProgress.modelDownload) * BOOT_STAGE_WEIGHTS.modelDownload +
+    clamp01(bootState.stageProgress.modelProcess) * BOOT_STAGE_WEIGHTS.modelProcess +
+    clamp01(bootState.stageProgress.finalize) * BOOT_STAGE_WEIGHTS.finalize
+  ) * 100;
+}
+
+function setBootStage(stage, message) {
+  bootState.stage = stage;
+  if (bootStageEl && typeof message === "string") {
+    bootStageEl.textContent = message;
+  }
+}
+
+function setBootDetail(detail) {
+  bootState.detail = detail;
+  if (bootDetailEl && typeof detail === "string") {
+    bootDetailEl.textContent = detail;
+  }
+}
+
+function setBootStageProgress(stage, progress) {
+  if (!(stage in bootState.stageProgress)) return;
+  bootState.stageProgress[stage] = clamp01(progress);
+  const percent = computeBootPercent();
+  if (bootProgressFillEl) {
+    bootProgressFillEl.style.width = `${percent.toFixed(2)}%`;
+  }
+  if (bootPercentEl) {
+    bootPercentEl.textContent = `${Math.round(percent)}%`;
+  }
+}
+
+function setModelProcessProgress(baseOffset, span, progressInPhase) {
+  setBootStageProgress("modelProcess", baseOffset + (span * clamp01(progressInPhase)));
+}
+
+function updateBootDownloadProgress(loadedBytes, totalBytes) {
+  const loaded = Math.max(0, Number(loadedBytes) || 0);
+  const total = Number.isFinite(totalBytes) && totalBytes > 0 ? Number(totalBytes) : 0;
+  bootState.bytesLoaded = loaded;
+  bootState.bytesTotal = total;
+
+  if (total > 0) {
+    const ratio = loaded / total;
+    setBootStageProgress("modelDownload", ratio);
+    setBootDetail(`${formatBootBytes(loaded)} / ${formatBootBytes(total)}`);
+    return;
+  }
+
+  setBootDetail(`${formatBootBytes(loaded)} downloaded`);
+}
+
+function maybeFinishBootLoader() {
+  if (bootState.errored || bootState.hideStarted || bootState.hidden) return;
+  if (!(bootState.uiReady && bootState.modelReady)) return;
+
+  bootState.hideStarted = true;
+  bootState.phase = "finalize-hold";
+  setBootStage("finalize", "Finalizing startup...");
+  setBootDetail("Preparing cinematic transition...");
+  setBootStageProgress("finalize", 1);
+
+  if (bootRevealHoldTimer) {
+    window.clearTimeout(bootRevealHoldTimer);
+    bootRevealHoldTimer = 0;
+  }
+  bootRevealHoldTimer = window.setTimeout(() => {
+    bootRevealHoldTimer = 0;
+    runRevealSequence();
+  }, BOOT_REVEAL_HOLD_MS);
+}
+
+function projectWorldPointToScreen(point, viewportWidth, viewportHeight, aspectOverride = 0) {
+  if (!point || !camera) {
+    return {
+      x: viewportWidth * 0.5,
+      y: viewportHeight * 0.5,
+    };
+  }
+
+  let projectionCamera = camera;
+  if (Number.isFinite(aspectOverride) && aspectOverride > 0) {
+    projectionCamera = camera.clone();
+    projectionCamera.aspect = aspectOverride;
+    projectionCamera.updateProjectionMatrix();
+    projectionCamera.position.copy(camera.position);
+    projectionCamera.quaternion.copy(camera.quaternion);
+    projectionCamera.updateMatrixWorld(true);
+  }
+
+  const projected = point.clone().project(projectionCamera);
+  if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y)) {
+    return {
+      x: viewportWidth * 0.5,
+      y: viewportHeight * 0.5,
+    };
+  }
+
+  return {
+    x: ((projected.x + 1) * 0.5) * viewportWidth,
+    y: ((1 - projected.y) * 0.5) * viewportHeight,
+  };
+}
+
+function getModelHandoffScreenPoint() {
+  const viewportWidth = Math.max(window.innerWidth, 1);
+  const viewportHeight = Math.max(window.innerHeight, 1);
+  const fallback = { x: viewportWidth * 0.5, y: viewportHeight * 0.5 };
+  if (!loadedModel || !camera || !controls) return fallback;
+
+  const bounds = new THREE.Box3().setFromObject(loadedModel);
+  const focusPoint = bounds.isEmpty()
+    ? controls.target.clone()
+    : bounds.getCenter(new THREE.Vector3());
+  if (!bounds.isEmpty()) {
+    const size = bounds.getSize(new THREE.Vector3());
+    focusPoint.y += size.y * STARTUP_HANDOFF_TARGET.focusLiftRatio;
+  }
+
+  const targetCanvasHeight = Math.max(
+    STARTUP_HANDOFF_TARGET.windowHeight - STARTUP_HANDOFF_TARGET.chromeHeight,
+    1,
+  );
+  const targetAspect = STARTUP_HANDOFF_TARGET.windowWidth / targetCanvasHeight;
+  const projected = projectWorldPointToScreen(focusPoint, viewportWidth, viewportHeight, targetAspect);
+  const biasedY = projected.y + (viewportHeight * STARTUP_HANDOFF_TARGET.yBiasRatio);
+
+  return {
+    x: clamp(projected.x, 0, viewportWidth),
+    y: clamp(biasedY, 0, viewportHeight),
+  };
+}
+
+function runRevealSequence() {
+  const loaderContent = document.getElementById("boot-loader-content");
+  const logoEl = document.getElementById("boot-logo");
+  const loaderTitleEl = document.querySelector(".boot-loader__title");
+  const loaderBarEl = document.querySelector(".boot-loader__bar");
+  const loaderMetaEl = document.querySelector(".boot-loader__meta");
+  const sceneCanvas = document.getElementById("scene");
+  const hudRoot = document.querySelector(".hud");
+  const detailPanel = document.querySelector(".detail-panel");
+  const header = document.querySelector(".hud__header");
+
+  if (!bootLoaderEl || !gsap) {
+    bootState.hidden = true;
+    bootState.phase = "complete";
+    document.body.classList.remove("is-booting", "is-revealing");
+    if (bootLoaderEl) bootLoaderEl.remove();
+    return;
+  }
+  const leftPanels = gsap.utils.toArray(".left-column .glass-panel");
+  const rightPanels = gsap.utils.toArray(".right-column .glass-panel");
+  const statusEl = document.querySelector(".status");
+
+  bootState.phase = "reveal";
+  document.body.classList.add("is-revealing");
+  document.body.classList.remove("is-booting");
+
+  const revealDuration = BOOT_REVEAL_DURATION_MS / 1000;
+  const contentFadeDuration = revealDuration * 0.32;
+  const logoGrowDuration = revealDuration * 0.64;
+  const sceneFadeDuration = revealDuration * 0.56;
+  const hudEntranceDuration = revealDuration * 0.38;
+  const handoffPoint = getModelHandoffScreenPoint();
+  const logoRect = logoEl?.getBoundingClientRect() || null;
+  const logoCenterX = logoRect ? (logoRect.left + (logoRect.width * 0.5)) : (window.innerWidth * 0.5);
+  const logoCenterY = logoRect ? (logoRect.top + (logoRect.height * 0.5)) : (window.innerHeight * 0.5);
+  const logoMoveX = handoffPoint.x - logoCenterX;
+  const logoMoveY = handoffPoint.y - logoCenterY;
+  const modelPulseTo = loadedModel
+    ? { x: loadedModel.scale.x, y: loadedModel.scale.y, z: loadedModel.scale.z }
+    : null;
+  const modelPulseFrom = modelPulseTo
+    ? { x: modelPulseTo.x * 0.96, y: modelPulseTo.y * 0.96, z: modelPulseTo.z * 0.96 }
+    : null;
+
+  const tl = gsap.timeline({
+    defaults: { ease: "power3.out" },
+    onComplete: () => {
+      bootState.hidden = true;
+      bootState.phase = "complete";
+      document.body.classList.remove("is-revealing");
+      if (bootLoaderEl) bootLoaderEl.remove();
+      gsap.set(
+        [
+          loaderContent,
+          logoEl,
+          loaderTitleEl,
+          bootStageEl,
+          loaderBarEl,
+          loaderMetaEl,
+          sceneCanvas,
+          hudRoot,
+          detailPanel,
+          header,
+          ...leftPanels,
+          ...rightPanels,
+          statusEl,
+        ].filter(Boolean),
+        { clearProps: "all" },
+      );
+    },
+  });
+
+  tl.set([sceneCanvas, hudRoot].filter(Boolean), { visibility: "visible" }, 0);
+
+  tl.to(
+    [loaderTitleEl, bootStageEl, loaderBarEl, loaderMetaEl].filter(Boolean),
+    {
+      opacity: 0,
+      y: 10,
+      duration: contentFadeDuration,
+      stagger: 0.04,
+      ease: "power2.out",
+    },
+    0,
+  );
+
+  if (logoEl) {
+    tl.to(
+      logoEl,
+      {
+        x: logoMoveX,
+        y: logoMoveY,
+        scale: 1.46,
+        opacity: 0,
+        duration: logoGrowDuration,
+        ease: "expo.inOut",
+      },
+      0.05,
+    );
+  }
+
+  if (sceneCanvas) {
+    tl.fromTo(
+      sceneCanvas,
+      { opacity: 0 },
+      { opacity: 1, duration: sceneFadeDuration, ease: "sine.inOut" },
+      revealDuration * 0.16,
+    );
+  }
+
+  if (loadedModel && modelPulseFrom && modelPulseTo) {
+    tl.fromTo(
+      loadedModel.scale,
+      modelPulseFrom,
+      {
+        ...modelPulseTo,
+        duration: sceneFadeDuration,
+        ease: "power2.out",
+      },
+      revealDuration * 0.18,
+    );
+  }
+
+  if (loaderContent) {
+    tl.to(
+      loaderContent,
+      { opacity: 0, duration: revealDuration * 0.2, ease: "power2.out" },
+      revealDuration * 0.68,
+    );
+  }
+
+  tl.add(() => {
+    if (hudRoot) gsap.set(hudRoot, { visibility: "visible", opacity: 1 });
+  }, revealDuration * 0.62);
+
+  if (header) {
+    tl.fromTo(
+      header,
+      { opacity: 0, y: -14 },
+      { opacity: 1, y: 0, duration: hudEntranceDuration, ease: "expo.out" },
+      revealDuration * 0.66,
+    );
+  }
+
+  tl.fromTo(
+    leftPanels,
+    { opacity: 0, x: -20 },
+    {
+      opacity: 1,
+      x: 0,
+      duration: hudEntranceDuration,
+      stagger: 0.07,
+      ease: "expo.out",
+    },
+    revealDuration * 0.71,
+  );
+
+  tl.fromTo(
+    rightPanels,
+    { opacity: 0, x: 20 },
+    {
+      opacity: 1,
+      x: 0,
+      duration: hudEntranceDuration,
+      stagger: 0.07,
+      ease: "expo.out",
+    },
+    revealDuration * 0.74,
+  );
+
+  if (statusEl) {
+    tl.fromTo(
+      statusEl,
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: revealDuration * 0.25, ease: "expo.out" },
+      revealDuration * 0.82,
+    );
+  }
+}
+
+function markBootUiReady() {
+  if (bootState.uiReady) return;
+  bootState.uiReady = true;
+  setBootStageProgress("bootstrap", 1);
+  maybeFinishBootLoader();
+}
+
+function markBootModelReady() {
+  if (bootState.modelReady || bootState.errored) return;
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      if (bootState.modelReady || bootState.errored) return;
+      bootState.modelReady = true;
+      maybeFinishBootLoader();
+    });
+  });
+}
+
+function setBootError(message, error = null) {
+  if (bootRevealHoldTimer) {
+    window.clearTimeout(bootRevealHoldTimer);
+    bootRevealHoldTimer = 0;
+  }
+  bootState.errored = true;
+  bootState.phase = "error";
+  if (bootLoaderEl) {
+    bootLoaderEl.classList.remove("is-hidden");
+    bootLoaderEl.classList.add("is-error");
+  }
+  document.body.classList.remove("is-revealing");
+  setBootStage("finalize", message || "Startup failed.");
+  setBootDetail("See console for details.");
+  if (error) {
+    console.error("[BMS] Startup error:", error);
+  }
+}
+
+window.__bmsBootDebug = function __bmsBootDebug() {
+  return {
+    stage: bootState.stage,
+    percent: Number(computeBootPercent().toFixed(2)),
+    bytesLoaded: bootState.bytesLoaded,
+    bytesTotal: bootState.bytesTotal,
+    uiReady: bootState.uiReady,
+    modelReady: bootState.modelReady,
+    hidden: bootState.hidden,
+    errored: bootState.errored,
+    phase: bootState.phase,
+  };
+};
+
+setBootStage("bootstrap", "Initializing dashboard...");
+setBootDetail("Preparing renderer...");
+setBootStageProgress("bootstrap", 0.1);
+
 // --- Scene Setup ---
 const canvas = document.getElementById("scene");
 const renderer = new THREE.WebGLRenderer({
@@ -64,6 +497,8 @@ controls.dampingFactor = 0.05;
 controls.enablePan = false;
 controls.maxPolarAngle = Math.PI / 2.1;
 controls.target.copy(DEFAULT_CAMERA_TARGET);
+setBootStageProgress("bootstrap", 0.45);
+setBootDetail("Configuring scene...");
 
 // --- Lighting ---
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
@@ -77,6 +512,8 @@ scene.add(dirLight);
 const fillLight = new THREE.DirectionalLight(0xbadfff, 0.8);
 fillLight.position.set(-10, 10, -10);
 scene.add(fillLight);
+setBootStageProgress("bootstrap", 0.7);
+setBootDetail("Preparing interface...");
 
 // --- State ---
 const cellMeshes = []; // Will store references to cell meshes
@@ -1343,108 +1780,106 @@ function selectStrictNamedFanBlades(meshInfoList) {
 }
 
 // --- Load Model ---
-console.log("Starting FBX load...");
-const loader = new FBXLoader();
-loader.load(
-  MODEL_PATH,
-  (object) => {
-    loadedModel = object;
+const MODEL_PROCESS_SEGMENTS = {
+  prepare: { start: 0.00, span: 0.10 },
+  traverse: { start: 0.10, span: 0.30 },
+  cells: { start: 0.40, span: 0.20 },
+  shell: { start: 0.60, span: 0.10 },
+  fans: { start: 0.70, span: 0.20 },
+  finalize: { start: 0.90, span: 0.10 },
+};
 
-    // Center the model
-    const box = new THREE.Box3().setFromObject(object);
-    const center = box.getCenter(new THREE.Vector3());
-    const modelSize = box.getSize(new THREE.Vector3());
-    object.position.sub(center); // Center at 0,0,0
-    configureModelPoseTargets(object);
+async function initializeLoadedModel(object) {
+  loadedModel = object;
+  setBootStage("modelProcess", "Processing 3D model...");
+  setBootDetail("Preparing geometry...");
+  setBootStageProgress("modelDownload", 1);
+  setBootStageProgress("modelProcess", 0);
 
-    // Reset in case model reloads.
-    meshInfos.length = 0;
-    selectedCellUuidSet.clear();
-    cellMeshes.length = 0;
-    shellMeshes.length = 0;
-    fanMeshes.length = 0;
+  // Prepare bounds and model pose.
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const modelSize = box.getSize(new THREE.Vector3());
+  object.position.sub(center); // Center at 0,0,0
+  configureModelPoseTargets(object);
+  setModelProcessProgress(MODEL_PROCESS_SEGMENTS.prepare.start, MODEL_PROCESS_SEGMENTS.prepare.span, 1);
+  await waitForNextFrame();
 
-    const fastNamedCellObjects = FAST_MODEL_INIT
-      ? selectStrictNamedCellObjects(object, modelSize, { y: null, margin: 0, pcbInfos: [] })
-      : [];
-    const useFastNamedPath = FAST_MODEL_INIT && fastNamedCellObjects.length === CELL_COUNT;
+  // Reset in case model reloads.
+  meshInfos.length = 0;
+  selectedCellUuidSet.clear();
+  cellMeshes.length = 0;
+  shellMeshes.length = 0;
+  fanMeshes.length = 0;
 
-    // Traverse and gather fingerprints/candidates
-    const fanCandidates = [];
-    object.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = false;
-        child.receiveShadow = false;
+  const fastNamedCellObjects = FAST_MODEL_INIT
+    ? selectStrictNamedCellObjects(object, modelSize, { y: null, margin: 0, pcbInfos: [] })
+    : [];
+  const useFastNamedPath = FAST_MODEL_INIT && fastNamedCellObjects.length === CELL_COUNT;
 
-        // Fix invalid material indices (negative values)
-        if (child.geometry && child.geometry.groups) {
-          child.geometry.groups.forEach(group => {
-            if (group.materialIndex < 0) group.materialIndex = 0;
-          });
-        }
+  // Traverse and gather fingerprints/candidates.
+  setBootDetail("Scanning model meshes...");
+  const meshNodes = [];
+  object.traverse((child) => {
+    if (child?.isMesh) {
+      meshNodes.push(child);
+    }
+  });
+  const meshTotal = Math.max(meshNodes.length, 1);
+  const fanCandidates = [];
+  for (let idx = 0; idx < meshNodes.length; idx += 1) {
+    const child = meshNodes[idx];
+    child.castShadow = false;
+    child.receiveShadow = false;
 
-        if (!useFastNamedPath) {
-          const info = computeMeshFingerprint(child, modelSize);
-          if (!info) return;
-          meshInfos.push(info);
+    // Fix invalid material indices (negative values).
+    if (child.geometry && child.geometry.groups) {
+      child.geometry.groups.forEach((group) => {
+        if (group.materialIndex < 0) group.materialIndex = 0;
+      });
+    }
 
-          const fanCandidate = collectFanCandidate(child, info.nodeName, modelSize);
-          if (fanCandidate) {
-            fanCandidates.push(fanCandidate);
-          }
+    if (!useFastNamedPath) {
+      const info = computeMeshFingerprint(child, modelSize);
+      if (info) {
+        meshInfos.push(info);
+        const fanCandidate = collectFanCandidate(child, info.nodeName, modelSize);
+        if (fanCandidate) {
+          fanCandidates.push(fanCandidate);
         }
       }
-    });
+    }
 
-    const boardPlane = useFastNamedPath
-      ? { y: null, margin: null, pcbInfos: [] }
-      : computeBoardPlane(meshInfos, modelSize);
-    let cellCandidateCount = 0;
-    const strictCellObjects = useFastNamedPath
-      ? fastNamedCellObjects
-      : selectStrictNamedCellObjects(object, modelSize, boardPlane);
-    if (strictCellObjects.length === CELL_COUNT) {
-      strictCellObjects
-        .sort((a, b) => a.cellId - b.cellId)
-        .forEach(({ cellId, node }) => {
-          const mesh = selectBestCellMesh(node);
-          if (!mesh) return;
-          selectedCellUuidSet.add(mesh.uuid);
+    const traverseProgress = (idx + 1) / meshTotal;
+    setModelProcessProgress(
+      MODEL_PROCESS_SEGMENTS.traverse.start,
+      MODEL_PROCESS_SEGMENTS.traverse.span,
+      traverseProgress,
+    );
+    if ((idx + 1) % 120 === 0) {
+      await waitForNextFrame();
+    }
+  }
+  if (meshNodes.length === 0) {
+    setModelProcessProgress(MODEL_PROCESS_SEGMENTS.traverse.start, MODEL_PROCESS_SEGMENTS.traverse.span, 1);
+  }
 
-          // Clone so only cell meshes are colorized by telemetry.
-          if (Array.isArray(mesh.material)) {
-            mesh.material = mesh.material.map((material) => (
-              material?.clone ? material.clone() : material
-            ));
-          } else if (mesh.material?.clone) {
-            mesh.material = mesh.material.clone();
-          }
-
-          // Force cells to remain opaque even when shell is transparent.
-          toMaterialList(mesh).forEach((material) => {
-            if (!material || typeof material.opacity !== "number") return;
-            material.transparent = false;
-            material.opacity = 1;
-            material.depthWrite = true;
-            material.needsUpdate = true;
-          });
-
-          const probeMaterial = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-          const baseColor = probeMaterial?.color ? probeMaterial.color.clone() : new THREE.Color(0.55, 0.55, 0.55);
-          cellMeshes.push({
-            id: cellId,
-            mesh,
-            baseColor,
-            targetColor: baseColor.clone(),
-          });
-        });
-      cellCandidateCount = strictCellObjects.length;
-    } else {
-      const cellSelection = selectCellInfos(meshInfos, boardPlane);
-      cellSelection.selectedInfos.forEach((info, idx) => {
-        const mesh = info.mesh;
+  // Cell selection/material setup.
+  setBootDetail("Selecting battery cells...");
+  const boardPlane = useFastNamedPath
+    ? { y: null, margin: null, pcbInfos: [] }
+    : computeBoardPlane(meshInfos, modelSize);
+  let cellCandidateCount = 0;
+  const strictCellObjects = useFastNamedPath
+    ? fastNamedCellObjects
+    : selectStrictNamedCellObjects(object, modelSize, boardPlane);
+  if (strictCellObjects.length === CELL_COUNT) {
+    strictCellObjects
+      .sort((a, b) => a.cellId - b.cellId)
+      .forEach(({ cellId, node }) => {
+        const mesh = selectBestCellMesh(node);
         if (!mesh) return;
-        selectedCellUuidSet.add(info.uuid);
+        selectedCellUuidSet.add(mesh.uuid);
 
         // Clone so only cell meshes are colorized by telemetry.
         if (Array.isArray(mesh.material)) {
@@ -1467,269 +1902,326 @@ loader.load(
         const probeMaterial = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
         const baseColor = probeMaterial?.color ? probeMaterial.color.clone() : new THREE.Color(0.55, 0.55, 0.55);
         cellMeshes.push({
-          id: idx + 1,
+          id: cellId,
           mesh,
           baseColor,
           targetColor: baseColor.clone(),
         });
       });
-      cellCandidateCount = cellSelection.candidatePool.length;
-    }
+    cellCandidateCount = strictCellObjects.length;
+  } else {
+    const cellSelection = selectCellInfos(meshInfos, boardPlane);
+    cellSelection.selectedInfos.forEach((info, idx) => {
+      const mesh = info.mesh;
+      if (!mesh) return;
+      selectedCellUuidSet.add(info.uuid);
 
-    if (cellMeshes.length !== CELL_COUNT) {
-      console.warn(
-        `[BMS] Expected ${CELL_COUNT} cells but selected ${cellMeshes.length}.`,
-      );
-    }
+      // Clone so only cell meshes are colorized by telemetry.
+      if (Array.isArray(mesh.material)) {
+        mesh.material = mesh.material.map((material) => (
+          material?.clone ? material.clone() : material
+        ));
+      } else if (mesh.material?.clone) {
+        mesh.material = mesh.material.clone();
+      }
 
-    cellMeshes.sort((a, b) => a.id - b.id);
-
-    if (useFastNamedPath) {
-      selectShellMeshesByName(object, selectedCellUuidSet).forEach((mesh) => {
-        if (!mesh) return;
-        shellMeshes.push({ mesh });
-        registerShellMaterialState(mesh);
+      // Force cells to remain opaque even when shell is transparent.
+      toMaterialList(mesh).forEach((material) => {
+        if (!material || typeof material.opacity !== "number") return;
+        material.transparent = false;
+        material.opacity = 1;
+        material.depthWrite = true;
+        material.needsUpdate = true;
       });
-    } else {
-      selectShellInfos(meshInfos, modelSize, selectedCellUuidSet).forEach((info) => {
-        if (!info?.mesh) return;
-        shellMeshes.push({ mesh: info.mesh });
-        registerShellMaterialState(info.mesh);
+
+      const probeMaterial = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+      const baseColor = probeMaterial?.color ? probeMaterial.color.clone() : new THREE.Color(0.55, 0.55, 0.55);
+      cellMeshes.push({
+        id: idx + 1,
+        mesh,
+        baseColor,
+        targetColor: baseColor.clone(),
       });
-    }
+    });
+    cellCandidateCount = cellSelection.candidatePool.length;
+  }
+  setModelProcessProgress(MODEL_PROCESS_SEGMENTS.cells.start, MODEL_PROCESS_SEGMENTS.cells.span, 1);
+  await waitForNextFrame();
 
-    const enclosureBounds = buildEnclosureBounds(shellMeshes);
+  if (cellMeshes.length !== CELL_COUNT) {
+    console.warn(
+      `[BMS] Expected ${CELL_COUNT} cells but selected ${cellMeshes.length}.`,
+    );
+  }
+  cellMeshes.sort((a, b) => a.id - b.id);
 
-    let strictFanObjects = selectStrictNamedFanBladeObjects(object, enclosureBounds);
-    if (strictFanObjects.length < FAN_TARGET_COUNT) {
-      strictFanObjects = selectStrictNamedFanBladeObjects(object, null);
+  // Shell mesh selection/material setup.
+  setBootDetail("Preparing enclosure meshes...");
+  if (useFastNamedPath) {
+    selectShellMeshesByName(object, selectedCellUuidSet).forEach((mesh) => {
+      if (!mesh) return;
+      shellMeshes.push({ mesh });
+      registerShellMaterialState(mesh);
+    });
+  } else {
+    selectShellInfos(meshInfos, modelSize, selectedCellUuidSet).forEach((info) => {
+      if (!info?.mesh) return;
+      shellMeshes.push({ mesh: info.mesh });
+      registerShellMaterialState(info.mesh);
+    });
+  }
+  setModelProcessProgress(MODEL_PROCESS_SEGMENTS.shell.start, MODEL_PROCESS_SEGMENTS.shell.span, 1);
+  await waitForNextFrame();
+
+  // Fan selection/finalization.
+  setBootDetail("Preparing fan components...");
+  const enclosureBounds = buildEnclosureBounds(shellMeshes);
+
+  let strictFanObjects = selectStrictNamedFanBladeObjects(object, enclosureBounds);
+  if (strictFanObjects.length < FAN_TARGET_COUNT) {
+    strictFanObjects = selectStrictNamedFanBladeObjects(object, null);
+  }
+  const usedFanObjectUuids = new Set();
+  strictFanObjects.forEach(({ fanId, node }) => {
+    const entry = createObjectSpinEntry(node, null, fanId);
+    if (!entry) return;
+    if (usedFanObjectUuids.has(node.uuid)) return;
+    usedFanObjectUuids.add(node.uuid);
+    fanMeshes.push(entry);
+  });
+  setModelProcessProgress(MODEL_PROCESS_SEGMENTS.fans.start, MODEL_PROCESS_SEGMENTS.fans.span, 0.35);
+
+  if (fanMeshes.length < FAN_TARGET_COUNT) {
+    let looseCandidates = selectLooseFanBladeObjects(object, enclosureBounds);
+    if (looseCandidates.length === 0) {
+      looseCandidates = selectLooseFanBladeObjects(object, null);
     }
-    const usedFanObjectUuids = new Set();
-    strictFanObjects.forEach(({ fanId, node }) => {
-      const entry = createObjectSpinEntry(node, null, fanId);
+    const existingFanIds = new Set(
+      fanMeshes.map((entry) => entry?.fanId).filter((id) => id === 1 || id === 2),
+    );
+
+    // Fill missing explicit IDs first.
+    looseCandidates.forEach((candidate) => {
+      if (fanMeshes.length >= FAN_TARGET_COUNT) return;
+      if (!candidate?.node) return;
+      if (usedFanObjectUuids.has(candidate.node.uuid)) return;
+      if (candidate.fanId !== 1 && candidate.fanId !== 2) return;
+      if (existingFanIds.has(candidate.fanId)) return;
+      const entry = createObjectSpinEntry(candidate.node, null, candidate.fanId);
       if (!entry) return;
-      if (usedFanObjectUuids.has(node.uuid)) return;
-      usedFanObjectUuids.add(node.uuid);
+      usedFanObjectUuids.add(candidate.node.uuid);
+      existingFanIds.add(candidate.fanId);
       fanMeshes.push(entry);
     });
 
+    // Last resort: add farthest-side blade-like candidate.
     if (fanMeshes.length < FAN_TARGET_COUNT) {
-      let looseCandidates = selectLooseFanBladeObjects(object, enclosureBounds);
-      if (looseCandidates.length === 0) {
-        looseCandidates = selectLooseFanBladeObjects(object, null);
-      }
-      const existingFanIds = new Set(
-        fanMeshes.map((entry) => entry?.fanId).filter((id) => id === 1 || id === 2),
-      );
-
-      // Fill missing explicit IDs first.
-      looseCandidates.forEach((candidate) => {
-        if (fanMeshes.length >= FAN_TARGET_COUNT) return;
-        if (!candidate?.node) return;
-        if (usedFanObjectUuids.has(candidate.node.uuid)) return;
-        if (candidate.fanId !== 1 && candidate.fanId !== 2) return;
-        if (existingFanIds.has(candidate.fanId)) return;
-        const entry = createObjectSpinEntry(candidate.node, null, candidate.fanId);
-        if (!entry) return;
-        usedFanObjectUuids.add(candidate.node.uuid);
-        existingFanIds.add(candidate.fanId);
-        fanMeshes.push(entry);
-      });
-
-      // Last resort: add farthest-side blade-like candidate.
-      if (fanMeshes.length < FAN_TARGET_COUNT) {
-        const referenceX = fanMeshes.length
-          ? fanMeshes.reduce((acc, item) => acc + (Number.isFinite(item?.worldX) ? item.worldX : 0), 0) / fanMeshes.length
-          : 0;
-        const fallback = looseCandidates
-          .filter((candidate) => candidate?.node && !usedFanObjectUuids.has(candidate.node.uuid))
-          .sort((a, b) => Math.abs(b.centerX - referenceX) - Math.abs(a.centerX - referenceX))[0];
-        if (fallback?.node) {
-          const guessedFanId = fallback.centerX < referenceX ? 1 : 2;
-          const entry = createObjectSpinEntry(fallback.node, null, guessedFanId);
-          if (entry) {
-            usedFanObjectUuids.add(fallback.node.uuid);
-            fanMeshes.push(entry);
-          }
+      const referenceX = fanMeshes.length
+        ? fanMeshes.reduce((acc, item) => acc + (Number.isFinite(item?.worldX) ? item.worldX : 0), 0) / fanMeshes.length
+        : 0;
+      const fallback = looseCandidates
+        .filter((candidate) => candidate?.node && !usedFanObjectUuids.has(candidate.node.uuid))
+        .sort((a, b) => Math.abs(b.centerX - referenceX) - Math.abs(a.centerX - referenceX))[0];
+      if (fallback?.node) {
+        const guessedFanId = fallback.centerX < referenceX ? 1 : 2;
+        const entry = createObjectSpinEntry(fallback.node, null, guessedFanId);
+        if (entry) {
+          usedFanObjectUuids.add(fallback.node.uuid);
+          fanMeshes.push(entry);
         }
       }
     }
+  }
+  setModelProcessProgress(MODEL_PROCESS_SEGMENTS.fans.start, MODEL_PROCESS_SEGMENTS.fans.span, 0.65);
 
-    if (!useFastNamedPath && fanMeshes.length < FAN_TARGET_COUNT) {
-      const explicitFanBladeInfos = selectStrictNamedFanBlades(meshInfos);
-      const usedFanMeshUuids = new Set();
-      const existingFanIds = new Set(fanMeshes.map((entry) => entry?.fanId).filter((id) => id === 1 || id === 2));
-      fanMeshes.forEach((entry) => {
-        if (entry?.mesh?.uuid) usedFanMeshUuids.add(entry.mesh.uuid);
-      });
-      explicitFanBladeInfos.forEach(({ fanId, info }) => {
-        if (fanId === 1 || fanId === 2) {
-          if (existingFanIds.has(fanId)) return;
-        }
-        const entry = createFanSpinEntry(info.mesh, null, fanId);
-        if (!entry || !entry.mesh) return;
-        if (usedFanMeshUuids.has(entry.mesh.uuid)) return;
-        usedFanMeshUuids.add(entry.mesh.uuid);
-        fanMeshes.push(entry);
-        if (fanId === 1 || fanId === 2) {
-          existingFanIds.add(fanId);
-        }
-      });
-    }
+  if (!useFastNamedPath && fanMeshes.length < FAN_TARGET_COUNT) {
+    const explicitFanBladeInfos = selectStrictNamedFanBlades(meshInfos);
+    const usedFanMeshUuids = new Set();
+    const existingFanIds = new Set(fanMeshes.map((entry) => entry?.fanId).filter((id) => id === 1 || id === 2));
+    fanMeshes.forEach((entry) => {
+      if (entry?.mesh?.uuid) usedFanMeshUuids.add(entry.mesh.uuid);
+    });
+    explicitFanBladeInfos.forEach(({ fanId, info }) => {
+      if (fanId === 1 || fanId === 2) {
+        if (existingFanIds.has(fanId)) return;
+      }
+      const entry = createFanSpinEntry(info.mesh, null, fanId);
+      if (!entry || !entry.mesh) return;
+      if (usedFanMeshUuids.has(entry.mesh.uuid)) return;
+      usedFanMeshUuids.add(entry.mesh.uuid);
+      fanMeshes.push(entry);
+      if (fanId === 1 || fanId === 2) {
+        existingFanIds.add(fanId);
+      }
+    });
+  }
 
-    if (fanMeshes.length < FAN_TARGET_COUNT) {
-      const existingMeshUuids = new Set(
-        fanMeshes
-          .map((entry) => entry?.mesh?.uuid)
-          .filter((uuid) => typeof uuid === "string" && uuid.length > 0),
-      );
-      finalizeFanMeshes(fanCandidates, object, modelSize).forEach((entry) => {
-        if (!entry?.mesh?.uuid) return;
-        if (fanMeshes.length >= FAN_TARGET_COUNT) return;
-        if (existingMeshUuids.has(entry.mesh.uuid)) return;
-        existingMeshUuids.add(entry.mesh.uuid);
-        fanMeshes.push(entry);
-      });
-    }
+  if (fanMeshes.length < FAN_TARGET_COUNT) {
+    const existingMeshUuids = new Set(
+      fanMeshes
+        .map((entry) => entry?.mesh?.uuid)
+        .filter((uuid) => typeof uuid === "string" && uuid.length > 0),
+    );
+    finalizeFanMeshes(fanCandidates, object, modelSize).forEach((entry) => {
+      if (!entry?.mesh?.uuid) return;
+      if (fanMeshes.length >= FAN_TARGET_COUNT) return;
+      if (existingMeshUuids.has(entry.mesh.uuid)) return;
+      existingMeshUuids.add(entry.mesh.uuid);
+      fanMeshes.push(entry);
+    });
+  }
+  setModelProcessProgress(MODEL_PROCESS_SEGMENTS.fans.start, MODEL_PROCESS_SEGMENTS.fans.span, 1);
+  await waitForNextFrame();
 
-    lastModelSelectionDebug = {
-      boardPlaneY: boardPlane.y,
-      boardPlaneMargin: boardPlane.margin,
-      fastInitPath: useFastNamedPath,
-      meshInfoCount: meshInfos.length,
-      cellCandidateCount,
-      selectedCellCount: cellMeshes.length,
-      shellCount: shellMeshes.length,
-      fanCount: fanMeshes.length,
-      selectedCells: cellMeshes.map((entry) => {
-        const info = meshInfos.find((item) => item.uuid === entry.mesh?.uuid);
-        return {
-          id: entry.id,
-          uuid: entry.mesh?.uuid || "",
-          name: entry.mesh?.name || "",
-          parentName: entry.mesh?.parent?.name || "",
-          center: info
-            ? {
-              x: Number(info.center.x.toFixed(3)),
-              y: Number(info.center.y.toFixed(3)),
-              z: Number(info.center.z.toFixed(3)),
-            }
-            : null,
-        };
-      }),
-      selectedFans: fanMeshes.map((entry) => ({
-        name: entry.objectName || entry.mesh?.name || "",
+  // Final model state + camera fit.
+  setBootDetail("Finalizing 3D scene...");
+  lastModelSelectionDebug = {
+    boardPlaneY: boardPlane.y,
+    boardPlaneMargin: boardPlane.margin,
+    fastInitPath: useFastNamedPath,
+    meshInfoCount: meshInfos.length,
+    cellCandidateCount,
+    selectedCellCount: cellMeshes.length,
+    shellCount: shellMeshes.length,
+    fanCount: fanMeshes.length,
+    selectedCells: cellMeshes.map((entry) => {
+      const info = meshInfos.find((item) => item.uuid === entry.mesh?.uuid);
+      return {
+        id: entry.id,
+        uuid: entry.mesh?.uuid || "",
+        name: entry.mesh?.name || "",
         parentName: entry.mesh?.parent?.name || "",
-        spinNode: entry.spinNode?.name || "",
-        axis: entry.axis || "",
-        fanId: entry.fanId ?? null,
-        side: Number.isFinite(entry.worldX) ? (entry.worldX <= 0 ? "left-ish" : "right-ish") : "unknown",
-        rpm: Number(entry.rpm || 0),
-        meshName: entry.mesh?.name || "",
-        x: Number((entry.worldX ?? entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.x ?? 0).toFixed(3)),
-        insideEnclosure: enclosureBounds
-          ? enclosureBounds.containsPoint(
-            new THREE.Vector3(
-              entry.worldX ?? entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.x ?? 0,
-              entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.y ?? 0,
-              entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.z ?? 0,
-            ),
-          )
-          : null,
-        centered: Boolean(entry.mesh?.userData?.bmsSpinCentered),
-        spinCenter: entry.mesh?.userData?.bmsSpinCenter
+        center: info
           ? {
-            x: Number(entry.mesh.userData.bmsSpinCenter.x.toFixed(3)),
-            y: Number(entry.mesh.userData.bmsSpinCenter.y.toFixed(3)),
-            z: Number(entry.mesh.userData.bmsSpinCenter.z.toFixed(3)),
+            x: Number(info.center.x.toFixed(3)),
+            y: Number(info.center.y.toFixed(3)),
+            z: Number(info.center.z.toFixed(3)),
           }
           : null,
-      })),
-      thresholds: lastModelSelectionDebug.thresholds,
-    };
+      };
+    }),
+    selectedFans: fanMeshes.map((entry) => ({
+      name: entry.objectName || entry.mesh?.name || "",
+      parentName: entry.mesh?.parent?.name || "",
+      spinNode: entry.spinNode?.name || "",
+      axis: entry.axis || "",
+      fanId: entry.fanId ?? null,
+      side: Number.isFinite(entry.worldX) ? (entry.worldX <= 0 ? "left-ish" : "right-ish") : "unknown",
+      rpm: Number(entry.rpm || 0),
+      meshName: entry.mesh?.name || "",
+      x: Number((entry.worldX ?? entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.x ?? 0).toFixed(3)),
+      insideEnclosure: enclosureBounds
+        ? enclosureBounds.containsPoint(
+          new THREE.Vector3(
+            entry.worldX ?? entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.x ?? 0,
+            entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.y ?? 0,
+            entry.mesh?.getWorldPosition?.(new THREE.Vector3())?.z ?? 0,
+          ),
+        )
+        : null,
+      centered: Boolean(entry.mesh?.userData?.bmsSpinCentered),
+      spinCenter: entry.mesh?.userData?.bmsSpinCenter
+        ? {
+          x: Number(entry.mesh.userData.bmsSpinCenter.x.toFixed(3)),
+          y: Number(entry.mesh.userData.bmsSpinCenter.y.toFixed(3)),
+          z: Number(entry.mesh.userData.bmsSpinCenter.z.toFixed(3)),
+        }
+        : null,
+    })),
+    thresholds: lastModelSelectionDebug.thresholds,
+  };
 
-    updateConnectionVisualState(performance.now());
+  updateConnectionVisualState(performance.now());
+  scene.add(object);
 
-    scene.add(object);
+  // Fit camera to object.
+  const size = box.getSize(new THREE.Vector3()).length();
+  const fitOffset = 1.4; // Zoom out to show whole model
+  const maxSize = size * fitOffset;
+  const fitHeightDistance = maxSize / (2 * Math.atan((Math.PI * camera.fov) / 360));
+  const fitWidthDistance = fitHeightDistance / camera.aspect;
+  const distance = Math.max(fitHeightDistance, fitWidthDistance);
 
-    // Fit camera to object
-    const size = box.getSize(new THREE.Vector3()).length();
-    const fitOffset = 1.4; // Zoom out to show whole model
-    const maxSize = size * fitOffset;
-    const fitHeightDistance = maxSize / (2 * Math.atan((Math.PI * camera.fov) / 360));
-    const fitWidthDistance = fitHeightDistance / camera.aspect;
-    const distance = Math.max(fitHeightDistance, fitWidthDistance);
+  const direction = controls.target.clone().sub(camera.position).normalize().multiplyScalar(distance);
+  controls.maxDistance = distance * 3;
+  controls.target.copy(new THREE.Vector3(0, 0, 0));
 
-    const direction = controls.target.clone().sub(camera.position).normalize().multiplyScalar(distance);
-    controls.maxDistance = distance * 3;
-    controls.target.copy(new THREE.Vector3(0, 0, 0));
+  camera.near = distance / 100;
+  camera.far = distance * 100;
+  camera.updateProjectionMatrix();
 
-    camera.near = distance / 100;
-    camera.far = distance * 100;
-    camera.updateProjectionMatrix();
+  camera.position.copy(controls.target).sub(direction);
+  controls.update();
 
-    camera.position.copy(controls.target).sub(direction);
-    controls.update();
+  // Save the actual launch position for view reset.
+  DEFAULT_CAMERA_POSITION.copy(camera.position);
+  DEFAULT_CAMERA_TARGET.copy(controls.target);
 
-    // Save the actual launch position for view reset
-    DEFAULT_CAMERA_POSITION.copy(camera.position);
-    DEFAULT_CAMERA_TARGET.copy(controls.target);
+  updateConnectionVisualState(performance.now());
+  setModelProcessProgress(MODEL_PROCESS_SEGMENTS.finalize.start, MODEL_PROCESS_SEGMENTS.finalize.span, 1);
 
-    updateConnectionVisualState(performance.now());
+  console.log(`Loaded model with ${cellMeshes.length} detected cells.`);
+  console.log(`Detected ${shellMeshes.length} shell mesh(es), ${fanMeshes.length} fan mesh(es).`);
 
-    console.log(`Loaded model with ${cellMeshes.length} detected cells.`);
-    console.log(`Detected ${shellMeshes.length} shell mesh(es), ${fanMeshes.length} fan mesh(es).`);
+  // If no cells found, maybe log all names to help debug.
+  if (cellMeshes.length === 0) {
+    console.warn("No cells found matching pattern. Logging all mesh names:");
+    object.traverse((child) => { if (child.isMesh) console.log(child.name); });
 
-    // If no cells found, maybe log all names to help debug
-    if (cellMeshes.length === 0) {
-      console.warn("No cells found matching pattern. Logging all mesh names:");
-      object.traverse(c => { if (c.isMesh) console.log(c.name); });
+    // Fallback: Add a placeholder box so the user sees SOMETHING.
+    const placeholder = new THREE.Mesh(
+      new THREE.BoxGeometry(5, 5, 5),
+      new THREE.MeshStandardMaterial({ color: 0xff0000, wireframe: true }),
+    );
+    scene.add(placeholder);
 
-      // Fallback: Add a placeholder box so the user sees SOMETHING
-      const placeholder = new THREE.Mesh(
-        new THREE.BoxGeometry(5, 5, 5),
-        new THREE.MeshStandardMaterial({ color: 0xff0000, wireframe: true })
-      );
-      scene.add(placeholder);
+    // Add a text label if possible, or just log.
+    const msg = document.createElement("div");
+    msg.style.position = "absolute";
+    msg.style.bottom = "20px";
+    msg.style.left = "50%";
+    msg.style.transform = "translateX(-50%)";
+    msg.style.color = "orange";
+    msg.innerText = "Warning: No battery cells found in model. Showing wireframe box.";
+    document.body.appendChild(msg);
+  }
 
-      // Add a text label if possible, or just log
-      const msg = document.createElement('div');
-      msg.style.position = 'absolute';
-      msg.style.bottom = '20px';
-      msg.style.left = '50%';
-      msg.style.transform = 'translateX(-50%)';
-      msg.style.color = 'orange';
-      msg.innerText = "Warning: No battery cells found in model. Showing wireframe box.";
-      document.body.appendChild(msg);
-    }
+  setBootDetail("3D model ready.");
+  markBootModelReady();
+}
+
+function handleModelLoadFailure(error) {
+  console.error("An error happened loading the FBX:", error);
+  const message = (error && typeof error.message === "string" && error.message.trim().length > 0)
+    ? `3D model loading error: ${error.message}`
+    : "3D model loading error.";
+  setBootError(message, error);
+}
+
+setBootStageProgress("bootstrap", 0.85);
+setBootStage("modelDownload", "Loading 3D model...");
+setBootDetail("Waiting for transfer...");
+console.log("Starting FBX load...");
+const loader = new FBXLoader();
+loader.load(
+  MODEL_PATH,
+  (object) => {
+    void initializeLoadedModel(object).catch(handleModelLoadFailure);
   },
   (xhr) => {
-    console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+    const loaded = Number(xhr?.loaded) || 0;
+    const total = Number(xhr?.total);
+    setBootStage("modelDownload", "Loading 3D model...");
+    updateBootDownloadProgress(loaded, total);
+    if (Number.isFinite(total) && total > 0) {
+      console.log(`${((loaded / total) * 100).toFixed(1)}% loaded`);
+    } else {
+      console.log(`${formatBootBytes(loaded)} downloaded`);
+    }
   },
   (error) => {
-    console.error("An error happened loading the FBX:", error);
-    // Create an on-screen error message for the user
-    const errorDiv = document.createElement('div');
-    errorDiv.style.position = 'absolute';
-    errorDiv.style.top = '50%';
-    errorDiv.style.left = '50%';
-    errorDiv.style.transform = 'translate(-50%, -50%)';
-    errorDiv.style.background = 'rgba(255, 0, 0, 0.8)';
-    errorDiv.style.color = 'white';
-    errorDiv.style.padding = '20px';
-    errorDiv.style.borderRadius = '8px';
-    errorDiv.style.zIndex = '1000';
-    errorDiv.innerHTML = `
-      <h3>3D Model Loading Error</h3>
-      <p>${error.message || 'Unknown error'}</p>
-      <p style="font-size: 0.8em; margin-top: 10px">
-        Note: If you are opening index.html directly (file://), 
-        browsers block 3D models for security. 
-        <br>Try using a local server (e.g., VS Code Live Server).
-      </p>
-    `;
-    document.body.appendChild(errorDiv);
-  }
+    handleModelLoadFailure(error);
+  },
 );
 
 window.__bmsDebugModel = function __bmsDebugModel() {
@@ -3269,10 +3761,4 @@ window.__bmsGetSimulationState = () => Boolean(simulationEnabled);
 
 setSimulationMode(false);
 console.log("[BMS] Simulation toggle initialized in Actual Testing Mode.");
-
-
-
-
-
-
-
+markBootUiReady();

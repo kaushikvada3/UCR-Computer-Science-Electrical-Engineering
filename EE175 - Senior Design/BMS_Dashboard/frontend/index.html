@@ -21,7 +21,21 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 </head>
 
-<body>
+<body class="is-booting">
+  <div id="boot-loader" role="status" aria-live="polite" aria-label="Loading BMS Dashboard">
+    <div id="boot-loader-content">
+      <img id="boot-logo" src="assets/branding/bms-logo.png" alt="BMS Logo" class="boot-loader__logo" />
+      <p class="boot-loader__title">BMS Dashboard</p>
+      <p id="boot-stage" class="boot-loader__stage">Initializing dashboard...</p>
+      <div class="boot-loader__bar" aria-hidden="true">
+        <div id="boot-progress-fill" class="boot-loader__fill"></div>
+      </div>
+      <div class="boot-loader__meta">
+        <span id="boot-percent" class="boot-loader__percent">0%</span>
+        <span id="boot-detail" class="boot-loader__detail">Waiting to start...</span>
+      </div>
+    </div>
+  </div>
   <canvas id="scene"></canvas>
 
   <div class="hud">

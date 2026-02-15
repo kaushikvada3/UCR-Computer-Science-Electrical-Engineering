@@ -80,6 +80,173 @@ body::before {
   z-index: 0;
 }
 
+#boot-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: transparent;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+#boot-loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#boot-loader.is-error {
+  background: transparent;
+}
+
+#boot-loader-content {
+  width: min(560px, calc(100vw - 3rem));
+  padding: 0.75rem 0.25rem;
+  text-align: center;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.boot-loader__logo {
+  width: clamp(128px, 24vw, 170px);
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 0.9rem;
+  transform-origin: 50% 50%;
+}
+
+.boot-loader__title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.boot-loader__stage {
+  margin-top: 0.38rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  min-height: 1.2rem;
+}
+
+#boot-loader.is-error .boot-loader__stage {
+  color: #ffb3ad;
+}
+
+.boot-loader__bar {
+  height: 9px;
+  margin-top: 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.boot-loader__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(72, 164, 255, 0.95) 0%, rgba(9, 124, 255, 0.98) 100%);
+  box-shadow: 0 0 12px rgba(10, 132, 255, 0.45);
+  transition: width 0.12s linear;
+}
+
+#boot-loader.is-error .boot-loader__fill {
+  background: linear-gradient(90deg, rgba(255, 117, 104, 0.95) 0%, rgba(219, 47, 30, 0.98) 100%);
+  box-shadow: 0 0 12px rgba(255, 69, 58, 0.35);
+}
+
+.boot-loader__meta {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.82rem;
+}
+
+.boot-loader__percent {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.boot-loader__detail {
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+#boot-loader.is-error .boot-loader__detail {
+  color: rgba(255, 179, 173, 0.95);
+}
+
+#boot-logo,
+.boot-loader__title,
+.boot-loader__stage,
+.boot-loader__bar,
+.boot-loader__meta {
+  will-change: transform, opacity;
+}
+
+body.is-booting .hud,
+body.is-booting .detail-panel {
+  pointer-events: none !important;
+}
+
+body.is-booting .hud * {
+  pointer-events: none !important;
+}
+
+body.is-booting {
+  background-color: transparent;
+}
+
+body.is-booting::before {
+  content: none;
+}
+
+body.is-booting #scene,
+body.is-booting .hud,
+body.is-booting .detail-panel {
+  visibility: hidden;
+  opacity: 0;
+}
+
+body.is-revealing #scene {
+  visibility: visible;
+  opacity: 0;
+}
+
+body.is-revealing .hud,
+body.is-revealing .detail-panel {
+  visibility: hidden;
+  opacity: 0;
+}
+
+body.is-revealing .hud__header {
+  opacity: 0;
+  transform: translateY(-14px);
+}
+
+body.is-revealing .left-column .glass-panel {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+body.is-revealing .right-column .glass-panel {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+body.is-revealing .status {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
 .hud {
   position: relative;
   z-index: 10;

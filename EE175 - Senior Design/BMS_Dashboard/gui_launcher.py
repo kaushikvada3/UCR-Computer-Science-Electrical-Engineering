@@ -13,10 +13,23 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from PyQt6.QtCore import QFileSystemWatcher, QObject, QThread, QTimer, Qt, QUrl, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QAction, QDesktopServices, QIcon
+from PyQt6.QtCore import (
+    QEasingCurve,
+    QFileSystemWatcher,
+    QObject,
+    QParallelAnimationGroup,
+    QPropertyAnimation,
+    QRect,
+    QThread,
+    QTimer,
+    Qt,
+    QUrl,
+    pyqtSignal,
+    pyqtSlot,
+)
+from PyQt6.QtGui import QAction, QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
@@ -26,6 +39,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QProgressDialog,
+    QSplashScreen,
 )
 
 from backend.data_stream import SerialWorker
@@ -45,6 +59,14 @@ APP_NAME = "BMS Dashboard"
 APP_USER_MODEL_ID = "UCR.BMSDashboard"
 SERIAL_AUTO_LABEL = "Auto-detect"
 SERIAL_PORT_DEFAULT_SENTINEL = "__default__"
+DEFAULT_WINDOW_WIDTH = 1400
+DEFAULT_WINDOW_HEIGHT = 900
+STARTUP_SHELL_WIDTH = DEFAULT_WINDOW_WIDTH
+STARTUP_SHELL_HEIGHT = DEFAULT_WINDOW_HEIGHT
+STARTUP_MIN_DURATION_MS = 3000
+BOOT_POLL_INTERVAL_MS = 120
+BOOT_POLL_TIMEOUT_MS = 30000
+WINDOW_MORPH_DURATION_MS = 1200
 
 
 def runtime_root() -> Path:
@@ -147,7 +169,7 @@ class DashboardWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self.setWindowTitle("BMS Command Surface")
-        self.resize(1400, 900)
+        self.resize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
 
         self.settings = settings
         self.baudrate = baudrate
@@ -160,6 +182,19 @@ class DashboardWindow(QMainWindow):
         self._update_download_version = ""
         self._has_serial_data = False
         self._current_connected_port = ""
+        self.toolbar = None
+        self._normal_window_flags = self.windowFlags()
+        self._startup_mode_active: bool = True
+        self._startup_started_at: float = time.monotonic()
+        self._startup_min_duration_ms: int = STARTUP_MIN_DURATION_MS
+        self._boot_poll_interval_ms: int = BOOT_POLL_INTERVAL_MS
+        self._boot_poll_timeout_ms: int = BOOT_POLL_TIMEOUT_MS
+        self._boot_last_state: Optional[dict[str, Any]] = None
+        self._startup_transition_done: bool = False
+        self._startup_transition_animation: Optional[QParallelAnimationGroup] = None
+        self._boot_poll_timer = QTimer(self)
+        self._boot_poll_timer.setInterval(self._boot_poll_interval_ms)
+        self._boot_poll_timer.timeout.connect(self._poll_boot_state_once)
 
         if app_icon and not app_icon.isNull():
             self.setWindowIcon(app_icon)
@@ -193,9 +228,11 @@ class DashboardWindow(QMainWindow):
         self.update_check_finished.connect(self._handle_update_result)
         self.update_install_finished.connect(self._handle_install_handoff)
         self.update_download_progress.connect(self._handle_download_progress)
+        self.view.loadFinished.connect(self._on_view_load_finished)
+        self._enter_startup_shell_mode()
         self._install_watcher()
         self.load_page()
-        self.statusBar().showMessage("Serial: connecting...")
+        self._refresh_status_bar()
 
         if self.updater and auto_update_check:
             QTimer.singleShot(2500, lambda: self.check_for_updates_async(manual=False))
@@ -230,6 +267,8 @@ class DashboardWindow(QMainWindow):
         )
 
     def _refresh_status_bar(self):
+        if self._startup_mode_active and not self._startup_transition_done:
+            return
         target_port = self.serial_worker.get_target_port() or SERIAL_AUTO_LABEL
         connected_port = self._current_connected_port
         if connected_port:
@@ -237,6 +276,149 @@ class DashboardWindow(QMainWindow):
         else:
             message = f"Serial disconnected (target: {target_port}) @ {self.baudrate}"
         self.statusBar().showMessage(message)
+
+    def _center_window(self) -> None:
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return
+        geometry = screen.availableGeometry()
+        x = geometry.x() + (geometry.width() - self.width()) // 2
+        y = geometry.y() + (geometry.height() - self.height()) // 2
+        self.move(x, y)
+
+    def _target_dashboard_geometry(self) -> QRect:
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return QRect(self.x(), self.y(), DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+        geometry = screen.availableGeometry()
+        x = geometry.x() + (geometry.width() - DEFAULT_WINDOW_WIDTH) // 2
+        y = geometry.y() + (geometry.height() - DEFAULT_WINDOW_HEIGHT) // 2
+        return QRect(x, y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+
+    def _enter_startup_shell_mode(self) -> None:
+        startup_flags = Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAutoFillBackground(False)
+        self.setStyleSheet("QMainWindow { background: transparent; }")
+        self.setWindowFlags(startup_flags)
+        self.resize(STARTUP_SHELL_WIDTH, STARTUP_SHELL_HEIGHT)
+        self._center_window()
+        self.view.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.view.setStyleSheet("background: transparent;")
+        self.view.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        if self.toolbar:
+            self.toolbar.setVisible(False)
+        self.statusBar().setVisible(False)
+
+    def _on_view_load_finished(self, ok: bool) -> None:
+        if self._startup_transition_done:
+            return
+        if not ok:
+            logger.warning("Initial page load failed. Transitioning to full dashboard window.")
+            self._transition_to_full_dashboard_window("page-load-failed")
+            return
+        self._start_boot_polling()
+
+    def _start_boot_polling(self) -> None:
+        if self._startup_transition_done:
+            return
+        if self._boot_poll_timer.isActive():
+            return
+        self._boot_poll_timer.start()
+        self._poll_boot_state_once()
+
+    def _poll_boot_state_once(self) -> None:
+        if self._startup_transition_done:
+            if self._boot_poll_timer.isActive():
+                self._boot_poll_timer.stop()
+            return
+
+        elapsed_ms = (time.monotonic() - self._startup_started_at) * 1000.0
+        if elapsed_ms >= self._boot_poll_timeout_ms:
+            logger.warning("Boot polling timed out after %.0f ms", elapsed_ms)
+            self._transition_to_full_dashboard_window("boot-timeout")
+            return
+
+        self.view.page().runJavaScript(
+            "window.__bmsBootDebug ? window.__bmsBootDebug() : null",
+            self._handle_boot_state,
+        )
+
+    def _handle_boot_state(self, state: Any) -> None:
+        if self._startup_transition_done:
+            return
+
+        state_dict: Optional[dict[str, Any]] = state if isinstance(state, dict) else None
+        if state_dict is not None:
+            self._boot_last_state = state_dict
+
+        elapsed_ms = (time.monotonic() - self._startup_started_at) * 1000.0
+        min_time_met = elapsed_ms >= self._startup_min_duration_ms
+
+        ready_by_js = bool(state_dict and state_dict.get("hidden") is True)
+        errored = bool(state_dict and state_dict.get("errored") is True)
+
+        if ready_by_js and min_time_met:
+            self._transition_to_full_dashboard_window("boot-ready")
+            return
+        if errored and min_time_met:
+            self._transition_to_full_dashboard_window("boot-error")
+            return
+
+    def _transition_to_full_dashboard_window(self, reason: str) -> None:
+        if self._startup_transition_done:
+            return
+        self._startup_transition_done = True
+        self._startup_mode_active = False
+
+        if self._boot_poll_timer.isActive():
+            self._boot_poll_timer.stop()
+
+        self.setUpdatesEnabled(False)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        self.setAutoFillBackground(True)
+        self.setStyleSheet("")
+        flags_changed = self.windowFlags() != self._normal_window_flags
+        if flags_changed:
+            self.setWindowFlags(self._normal_window_flags)
+        self.setMinimumSize(0, 0)
+        self.setMaximumSize(16777215, 16777215)
+        self.view.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        self.view.setStyleSheet("")
+        self.view.page().setBackgroundColor(QColor(0, 0, 0))
+
+        if self.toolbar:
+            self.toolbar.setVisible(True)
+        self.statusBar().setVisible(True)
+
+        if flags_changed:
+            self.show()
+        self.raise_()
+        self.activateWindow()
+        self.setUpdatesEnabled(True)
+
+        if self._startup_transition_animation is not None:
+            self._startup_transition_animation.stop()
+            self._startup_transition_animation.deleteLater()
+            self._startup_transition_animation = None
+        self.setWindowOpacity(1.0)
+        self._finish_startup_transition(reason)
+
+    def _finish_startup_transition(self, reason: str) -> None:
+        self._startup_transition_animation = None
+        self.setWindowOpacity(1.0)
+
+        if reason == "boot-error":
+            self.statusBar().showMessage("Startup error: frontend boot failed.", 10000)
+            return
+        if reason == "boot-timeout":
+            self.statusBar().showMessage("Startup timeout: opening dashboard anyway.", 10000)
+            return
+        if reason == "page-load-failed":
+            self.statusBar().showMessage("Startup page load failed: opening dashboard anyway.", 10000)
+            return
+
+        self._refresh_status_bar()
 
     def start_http_server(self) -> None:
         frontend_dir = self.entrypoint.parent
@@ -274,6 +456,13 @@ class DashboardWindow(QMainWindow):
         self.view.reload()
 
     def closeEvent(self, event) -> None:
+        if self._boot_poll_timer.isActive():
+            self._boot_poll_timer.stop()
+        if self._startup_transition_animation is not None:
+            self._startup_transition_animation.stop()
+            self._startup_transition_animation.deleteLater()
+            self._startup_transition_animation = None
+
         if hasattr(self, "serial_worker"):
             self.serial_worker.stop()
             self.serial_thread.quit()
@@ -285,33 +474,33 @@ class DashboardWindow(QMainWindow):
         event.accept()
 
     def _build_toolbar(self) -> None:
-        toolbar = self.addToolBar("Controls")
-        toolbar.setMovable(False)
+        self.toolbar = self.addToolBar("Controls")
+        self.toolbar.setMovable(False)
 
         reload_action = QAction(QIcon.fromTheme("view-refresh"), "Reload", self)
         reload_action.setStatusTip("Force-reload the dashboard surface")
         reload_action.triggered.connect(self.reload)
-        toolbar.addAction(reload_action)
+        self.toolbar.addAction(reload_action)
 
         open_action = QAction("Open...", self)
         open_action.setStatusTip("Choose a different HTML entrypoint")
         open_action.triggered.connect(self._choose_entrypoint)
-        toolbar.addAction(open_action)
+        self.toolbar.addAction(open_action)
 
         serial_action = QAction("Serial Port...", self)
         serial_action.setStatusTip("Choose target serial port or auto-detect mode")
         serial_action.triggered.connect(self._choose_serial_port)
-        toolbar.addAction(serial_action)
+        self.toolbar.addAction(serial_action)
 
         baud_action = QAction("Baudrate...", self)
         baud_action.setStatusTip("Set serial baudrate")
         baud_action.triggered.connect(self._choose_baudrate)
-        toolbar.addAction(baud_action)
+        self.toolbar.addAction(baud_action)
 
         update_action = QAction("Check Updates", self)
         update_action.setStatusTip("Check GitHub Releases for an update")
         update_action.triggered.connect(lambda: self.check_for_updates_async(manual=True))
-        toolbar.addAction(update_action)
+        self.toolbar.addAction(update_action)
 
     def _choose_entrypoint(self) -> None:
         dialog = QFileDialog(self, "Select dashboard entrypoint")
@@ -676,6 +865,65 @@ class DashboardWindow(QMainWindow):
                     return f"{int(size)} {unit}"
                 return f"{size:.1f} {unit}"
             size /= 1024.0
+
+
+def _create_splash(logo_path: Optional[Path]) -> Optional[QSplashScreen]:
+    """Build a dark-themed splash screen with the BMS logo and loading text."""
+    SPLASH_W, SPLASH_H = 520, 580
+    LOGO_SIZE = 380
+    BG_COLOR = QColor(13, 13, 15)          # #0d0d0f
+    TITLE_COLOR = QColor(230, 232, 240)
+    SUBTITLE_COLOR = QColor(150, 150, 170)
+
+    canvas = QPixmap(SPLASH_W, SPLASH_H)
+    canvas.fill(BG_COLOR)
+
+    painter = QPainter(canvas)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+    # ── Draw the logo centred in the upper area ──
+    if logo_path and logo_path.exists():
+        logo_pix = QPixmap(str(logo_path))
+        if not logo_pix.isNull():
+            logo_pix = logo_pix.scaled(
+                LOGO_SIZE, LOGO_SIZE,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            x = (SPLASH_W - logo_pix.width()) // 2
+            y = 30
+            painter.drawPixmap(x, y, logo_pix)
+
+    # ── Title text ──
+    title_font = QFont("Inter", 22, QFont.Weight.Bold)
+    painter.setFont(title_font)
+    painter.setPen(TITLE_COLOR)
+    painter.drawText(
+        0, SPLASH_H - 110, SPLASH_W, 40,
+        Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
+        "BMS Dashboard",
+    )
+
+    # ── Subtitle / version ──
+    sub_font = QFont("Inter", 11)
+    painter.setFont(sub_font)
+    painter.setPen(SUBTITLE_COLOR)
+    painter.drawText(
+        0, SPLASH_H - 75, SPLASH_W, 30,
+        Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
+        f"v{APP_VERSION}  ·  UCR EV Lab",
+    )
+
+    painter.end()
+
+    splash = QSplashScreen(canvas, Qt.WindowType.WindowStaysOnTopHint)
+    splash.showMessage(
+        "Initializing...",
+        Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
+        SUBTITLE_COLOR,
+    )
+    return splash
 
 
 def parse_args() -> argparse.Namespace:
