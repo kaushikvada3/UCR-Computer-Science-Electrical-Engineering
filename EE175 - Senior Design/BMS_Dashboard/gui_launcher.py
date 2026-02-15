@@ -406,9 +406,20 @@ class DashboardWindow(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setAutoFillBackground(True)
         self.setStyleSheet("")
-        flags_changed = self.windowFlags() != self._normal_window_flags
-        if flags_changed:
-            self.setWindowFlags(self._normal_window_flags)
+
+        # On Windows, WA_TranslucentBackground permanently strips the native
+        # frame even after being disabled.  Force standard decorated flags so
+        # the title-bar with minimize / maximize / close buttons is restored.
+        decorated_flags = (
+            Qt.WindowType.Window
+            | Qt.WindowType.WindowMinimizeButtonHint
+            | Qt.WindowType.WindowMaximizeButtonHint
+            | Qt.WindowType.WindowCloseButtonHint
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowSystemMenuHint
+        )
+        self.setWindowFlags(decorated_flags)
+
         self.setMinimumSize(0, 0)
         self.setMaximumSize(16777215, 16777215)
         self.view.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
@@ -419,8 +430,9 @@ class DashboardWindow(QMainWindow):
             self.toolbar.setVisible(True)
         self.statusBar().setVisible(True)
 
-        if flags_changed:
-            self.show()
+        # Always call show() – setWindowFlags hides the window, and the
+        # native frame must be re-created for the controls to appear.
+        self.show()
         self.raise_()
         self.activateWindow()
         self.setUpdatesEnabled(True)

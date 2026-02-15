@@ -3675,6 +3675,10 @@ function updateSimulationToggleUi() {
   if (simulateDataModeEl) {
     simulateDataModeEl.textContent = simulationEnabled ? STATUS_SIMULATION : "Actual Testing Mode";
   }
+  const simCard = document.querySelector(".metric-card--simulate");
+  if (simCard) {
+    simCard.classList.toggle("is-simulating", simulationEnabled);
+  }
 }
 
 function setSimulationMode(enabled) {
