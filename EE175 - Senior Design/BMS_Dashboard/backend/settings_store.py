@@ -18,6 +18,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "updates": {
         "channel": "stable",
         "last_checked_utc": None,
+        "staged": None,
     },
 }
 
@@ -110,4 +111,49 @@ class SettingsStore:
     def set_last_checked_now(self) -> None:
         self._data.setdefault("updates", {})
         self._data["updates"]["last_checked_utc"] = datetime.now(timezone.utc).isoformat()
+        self.save()
+
+    def staged_update(self) -> Optional[Dict[str, Any]]:
+        value = self._data.get("updates", {}).get("staged")
+        if not isinstance(value, dict):
+            return None
+        version = str(value.get("version", "")).strip()
+        payload_path = str(value.get("payload_path", "")).strip()
+        created_utc = str(value.get("created_utc", "")).strip()
+        platform = str(value.get("platform", "")).strip()
+        if not version or not payload_path or not platform:
+            return None
+        return {
+            "version": version,
+            "payload_path": payload_path,
+            "created_utc": created_utc,
+            "platform": platform,
+        }
+
+    def set_staged_update(
+        self,
+        *,
+        version: str,
+        payload_path: str,
+        platform: str,
+        created_utc: Optional[str] = None,
+    ) -> None:
+        normalized_version = str(version).strip()
+        normalized_payload = str(payload_path).strip()
+        normalized_platform = str(platform).strip()
+        if not normalized_version or not normalized_payload or not normalized_platform:
+            self.clear_staged_update()
+            return
+        self._data.setdefault("updates", {})
+        self._data["updates"]["staged"] = {
+            "version": normalized_version,
+            "payload_path": normalized_payload,
+            "created_utc": created_utc or datetime.now(timezone.utc).isoformat(),
+            "platform": normalized_platform,
+        }
+        self.save()
+
+    def clear_staged_update(self) -> None:
+        self._data.setdefault("updates", {})
+        self._data["updates"]["staged"] = None
         self.save()

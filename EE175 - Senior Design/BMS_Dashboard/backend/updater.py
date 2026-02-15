@@ -432,113 +432,90 @@ class ReleaseUpdater:
         app_bundle_path: Optional[Path] = None,
         log_path: Optional[Path] = None,
     ) -> Dict[str, str]:
-        """
-        Seamlessly install update and restart the application.
-
-        This launches a helper script that:
-        1. Waits for the current app to exit
-        2. Replaces the app bundle with the new version
-        3. Relaunches the app
-
-        The current app should exit after calling this method.
-        """
         installer_path = installer_path.resolve()
         log_file = _append_update_log(f"Preparing seamless update: {installer_path}", log_path)
 
-        # Determine app bundle path
+        if not getattr(sys, "frozen", False):
+            return {
+                "status": "error",
+                "message": "Dev/source mode updates are via git/pull; app self-update is disabled.",
+                "log_path": str(log_file),
+            }
+
         if app_bundle_path is None:
-            if getattr(sys, "frozen", False):
-                # Running as packaged app
-                if sys.platform == "darwin":
-                    # Find .app bundle containing the executable
-                    exe_path = Path(sys.executable).resolve()
-                    for parent in exe_path.parents:
-                        if parent.suffix == ".app":
-                            app_bundle_path = parent
-                            break
-                    if app_bundle_path is None:
-                        return {
-                            "status": "error",
-                            "message": "Could not determine app bundle path",
-                        }
-                else:
-                    # For Windows/Linux, use executable path
-                    app_bundle_path = Path(sys.executable).resolve()
+            if sys.platform == "darwin":
+                exe_path = Path(sys.executable).resolve()
+                for parent in exe_path.parents:
+                    if parent.suffix == ".app":
+                        app_bundle_path = parent
+                        break
+                if app_bundle_path is None:
+                    return {
+                        "status": "error",
+                        "message": "Could not determine installed .app bundle path.",
+                        "log_path": str(log_file),
+                    }
             else:
+                app_bundle_path = Path(sys.executable).resolve()
+
+        if sys.platform == "darwin":
+            helper_args = [
+                str(Path(sys.executable).resolve()),
+                "--run-update-helper",
+                "--installer",
+                str(installer_path),
+                "--target-app",
+                str(app_bundle_path),
+                "--wait-pid",
+                str(os.getpid()),
+                "--relaunch",
+            ]
+            _append_update_log(f"Launching bundled helper mode: {' '.join(helper_args)}", log_file)
+
+            try:
+                subprocess.Popen(
+                    helper_args,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+            except Exception as exc:
+                _append_update_log(f"Failed to launch bundled helper mode: {exc}", log_file)
                 return {
                     "status": "error",
-                    "message": "Seamless updates only supported in packaged apps",
+                    "message": f"Failed to launch updater helper mode: {exc}",
+                    "log_path": str(log_file),
                 }
 
-        # Find update helper script
-        helper_candidates = [
-            Path(__file__).parent / "update_helper.py",
-            Path(sys.executable).parent / "update_helper.py",
-        ]
-        if getattr(sys, "frozen", False) and getattr(sys, "_MEIPASS", None):
-            helper_candidates.insert(0, Path(sys._MEIPASS) / "backend" / "update_helper.py")
-
-        helper_script = None
-        for candidate in helper_candidates:
-            if candidate.exists():
-                helper_script = candidate
-                break
-
-        if helper_script is None:
-            _append_update_log("Update helper script not found", log_file)
-            return {
-                "status": "error",
-                "message": "Update helper script not found. Falling back to manual install.",
-            }
-
-        current_pid = os.getpid()
-
-        # Determine Python interpreter to use
-        if getattr(sys, "frozen", False):
-            # When frozen, we need to use system Python
-            if sys.platform.startswith("win"):
-                python_exe = "python.exe"
-            else:
-                python_exe = "python3"
-        else:
-            # When running as script, use current interpreter
-            python_exe = sys.executable
-
-        # Launch helper script
-        helper_args = [
-            python_exe,
-            str(helper_script),
-            "--installer", str(installer_path),
-            "--target-app", str(app_bundle_path),
-            "--wait-pid", str(current_pid),
-            "--relaunch",
-        ]
-
-        _append_update_log(f"Launching helper: {' '.join(helper_args)}", log_file)
-
-        try:
-            # Launch helper in background
-            subprocess.Popen(
-                helper_args,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-            _append_update_log("Helper launched successfully", log_file)
-
+            _append_update_log("Bundled helper mode launched successfully", log_file)
             return {
                 "status": "installing",
-                "message": (
-                    "Update is installing. The application will restart automatically.\n\n"
-                    "Please wait a moment..."
-                ),
+                "message": "Installing staged update and restarting application.",
                 "log_path": str(log_file),
                 "requires_quit": "true",
+                "installer_path": str(installer_path),
             }
-        except Exception as exc:
-            _append_update_log(f"Failed to launch helper: {exc}", log_file)
+
+        launch_result = ReleaseUpdater.launch_guided_install(
+            installer_path,
+            wait_for_pid=os.getpid(),
+            autoclose_app=False,
+            update_mode=True,
+            log_path=log_file,
+        )
+        launch_status = str(launch_result.get("status", "")).strip().lower()
+        if launch_status == "manual_required":
             return {
                 "status": "error",
-                "message": f"Failed to launch update helper: {exc}",
-                "log_path": str(log_file),
+                "message": str(launch_result.get("message", "Unable to launch installer.")),
+                "log_path": str(launch_result.get("log_path", log_file)),
+                "installer_path": str(launch_result.get("installer_path", installer_path)),
             }
+
+        return {
+            "status": "installing",
+            "message": str(launch_result.get("message", "Installing update.")),
+            "log_path": str(launch_result.get("log_path", log_file)),
+            "installer_path": str(launch_result.get("installer_path", installer_path)),
+            "requires_quit": "true" if launch_status == "close_required" else "false",
+        }

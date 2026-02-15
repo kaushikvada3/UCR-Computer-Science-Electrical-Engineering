@@ -28,10 +28,14 @@ pyinstaller `
   --icon "assets/icons/app_icon.ico" `
   --add-data "frontend;frontend" `
   --add-data "assets/icons;assets/icons" `
+  --add-data "backend/update_helper.py;backend" `
   gui_launcher.py
 
 $keepLocales = if ($env:KEEP_QTWEBENGINE_LOCALES) { $env:KEEP_QTWEBENGINE_LOCALES } else { "en-US" }
 python scripts/optimize_pyinstaller_bundle.py --bundle-dir "dist/BMSDashboard" --keep-locales "$keepLocales"
+
+# Compatibility shim for older updater paths that search next to BMSDashboard.exe.
+Copy-Item -Force "backend/update_helper.py" "dist/BMSDashboard/update_helper.py"
 
 $appDir = (Resolve-Path "dist/BMSDashboard").Path
 $appExe = (Resolve-Path "dist/BMSDashboard/BMSDashboard.exe").Path

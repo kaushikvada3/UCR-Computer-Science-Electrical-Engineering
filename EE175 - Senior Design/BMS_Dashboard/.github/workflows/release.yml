@@ -136,20 +136,24 @@ jobs:
           set -euo pipefail
 
           WINDOWS_SRC="$(find release-artifacts/windows-release -type f -name 'BMSDashboard-windows-x64-setup.exe' | head -n1 || true)"
-          MACOS_SRC="$(find release-artifacts/macos-release -type f -name 'BMSDashboard-macos-universal2.dmg' | head -n1 || true)"
+          MACOS_ZIP_SRC="$(find release-artifacts/macos-release -type f -name 'BMSDashboard-macos-universal2.zip' | head -n1 || true)"
+          MACOS_DMG_SRC="$(find release-artifacts/macos-release -type f -name 'BMSDashboard-macos-universal2.dmg' | head -n1 || true)"
           LINUX_SRC="$(find release-artifacts/linux-release -type f -name 'BMSDashboard-linux-x64.AppImage' | head -n1 || true)"
 
           if [[ -z "${WINDOWS_SRC}" ]]; then
             WINDOWS_SRC="$(find release-artifacts/windows-release -type f -name '*windows-x64-setup.exe' | head -n1 || true)"
           fi
-          if [[ -z "${MACOS_SRC}" ]]; then
-            MACOS_SRC="$(find release-artifacts/macos-release -type f -name '*.dmg' | head -n1 || true)"
+          if [[ -z "${MACOS_ZIP_SRC}" ]]; then
+            MACOS_ZIP_SRC="$(find release-artifacts/macos-release -type f -name '*.zip' | head -n1 || true)"
+          fi
+          if [[ -z "${MACOS_DMG_SRC}" ]]; then
+            MACOS_DMG_SRC="$(find release-artifacts/macos-release -type f -name '*.dmg' | head -n1 || true)"
           fi
           if [[ -z "${LINUX_SRC}" ]]; then
             LINUX_SRC="$(find release-artifacts/linux-release -type f -name '*.AppImage' | head -n1 || true)"
           fi
 
-          if [[ -z "${WINDOWS_SRC}" || -z "${MACOS_SRC}" || -z "${LINUX_SRC}" ]]; then
+          if [[ -z "${WINDOWS_SRC}" || -z "${MACOS_ZIP_SRC}" || -z "${MACOS_DMG_SRC}" || -z "${LINUX_SRC}" ]]; then
             echo "Missing one or more build artifacts."
             ls -R release-artifacts || true
             exit 1
@@ -159,11 +163,13 @@ jobs:
           mkdir -p "${UPLOAD_DIR}"
 
           WINDOWS_FILE="${UPLOAD_DIR}/BMSDashboard-windows-x64-setup.exe"
-          MACOS_FILE="${UPLOAD_DIR}/BMSDashboard-macos-universal2.dmg"
+          MACOS_FILE="${UPLOAD_DIR}/BMSDashboard-macos-universal2.zip"
+          MACOS_DMG_FILE="${UPLOAD_DIR}/BMSDashboard-macos-universal2.dmg"
           LINUX_FILE="${UPLOAD_DIR}/BMSDashboard-linux-x64.AppImage"
 
           cp -f "${WINDOWS_SRC}" "${WINDOWS_FILE}"
-          cp -f "${MACOS_SRC}" "${MACOS_FILE}"
+          cp -f "${MACOS_ZIP_SRC}" "${MACOS_FILE}"
+          cp -f "${MACOS_DMG_SRC}" "${MACOS_DMG_FILE}"
           cp -f "${LINUX_SRC}" "${LINUX_FILE}"
 
           WIN_SIG=""

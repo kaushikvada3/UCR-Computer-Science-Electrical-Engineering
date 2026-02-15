@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
+from packaging.version import InvalidVersion, Version
 from PyQt6.QtCore import (
     QEasingCurve,
     QFileSystemWatcher,
@@ -29,21 +30,23 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QAction, QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
+from PyQt6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPixmap
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
     QInputDialog,
+    QLabel,
     QMainWindow,
     QMessageBox,
-    QProgressDialog,
+    QProgressBar,
     QSplashScreen,
 )
 
 from backend.data_stream import SerialWorker
 from backend.settings_store import SettingsStore
+from backend.update_helper import run_update_helper
 from backend.updater import (
     ReleaseUpdater,
     UpdateError,
@@ -156,6 +159,7 @@ class DashboardWindow(QMainWindow):
     update_check_finished = pyqtSignal(object, object, bool)
     update_install_finished = pyqtSignal(object, object)
     update_download_progress = pyqtSignal(int, int)
+    update_state_changed = pyqtSignal(str, str, int, int)
 
     def __init__(
         self,
@@ -165,6 +169,7 @@ class DashboardWindow(QMainWindow):
         baudrate: int,
         updater: Optional[ReleaseUpdater],
         auto_update_check: bool,
+        is_packaged: bool,
         app_icon: Optional[QIcon] = None,
     ) -> None:
         super().__init__()
@@ -174,12 +179,15 @@ class DashboardWindow(QMainWindow):
         self.settings = settings
         self.baudrate = baudrate
         self.updater = updater
+        self.is_packaged = is_packaged
         self._update_thread: Optional[threading.Thread] = None
         self._update_download_thread: Optional[threading.Thread] = None
-        self._update_check_dialog: Optional[QProgressDialog] = None
-        self._update_download_dialog: Optional[QProgressDialog] = None
         self._update_download_started_at = 0.0
         self._update_download_version = ""
+        self._update_action: Optional[QAction] = None
+        self._update_state_label: Optional[QLabel] = None
+        self._update_progress_bar: Optional[QProgressBar] = None
+        self._staged_restart_prompted = False
         self._has_serial_data = False
         self._current_connected_port = ""
         self.toolbar = None
@@ -225,16 +233,18 @@ class DashboardWindow(QMainWindow):
         self.view.page().setWebChannel(self.channel)
 
         self._build_toolbar()
+        self._build_update_indicator()
         self.update_check_finished.connect(self._handle_update_result)
         self.update_install_finished.connect(self._handle_install_handoff)
         self.update_download_progress.connect(self._handle_download_progress)
+        self.update_state_changed.connect(self._handle_update_state_changed)
         self.view.loadFinished.connect(self._on_view_load_finished)
         self._enter_startup_shell_mode()
         self._install_watcher()
         self.load_page()
         self._refresh_status_bar()
 
-        if self.updater and auto_update_check:
+        if self.updater and auto_update_check and self.is_packaged:
             QTimer.singleShot(2500, lambda: self.check_for_updates_async(manual=False))
 
     def handle_data(self, data: dict):
@@ -410,15 +420,15 @@ class DashboardWindow(QMainWindow):
 
         if reason == "boot-error":
             self.statusBar().showMessage("Startup error: frontend boot failed.", 10000)
-            return
-        if reason == "boot-timeout":
+        elif reason == "boot-timeout":
             self.statusBar().showMessage("Startup timeout: opening dashboard anyway.", 10000)
-            return
-        if reason == "page-load-failed":
+        elif reason == "page-load-failed":
             self.statusBar().showMessage("Startup page load failed: opening dashboard anyway.", 10000)
-            return
+        else:
+            self._refresh_status_bar()
 
-        self._refresh_status_bar()
+        if self.is_packaged:
+            QTimer.singleShot(800, self._resume_staged_update_if_ready)
 
     def start_http_server(self) -> None:
         frontend_dir = self.entrypoint.parent
@@ -497,10 +507,29 @@ class DashboardWindow(QMainWindow):
         baud_action.triggered.connect(self._choose_baudrate)
         self.toolbar.addAction(baud_action)
 
-        update_action = QAction("Check Updates", self)
-        update_action.setStatusTip("Check GitHub Releases for an update")
-        update_action.triggered.connect(lambda: self.check_for_updates_async(manual=True))
-        self.toolbar.addAction(update_action)
+        self._update_action = QAction("Check Updates", self)
+        self._update_action.setStatusTip("Check GitHub Releases for an update")
+        self._update_action.triggered.connect(lambda: self.check_for_updates_async(manual=True))
+        if not self.is_packaged:
+            self._update_action.setEnabled(False)
+            self._update_action.setStatusTip(
+                "Dev/source mode updates are via git/pull; app self-update is disabled."
+            )
+        self.toolbar.addAction(self._update_action)
+
+    def _build_update_indicator(self) -> None:
+        status_bar = self.statusBar()
+        self._update_state_label = QLabel("", self)
+        self._update_state_label.setVisible(False)
+        self._update_progress_bar = QProgressBar(self)
+        self._update_progress_bar.setVisible(False)
+        self._update_progress_bar.setMinimum(0)
+        self._update_progress_bar.setMaximum(100)
+        self._update_progress_bar.setValue(0)
+        self._update_progress_bar.setTextVisible(True)
+        self._update_progress_bar.setFixedWidth(220)
+        status_bar.addPermanentWidget(self._update_state_label)
+        status_bar.addPermanentWidget(self._update_progress_bar)
 
     def _choose_entrypoint(self) -> None:
         dialog = QFileDialog(self, "Select dashboard entrypoint")
@@ -570,6 +599,34 @@ class DashboardWindow(QMainWindow):
         QTimer.singleShot(250, self.reload)
 
     def check_for_updates_async(self, manual: bool):
+        if not self.is_packaged:
+            message = "Dev/source mode updates are via git/pull; app self-update is disabled."
+            self.update_state_changed.emit("error", message, 0, 0)
+            if manual:
+                QMessageBox.information(self, "Updates", message)
+            return
+
+        staged = self.settings.staged_update()
+        if staged:
+            payload_path = Path(str(staged.get("payload_path", "")).strip())
+            staged_version = str(staged.get("version", "")).strip()
+            if (
+                payload_path.exists()
+                and staged.get("platform") == ReleaseUpdater.platform_key()
+                and staged_version
+                and self._is_newer_version(staged_version, APP_VERSION)
+            ):
+                self.update_state_changed.emit(
+                    "restart_required",
+                    f"Update v{staged_version} already staged.",
+                    100,
+                    100,
+                )
+                if manual:
+                    self._prompt_restart_for_staged_update(staged_version)
+                return
+            self.settings.clear_staged_update()
+
         if not self.updater:
             if manual:
                 QMessageBox.information(
@@ -584,13 +641,7 @@ class DashboardWindow(QMainWindow):
                 QMessageBox.information(self, "Updates", "An update check is already running.")
             return
 
-        if manual:
-            self._show_busy_dialog(
-                title="Updates",
-                label="Checking for updates...",
-                dialog_attr="_update_check_dialog",
-            )
-        self.statusBar().showMessage("Checking for updates...")
+        self.update_state_changed.emit("checking", "Checking for updates...", 0, 0)
 
         self._update_thread = threading.Thread(
             target=self._check_updates_worker,
@@ -608,24 +659,26 @@ class DashboardWindow(QMainWindow):
             error = exc
             logger.exception("Update check failed")
         finally:
-            self.settings.set_last_checked_now()
+            if self.is_packaged:
+                self.settings.set_last_checked_now()
 
         self.update_check_finished.emit(info, error, manual)
 
     def _handle_update_result(self, info: Optional[UpdateInfo], error: Optional[Exception], manual: bool):
-        self._close_busy_dialog("_update_check_dialog")
         if error:
-            self.statusBar().showMessage("Update check failed.", 6000)
+            self.update_state_changed.emit("error", "Update check failed.", 0, 0)
             if manual:
                 QMessageBox.warning(self, "Updates", f"Update check failed:\n{error}")
             return
 
         if info is None:
+            self.update_state_changed.emit("idle", "", 0, 0)
             self.statusBar().showMessage("You are on the latest stable release.", 6000)
             if manual:
                 QMessageBox.information(self, "Updates", "You are already on the latest stable release.")
             return
 
+        self.update_state_changed.emit("idle", "", 0, 0)
         self.statusBar().showMessage(f"Update available: {info.version}", 6000)
         self._prompt_install_update(info)
 
@@ -640,9 +693,8 @@ class DashboardWindow(QMainWindow):
         msg.setIcon(QMessageBox.Icon.Information)
         msg.setText(f"Version {info.version} is available.")
         details = (
-            "Download and start guided install now?\n\n"
-            "The app will close to complete installation. If Windows keeps files locked, "
-            "setup may ask for a restart."
+            "Download and stage update in the background now?\n\n"
+            "No installer UI will be opened on macOS. You will be prompted to restart when ready."
         )
         if notes_preview:
             details += f"\n\nRelease notes:\n{notes_preview}"
@@ -655,14 +707,14 @@ class DashboardWindow(QMainWindow):
             QMessageBox.information(self, "Updates", "Update download already in progress.")
             return
 
-        self._show_busy_dialog(
-            title="Updates",
-            label=f"Downloading version {info.version}...",
-            dialog_attr="_update_download_dialog",
-        )
         self._update_download_started_at = time.monotonic()
         self._update_download_version = info.version
-        self.statusBar().showMessage(f"Downloading update {info.version}...")
+        self.update_state_changed.emit(
+            "downloading",
+            f"Downloading {info.version}...",
+            0,
+            0,
+        )
 
         self._update_download_thread = threading.Thread(
             target=self._download_and_launch_update_worker,
@@ -677,12 +729,23 @@ class DashboardWindow(QMainWindow):
         try:
             if not self.updater:
                 raise UpdateError("Updater is not configured")
+            self.update_state_changed.emit("downloading", f"Downloading {info.version}...", 0, 0)
             installer = self.updater.download_update(
                 info,
                 progress_callback=lambda done, total: self.update_download_progress.emit(done, total),
             )
-            # Use seamless auto-update for all platforms
-            message = self.updater.install_update_and_restart(installer)
+            self.update_state_changed.emit("verifying", "Verifying payload...", 0, 0)
+            if sys.platform == "darwin":
+                self.update_state_changed.emit("staging", "Staging update...", 0, 0)
+                message = {
+                    "status": "restart_required",
+                    "message": "Update staged. Restart to apply.",
+                    "installer_path": str(installer),
+                    "version": info.version,
+                }
+            else:
+                self.update_state_changed.emit("staging", "Launching installer...", 0, 0)
+                message = self.updater.install_update_and_restart(installer)
         except Exception as exc:
             error = exc
             logger.exception("Update install handoff failed")
@@ -690,43 +753,29 @@ class DashboardWindow(QMainWindow):
         self.update_install_finished.emit(message, error)
 
     def _handle_download_progress(self, downloaded_bytes: int, total_bytes: int):
-        dialog = self._update_download_dialog
-        if dialog is None:
-            return
-
         downloaded_bytes = max(0, int(downloaded_bytes))
         total_bytes = max(0, int(total_bytes))
-
+        detail = ""
         if total_bytes > 0:
-            if dialog.maximum() != total_bytes or dialog.minimum() != 0:
-                dialog.setRange(0, total_bytes)
-            dialog.setValue(min(downloaded_bytes, total_bytes))
             percent = (downloaded_bytes / total_bytes) * 100.0
-            label = (
-                f"Downloading version {self._update_download_version}..."
-                f"\n{self._format_bytes(downloaded_bytes)} / {self._format_bytes(total_bytes)}"
-                f" ({percent:.1f}%)"
+            detail = (
+                f"Downloading {percent:.1f}% "
+                f"({self._format_bytes(downloaded_bytes)} / {self._format_bytes(total_bytes)})"
             )
         else:
-            if dialog.minimum() != 0 or dialog.maximum() != 0:
-                dialog.setRange(0, 0)
-            dialog.setValue(0)
-            label = (
-                f"Downloading version {self._update_download_version}..."
-                f"\n{self._format_bytes(downloaded_bytes)} downloaded"
-            )
+            detail = f"Downloading {self._format_bytes(downloaded_bytes)}"
 
         elapsed = max(0.001, time.monotonic() - self._update_download_started_at)
         speed_bps = downloaded_bytes / elapsed
-        label += f" @ {self._format_bytes(speed_bps)}/s"
-        dialog.setLabelText(label)
+        detail += f" @ {self._format_bytes(speed_bps)}/s"
+        self.update_state_changed.emit("downloading", detail, downloaded_bytes, total_bytes)
 
     def _handle_install_handoff(self, message: Optional[object], error: Optional[Exception]):
-        self._close_busy_dialog("_update_download_dialog")
+        downloaded_version = self._update_download_version
         self._update_download_started_at = 0.0
         self._update_download_version = ""
         if error:
-            self.statusBar().showMessage("Update failed.", 6000)
+            self.update_state_changed.emit("error", "Update failed.", 0, 0)
             fallback_log = default_update_log_path()
             QMessageBox.warning(
                 self,
@@ -740,120 +789,239 @@ class DashboardWindow(QMainWindow):
             return
 
         status = ""
-        status_message = message or "Update package launched."
+        status_message = message or "Update package prepared."
         installer_path = ""
         requires_quit = False
+        version = ""
         if isinstance(message, dict):
             status = str(message.get("status", "")).strip().lower()
             status_message = str(message.get("message", status_message))
             installer_path = str(message.get("installer_path", "")).strip()
             requires_quit = str(message.get("requires_quit", "")).lower() == "true"
+            version = str(message.get("version", "")).strip()
 
-        # Handle seamless auto-update (macOS)
-        if status == "installing" and requires_quit:
-            self.statusBar().showMessage("Installing update and restarting...", 10000)
-
-            # Show a brief dialog with progress indicator
-            progress = QProgressDialog(
-                "Installing update...\n\nThe application will restart automatically.",
-                None,  # No cancel button
-                0, 0,  # Indeterminate progress
-                self
+        if status == "restart_required":
+            if not installer_path:
+                self.update_state_changed.emit("error", "Staged update payload not found.", 0, 0)
+                return
+            staged_version = version or downloaded_version or APP_VERSION
+            self.settings.set_staged_update(
+                version=staged_version,
+                payload_path=installer_path,
+                platform=ReleaseUpdater.platform_key(),
             )
-            progress.setWindowTitle("Installing Update")
-            progress.setWindowModality(Qt.WindowModality.WindowModal)
-            progress.setMinimumDuration(0)
-            progress.setValue(0)
-            progress.show()
-            QApplication.processEvents()
-
-            # Give user a moment to see the message, then quit
-            QTimer.singleShot(1500, lambda: [progress.close(), self.close()])
+            self.update_state_changed.emit(
+                "restart_required",
+                f"Ready to restart into v{staged_version}",
+                100,
+                100,
+            )
+            self._prompt_restart_for_staged_update(staged_version)
             return
 
-        if (
-            sys.platform.startswith("win")
-            and (
-                status in {"auto_close_pending", "close_required", "launched"}
-                or (isinstance(message, str) and "Close BMS Dashboard now" in message)
-            )
-        ):
-            self.statusBar().showMessage(
-                "Installer is open. Close this app to continue update (restart may be required).",
-                7000,
-            )
-            prompt = QMessageBox(self)
-            prompt.setWindowTitle("Updates")
-            prompt.setIcon(QMessageBox.Icon.Information)
-            prompt.setText("Installer is running.")
-            prompt.setInformativeText(
-                f"{status_message}\n\n"
-                "Look for the setup window titled similar to:\n"
-                '"BMS Dashboard <version> Setup"\n\n'
-                "If you do not see it, click Re-open Installer."
-            )
-            close_btn = prompt.addButton("Close App and Continue", QMessageBox.ButtonRole.AcceptRole)
-            reopen_btn = prompt.addButton("Re-open Installer", QMessageBox.ButtonRole.ActionRole)
-            cancel_btn = prompt.addButton(QMessageBox.StandardButton.Cancel)
-            prompt.setDefaultButton(close_btn)
-            prompt.exec()
-
-            clicked = prompt.clickedButton()
-            if clicked is reopen_btn:
-                if installer_path and self._open_installer_file(installer_path):
-                    self.statusBar().showMessage("Installer re-opened.", 5000)
-                else:
-                    QMessageBox.warning(
-                        self,
-                        "Updates",
-                        "Could not re-open installer automatically.\n"
-                        "Use Check Updates again, or launch installer manually from Downloads/temp.",
-                    )
-                return
-            if clicked is close_btn:
-                QTimer.singleShot(150, self.close)
-                return
-            if clicked is cancel_btn:
-                self.statusBar().showMessage("Update paused. Close app later to continue installer.", 7000)
-            return
-
-        if sys.platform.startswith("win") and status == "manual_required":
-            self.statusBar().showMessage("Installer is ready to run manually.", 7000)
+        if status == "error":
+            self.update_state_changed.emit("error", status_message, 0, 0)
             QMessageBox.warning(self, "Updates", status_message)
             return
 
-        self.statusBar().showMessage("Update package is ready.", 6000)
-        QMessageBox.information(self, "Updates", status_message)
+        if status == "installing":
+            self.update_state_changed.emit("installing", status_message, 0, 0)
+            if requires_quit:
+                if sys.platform.startswith("win"):
+                    choice = QMessageBox.question(
+                        self,
+                        "Updates",
+                        f"{status_message}\n\nClose the app now to continue installation?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.Yes,
+                    )
+                    if choice == QMessageBox.StandardButton.Yes:
+                        QTimer.singleShot(120, self.close)
+                    return
+                QTimer.singleShot(180, self.close)
+                return
+            QMessageBox.information(self, "Updates", status_message)
+            return
+
+        self.update_state_changed.emit("idle", "", 0, 0)
+        if status_message:
+            self.statusBar().showMessage(status_message, 6000)
+
+    def _resume_staged_update_if_ready(self) -> None:
+        if not self.is_packaged or self._staged_restart_prompted:
+            return
+        staged = self.settings.staged_update()
+        if not staged:
+            return
+
+        if staged.get("platform") != ReleaseUpdater.platform_key():
+            self.settings.clear_staged_update()
+            return
+
+        payload_path = Path(str(staged.get("payload_path", "")).strip())
+        if not payload_path.exists():
+            self.settings.clear_staged_update()
+            self.update_state_changed.emit("error", "Previously staged update payload is missing.", 0, 0)
+            return
+
+        staged_version = str(staged.get("version", "")).strip()
+        if not staged_version or not self._is_newer_version(staged_version, APP_VERSION):
+            self.settings.clear_staged_update()
+            return
+
+        self.update_state_changed.emit(
+            "restart_required",
+            f"Ready to restart into v{staged_version}",
+            100,
+            100,
+        )
+        self._prompt_restart_for_staged_update(staged_version)
+
+    def _prompt_restart_for_staged_update(self, version: str) -> None:
+        staged = self.settings.staged_update()
+        if not staged:
+            return
+        self._staged_restart_prompted = True
+
+        prompt = QMessageBox(self)
+        prompt.setWindowTitle("Update Ready")
+        prompt.setIcon(QMessageBox.Icon.Information)
+        prompt.setText(f"Version {version} is staged and ready.")
+        prompt.setInformativeText("Restart now to apply the update, or choose Later.")
+        restart_btn = prompt.addButton("Restart Now", QMessageBox.ButtonRole.AcceptRole)
+        later_btn = prompt.addButton("Later", QMessageBox.ButtonRole.RejectRole)
+        prompt.setDefaultButton(restart_btn)
+        prompt.exec()
+
+        if prompt.clickedButton() is restart_btn:
+            self._start_staged_install()
+            return
+
+        if prompt.clickedButton() is later_btn:
+            self.statusBar().showMessage("Update staged. Restart later to apply.", 7000)
+            self.update_state_changed.emit(
+                "restart_required",
+                f"Update v{version} staged (restart later).",
+                100,
+                100,
+            )
+
+    def _resolve_installed_target(self) -> Optional[Path]:
+        exe_path = Path(sys.executable).resolve()
+        if sys.platform == "darwin":
+            for parent in exe_path.parents:
+                if parent.suffix == ".app":
+                    return parent
+            return None
+        return exe_path
+
+    def _start_staged_install(self) -> None:
+        staged = self.settings.staged_update()
+        if not staged:
+            self.update_state_changed.emit("error", "No staged update is available.", 0, 0)
+            return
+        if not self.updater:
+            self.update_state_changed.emit("error", "Updater is not configured.", 0, 0)
+            return
+
+        payload_path = Path(str(staged.get("payload_path", "")).strip())
+        if not payload_path.exists():
+            self.settings.clear_staged_update()
+            self.update_state_changed.emit("error", "Staged update payload no longer exists.", 0, 0)
+            return
+
+        target = self._resolve_installed_target()
+        if target is None:
+            self.update_state_changed.emit("error", "Could not locate installed app path.", 0, 0)
+            return
+
+        if sys.platform == "darwin" and not os.access(target.parent, os.W_OK):
+            self.update_state_changed.emit(
+                "error",
+                f"No write permission for install location: {target.parent}",
+                0,
+                0,
+            )
+            QMessageBox.warning(
+                self,
+                "Updates",
+                "The installed app location is not writable.\n\n"
+                f"Install location: {target.parent}\n"
+                "Move the app to a writable location (for example /Applications) or run with proper permissions.",
+            )
+            return
+
+        self.update_state_changed.emit("installing", "Installing staged update...", 0, 0)
+        result = self.updater.install_update_and_restart(payload_path, app_bundle_path=target)
+        status = str(result.get("status", "")).strip().lower()
+        if status != "installing":
+            message = str(result.get("message", "Failed to launch updater helper."))
+            self.update_state_changed.emit("error", message, 0, 0)
+            QMessageBox.warning(self, "Updates", message)
+            return
+
+        self.settings.clear_staged_update()
+        self.update_state_changed.emit(
+            "installing",
+            str(result.get("message", "Installing update and restarting...")),
+            0,
+            0,
+        )
+        QTimer.singleShot(180, self.close)
+
+    def _handle_update_state_changed(
+        self,
+        status: str,
+        detail: str,
+        current: int,
+        total: int,
+    ) -> None:
+        if self._update_state_label is None or self._update_progress_bar is None:
+            return
+        normalized = (status or "").strip().lower()
+
+        if normalized in {"", "idle"}:
+            self._update_state_label.setVisible(False)
+            self._update_progress_bar.setVisible(False)
+            return
+
+        label_text = detail.strip() if detail else normalized.replace("_", " ").title()
+        self._update_state_label.setText(f"Updater: {label_text}")
+        self._update_state_label.setVisible(True)
+
+        if normalized == "downloading":
+            self._update_progress_bar.setVisible(True)
+            if total > 0:
+                percent = int(max(0.0, min(100.0, (current / total) * 100.0)))
+                self._update_progress_bar.setRange(0, 100)
+                self._update_progress_bar.setValue(percent)
+                self._update_progress_bar.setFormat(f"{percent}%")
+            else:
+                self._update_progress_bar.setRange(0, 0)
+                self._update_progress_bar.setFormat("...")
+            return
+
+        if normalized == "restart_required":
+            self._update_progress_bar.setVisible(True)
+            self._update_progress_bar.setRange(0, 100)
+            self._update_progress_bar.setValue(100)
+            self._update_progress_bar.setFormat("Ready")
+            return
+
+        if normalized in {"checking", "verifying", "staging", "installing", "error"}:
+            self._update_progress_bar.setVisible(False)
+            return
+
+        self._update_progress_bar.setVisible(False)
 
     @staticmethod
-    def _open_installer_file(path: str) -> bool:
-        if not path:
-            return False
-        installer = Path(path)
-        if not installer.exists():
-            return False
-        return QDesktopServices.openUrl(QUrl.fromLocalFile(str(installer)))
-
-    def _show_busy_dialog(self, title: str, label: str, dialog_attr: str) -> None:
-        self._close_busy_dialog(dialog_attr)
-        dialog = QProgressDialog(label, "", 0, 0, self)
-        dialog.setWindowTitle(title)
-        dialog.setWindowModality(Qt.WindowModality.WindowModal)
-        dialog.setMinimumDuration(0)
-        dialog.setAutoClose(False)
-        dialog.setAutoReset(False)
-        dialog.setCancelButton(None)
-        dialog.setValue(0)
-        dialog.show()
-        setattr(self, dialog_attr, dialog)
-
-    def _close_busy_dialog(self, dialog_attr: str) -> None:
-        dialog = getattr(self, dialog_attr, None)
-        if dialog is None:
-            return
-        dialog.close()
-        dialog.deleteLater()
-        setattr(self, dialog_attr, None)
+    def _is_newer_version(candidate: str, baseline: str) -> bool:
+        try:
+            left = Version(candidate.lstrip("v"))
+            right = Version(baseline.lstrip("v"))
+            return left > right
+        except InvalidVersion:
+            return candidate.strip() != baseline.strip()
 
     @staticmethod
     def _format_bytes(value: float) -> str:
@@ -961,15 +1129,30 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="GitHub repo slug for updates (owner/repo).",
     )
+    parser.add_argument("--run-update-helper", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--installer", type=Path, default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--target-app", type=Path, default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--wait-pid", type=int, default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--relaunch", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args()
 
 
 def main() -> int:
     logging.basicConfig(level=logging.INFO)
     args = parse_args()
+    if args.run_update_helper:
+        if args.installer is None or args.target_app is None:
+            return 2
+        return run_update_helper(
+            installer=args.installer,
+            target_app=args.target_app,
+            wait_pid=args.wait_pid,
+            relaunch=bool(args.relaunch),
+        )
 
     settings = SettingsStore()
     stored_baudrate = settings.serial_baudrate()
+    is_packaged = bool(getattr(sys, "frozen", False))
 
     if args.serial_port == SERIAL_PORT_DEFAULT_SENTINEL:
         # Default startup behavior is always auto-detect unless explicitly overridden.
@@ -984,7 +1167,7 @@ def main() -> int:
     entrypoint = resolve_entrypoint(args.entrypoint)
     repo_slug = args.update_repo or detect_repo_slug(source_root())
     updater = None
-    if repo_slug:
+    if is_packaged and repo_slug:
         updater = ReleaseUpdater(
             repo_slug=repo_slug,
             current_version=APP_VERSION,
@@ -1015,6 +1198,7 @@ def main() -> int:
             baudrate=baudrate,
             updater=updater,
             auto_update_check=not args.no_auto_update_check,
+            is_packaged=is_packaged,
             app_icon=icon,
         )
     except (FileNotFoundError, RuntimeError) as exc:

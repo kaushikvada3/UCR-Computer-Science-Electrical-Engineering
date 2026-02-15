@@ -22,10 +22,14 @@ pyinstaller \
   --icon "assets/icons/app_icon.png" \
   --add-data "frontend:frontend" \
   --add-data "assets/icons:assets/icons" \
+  --add-data "backend/update_helper.py:backend" \
   gui_launcher.py
 
 KEEP_LOCALES="${KEEP_QTWEBENGINE_LOCALES:-en-US}"
 python scripts/optimize_pyinstaller_bundle.py --bundle-dir "dist/BMSDashboard" --keep-locales "${KEEP_LOCALES}"
+
+# Compatibility shim for older updater paths that search next to the executable.
+cp -f backend/update_helper.py dist/BMSDashboard/update_helper.py
 
 APPDIR="dist/AppDir"
 mkdir -p "$APPDIR/usr/lib/bms-dashboard" "$APPDIR/usr/share/icons/hicolor/256x256/apps"

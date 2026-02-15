@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
-"""
-Auto-update helper script that replaces the app bundle and relaunches.
-This runs as a separate process after the main app exits.
-"""
+"""Background update helper used by packaged app runs."""
+
+from __future__ import annotations
 
 import argparse
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
+import zipfile
 from pathlib import Path
 
 
 def wait_for_pid(pid: int, timeout: int = 30) -> bool:
-    """Wait for a process to exit."""
     start = time.time()
     while time.time() - start < timeout:
         try:
-            os.kill(pid, 0)  # Check if process exists
-            time.sleep(0.5)
+            os.kill(pid, 0)
         except (OSError, ProcessLookupError):
-            return True  # Process has exited
+            return True
+        time.sleep(0.5)
     return False
 
 
 def mount_dmg(dmg_path: Path) -> tuple[bool, str]:
-    """Mount a DMG file and return the mount point."""
     try:
         result = subprocess.run(
             ["hdiutil", "attach", "-nobrowse", "-quiet", str(dmg_path)],
@@ -34,19 +33,20 @@ def mount_dmg(dmg_path: Path) -> tuple[bool, str]:
             text=True,
             check=True,
         )
-        # Parse mount point from output
-        for line in result.stdout.splitlines():
-            if "/Volumes/" in line:
-                mount_point = line.split("/Volumes/")[-1].split()[0]
-                return True, f"/Volumes/{mount_point}"
+    except subprocess.CalledProcessError as exc:
+        print(f"Failed to mount DMG: {exc}", file=sys.stderr)
         return False, ""
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to mount DMG: {e}", file=sys.stderr)
-        return False, ""
+
+    text = (result.stdout or "") + "\n" + (result.stderr or "")
+    for line in text.splitlines():
+        if "/Volumes/" in line:
+            mount_point = line[line.index("/Volumes/"):].split("\t")[0].strip()
+            if mount_point:
+                return True, mount_point
+    return False, ""
 
 
 def unmount_dmg(mount_point: str) -> bool:
-    """Unmount a DMG."""
     try:
         subprocess.run(
             ["hdiutil", "detach", mount_point, "-quiet"],
@@ -58,179 +58,180 @@ def unmount_dmg(mount_point: str) -> bool:
         return False
 
 
-def replace_app_bundle(source_app: Path, target_app: Path) -> bool:
-    """Replace the target app bundle with the source."""
+def _find_app_bundle(root: Path) -> Path | None:
+    direct = sorted(root.glob("*.app"))
+    if direct:
+        return direct[0]
+    for entry in sorted(root.iterdir()):
+        if not entry.is_dir():
+            continue
+        nested = sorted(entry.glob("*.app"))
+        if nested:
+            return nested[0]
+    return None
+
+
+def _ensure_writable_target(target_app: Path) -> None:
+    parent = target_app.parent
+    if not parent.exists():
+        raise RuntimeError(f"Install location does not exist: {parent}")
+    if not os.access(parent, os.W_OK):
+        raise PermissionError(f"No write permission for install location: {parent}")
+
+
+def atomic_replace_app_bundle(source_app: Path, target_app: Path) -> None:
+    _ensure_writable_target(target_app)
+    if not source_app.exists():
+        raise FileNotFoundError(f"Source app not found: {source_app}")
+
+    target_parent = target_app.parent
+    staging_app = target_parent / f"{target_app.name}.new"
+    backup_app = target_parent / f"{target_app.name}.old"
+
+    for stale in (staging_app, backup_app):
+        if stale.exists():
+            if stale.is_dir():
+                shutil.rmtree(stale)
+            else:
+                stale.unlink()
+
     try:
-        # Remove old app
+        shutil.copytree(source_app, staging_app, symlinks=True)
+        if not (staging_app / "Contents" / "Info.plist").exists():
+            raise RuntimeError("Staged bundle is incomplete")
+
         if target_app.exists():
-            shutil.rmtree(target_app)
+            target_app.rename(backup_app)
 
-        # Copy new app
-        shutil.copytree(source_app, target_app, symlinks=True)
+        staging_app.rename(target_app)
 
-        # Preserve executable permissions
-        for root, dirs, files in os.walk(target_app):
-            for name in files:
-                file_path = Path(root) / name
-                if file_path.suffix == "" or "MacOS" in str(file_path):
-                    try:
-                        file_path.chmod(0o755)
-                    except Exception:
-                        pass
+        if backup_app.exists():
+            try:
+                shutil.rmtree(backup_app)
+            except Exception:
+                # Backup cleanup should not fail the completed swap.
+                pass
+    except Exception:
+        try:
+            if staging_app.exists():
+                shutil.rmtree(staging_app)
+        except Exception:
+            pass
 
-        return True
-    except Exception as e:
-        print(f"Failed to replace app bundle: {e}", file=sys.stderr)
-        return False
+        try:
+            if backup_app.exists() and not target_app.exists():
+                backup_app.rename(target_app)
+        except Exception:
+            pass
+        raise
 
 
-def extract_zip(zip_path: Path, extract_to: Path) -> bool:
-    """Extract a ZIP file."""
+def replace_windows_exe(source_exe: Path, target_exe: Path) -> None:
+    backup_path = target_exe.with_suffix(".exe.old")
+    if backup_path.exists():
+        backup_path.unlink()
+
     try:
-        import zipfile
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_to)
-        return True
-    except Exception as e:
-        print(f"Failed to extract ZIP: {e}", file=sys.stderr)
-        return False
-
-
-def replace_windows_exe(source_exe: Path, target_exe: Path) -> bool:
-    """Replace Windows executable."""
-    try:
-        # Backup old exe
-        backup_path = target_exe.with_suffix('.exe.old')
-        if backup_path.exists():
-            backup_path.unlink()
-
         if target_exe.exists():
             shutil.move(str(target_exe), str(backup_path))
-
-        # Copy new exe
         shutil.copy2(str(source_exe), str(target_exe))
-
-        # Remove backup on success
         if backup_path.exists():
             backup_path.unlink()
-
-        return True
-    except Exception as e:
-        print(f"Failed to replace executable: {e}", file=sys.stderr)
-        # Try to restore backup
-        backup_path = target_exe.with_suffix('.exe.old')
+    except Exception:
         if backup_path.exists() and not target_exe.exists():
-            try:
-                shutil.move(str(backup_path), str(target_exe))
-            except Exception:
-                pass
-        return False
+            shutil.move(str(backup_path), str(target_exe))
+        raise
 
 
-def main():
-    parser = argparse.ArgumentParser(description="BMS Dashboard Update Helper")
-    parser.add_argument("--installer", required=True, help="Path to installer (DMG, ZIP, or EXE)")
-    parser.add_argument("--target-app", required=True, help="Path to app bundle/executable to replace")
-    parser.add_argument("--wait-pid", type=int, help="Wait for this PID to exit")
-    parser.add_argument("--relaunch", action="store_true", help="Relaunch app after update")
+def _install_from_zip(installer_path: Path, target_app: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="bms_update_extract_") as temp_dir:
+        temp_root = Path(temp_dir)
+        with zipfile.ZipFile(installer_path, "r") as zip_ref:
+            zip_ref.extractall(temp_root)
+        source_app = _find_app_bundle(temp_root)
+        if source_app is None:
+            raise RuntimeError("No .app bundle found in update ZIP payload")
+        atomic_replace_app_bundle(source_app, target_app)
 
-    args = parser.parse_args()
 
-    installer_path = Path(args.installer)
-    target_app = Path(args.target_app)
-    is_windows = sys.platform.startswith("win")
+def _install_from_dmg(installer_path: Path, target_app: Path) -> None:
+    success, mount_point = mount_dmg(installer_path)
+    if not success or not mount_point:
+        raise RuntimeError("Failed to mount DMG")
 
-    # Wait for main app to exit
-    if args.wait_pid:
-        print(f"Waiting for PID {args.wait_pid} to exit...")
-        if not wait_for_pid(args.wait_pid):
-            print("Timeout waiting for app to exit", file=sys.stderr)
+    try:
+        source_app = _find_app_bundle(Path(mount_point))
+        if source_app is None:
+            raise RuntimeError("No .app bundle found in DMG")
+        atomic_replace_app_bundle(source_app, target_app)
+    finally:
+        unmount_dmg(mount_point)
+
+
+def _relaunch_target(target_app: Path) -> None:
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", "-a", str(target_app)])
+        return
+    if sys.platform.startswith("win"):
+        subprocess.Popen([str(target_app)])
+        return
+    subprocess.Popen([str(target_app)])
+
+
+def run_update_helper(
+    *,
+    installer: Path,
+    target_app: Path,
+    wait_pid: int | None = None,
+    relaunch: bool = False,
+) -> int:
+    installer_path = installer.expanduser().resolve()
+    target_path = target_app.expanduser().resolve()
+
+    if wait_pid:
+        if not wait_for_pid(wait_pid):
+            print(f"Timeout waiting for process {wait_pid} to exit", file=sys.stderr)
             return 1
-        time.sleep(1)  # Extra grace period
+        time.sleep(0.75)
 
-    # Handle Windows EXE (direct replacement)
-    if is_windows and installer_path.suffix.lower() == ".exe":
-        print(f"Replacing {target_app} with {installer_path}")
-        if not replace_windows_exe(installer_path, target_app):
+    suffix = installer_path.suffix.lower()
+    try:
+        if sys.platform.startswith("win") and suffix == ".exe":
+            replace_windows_exe(installer_path, target_path)
+        elif suffix == ".zip":
+            _install_from_zip(installer_path, target_path)
+        elif suffix == ".dmg" and sys.platform == "darwin":
+            _install_from_dmg(installer_path, target_path)
+        else:
+            print(f"Unsupported update payload for this platform: {installer_path}", file=sys.stderr)
             return 1
-
-        if args.relaunch:
-            print(f"Relaunching {target_app}")
-            time.sleep(0.5)
-            subprocess.Popen([str(target_app)])
-
-        print("Update completed successfully")
-        return 0
-
-    # Handle DMG
-    if installer_path.suffix.lower() == ".dmg":
-        print(f"Mounting DMG: {installer_path}")
-        success, mount_point = mount_dmg(installer_path)
-        if not success:
-            return 1
-
-        try:
-            # Find .app bundle in mount point
-            mount_path = Path(mount_point)
-            app_bundles = list(mount_path.glob("*.app"))
-            if not app_bundles:
-                print("No .app bundle found in DMG", file=sys.stderr)
-                return 1
-
-            source_app = app_bundles[0]
-            print(f"Replacing {target_app} with {source_app}")
-
-            if not replace_app_bundle(source_app, target_app):
-                return 1
-
-        finally:
-            print(f"Unmounting {mount_point}")
-            unmount_dmg(mount_point)
-
-    # Handle ZIP
-    elif installer_path.suffix.lower() == ".zip":
-        print(f"Extracting ZIP: {installer_path}")
-        temp_dir = installer_path.parent / "extracted"
-        temp_dir.mkdir(exist_ok=True)
-
-        if not extract_zip(installer_path, temp_dir):
-            return 1
-
-        try:
-            # Find .app bundle in extracted folder
-            app_bundles = list(temp_dir.glob("*.app"))
-            if not app_bundles:
-                app_bundles = list(temp_dir.glob("*/*.app"))
-
-            if not app_bundles:
-                print("No .app bundle found in ZIP", file=sys.stderr)
-                return 1
-
-            source_app = app_bundles[0]
-            print(f"Replacing {target_app} with {source_app}")
-
-            if not replace_app_bundle(source_app, target_app):
-                return 1
-
-        finally:
-            # Clean up extracted files
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception:
-                pass
-
-    else:
-        print(f"Unsupported installer format: {installer_path.suffix}", file=sys.stderr)
+    except Exception as exc:
+        print(f"Update helper failed: {exc}", file=sys.stderr)
         return 1
 
-    # Relaunch app
-    if args.relaunch:
-        print(f"Relaunching {target_app}")
-        time.sleep(0.5)
-        subprocess.Popen(["open", "-a", str(target_app)])
-
-    print("Update completed successfully")
+    if relaunch:
+        time.sleep(0.35)
+        _relaunch_target(target_path)
     return 0
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="BMS Dashboard Update Helper")
+    parser.add_argument("--installer", required=True, help="Path to update payload")
+    parser.add_argument("--target-app", required=True, help="Path to installed app target")
+    parser.add_argument("--wait-pid", type=int, help="PID to wait for before applying update")
+    parser.add_argument("--relaunch", action="store_true", help="Relaunch app after install")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    return run_update_helper(
+        installer=Path(args.installer),
+        target_app=Path(args.target_app),
+        wait_pid=args.wait_pid,
+        relaunch=bool(args.relaunch),
+    )
 
 
 if __name__ == "__main__":
