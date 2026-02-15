@@ -266,168 +266,155 @@ function runRevealSequence() {
     ? { x: modelPulseTo.x * 0.88, y: modelPulseTo.y * 0.88, z: modelPulseTo.z * 0.88 }
     : null;
 
+  // Pre-set everything to GPU-composited layers before the timeline starts.
+  // This prevents mid-animation repaints that cause flicker.
+  const allAnimTargets = [
+    loaderContent, logoEl, loaderTitleEl, bootStageEl,
+    loaderBarEl, loaderMetaEl, sceneCanvas, hudRoot,
+    header, ...leftPanels, ...rightPanels, statusEl,
+  ].filter(Boolean);
+  gsap.set(allAnimTargets, { willChange: "transform, opacity" });
+
+  // Make scene and hud visible but fully transparent before anything moves.
+  // This avoids the flash from toggling visibility mid-frame.
+  if (sceneCanvas) gsap.set(sceneCanvas, { visibility: "visible", opacity: 0 });
+  if (hudRoot) gsap.set(hudRoot, { visibility: "visible", opacity: 0 });
+
   const tl = gsap.timeline({
-    defaults: { ease: "power3.out" },
+    defaults: { ease: "power3.out", force3D: true },
     onComplete: () => {
       bootState.hidden = true;
       bootState.phase = "complete";
       document.body.classList.remove("is-revealing");
+      // Clean up will-change to free GPU memory
+      gsap.set(allAnimTargets, { willChange: "auto", clearProps: "willChange" });
       if (bootLoaderEl) bootLoaderEl.remove();
       gsap.set(
-        [
-          loaderContent,
-          logoEl,
-          loaderTitleEl,
-          bootStageEl,
-          loaderBarEl,
-          loaderMetaEl,
-          sceneCanvas,
-          hudRoot,
-          detailPanel,
-          header,
-          ...leftPanels,
-          ...rightPanels,
-          statusEl,
-        ].filter(Boolean),
+        [sceneCanvas, hudRoot, detailPanel, header,
+         ...leftPanels, ...rightPanels, statusEl].filter(Boolean),
         { clearProps: "all" },
       );
     },
   });
 
-  tl.set([sceneCanvas, hudRoot].filter(Boolean), { visibility: "visible" }, 0);
-
-  // Phase 1: Glass card collapses — text slides down and fades, bar shrinks
+  // ── Phase 1: Glass card interior dissolves ──
   tl.to(
-    [loaderTitleEl, bootStageEl, loaderMetaEl].filter(Boolean),
+    [loaderTitleEl, bootStageEl, loaderBarEl, loaderMetaEl].filter(Boolean),
     {
       opacity: 0,
-      y: 18,
-      duration: 0.35,
-      stagger: 0.05,
-      ease: "power3.in",
+      y: 12,
+      duration: 0.4,
+      stagger: 0.04,
+      ease: "power2.in",
     },
     0,
   );
 
-  tl.to(
-    [loaderBarEl].filter(Boolean),
-    {
-      opacity: 0,
-      scaleX: 0.3,
-      duration: 0.3,
-      ease: "power3.in",
-    },
-    0.05,
-  );
-
-  // Phase 2: Logo lifts and morphs toward the 3D model position
+  // ── Phase 2: Logo drifts toward model and fades ──
   if (logoEl) {
     tl.to(
       logoEl,
       {
         x: logoMoveX,
         y: logoMoveY,
-        scale: 1.6,
+        scale: 1.5,
         opacity: 0,
-        duration: revealDuration * 0.55,
+        duration: revealDuration * 0.5,
         ease: "expo.inOut",
       },
-      0.15,
+      0.1,
     );
   }
 
-  // Phase 2b: Glass card scales down and dissolves
+  // ── Phase 2b: Glass card shrinks away ──
   if (loaderContent) {
     tl.to(
       loaderContent,
       {
         opacity: 0,
-        scale: 0.92,
-        y: 20,
-        duration: 0.5,
+        scale: 0.9,
+        duration: 0.55,
         ease: "power2.inOut",
       },
-      0.2,
+      0.15,
     );
   }
 
-  // Phase 3: 3D scene fades in with a soft bloom
+  // ── Phase 3: 3D scene fades in (opacity only — no CSS filter on canvas) ──
   if (sceneCanvas) {
-    tl.fromTo(
+    tl.to(
       sceneCanvas,
-      { opacity: 0, filter: "brightness(1.4) blur(4px)" },
       {
         opacity: 1,
-        filter: "brightness(1) blur(0px)",
-        duration: revealDuration * 0.5,
-        ease: "sine.out",
+        duration: revealDuration * 0.45,
+        ease: "power2.inOut",
       },
-      revealDuration * 0.22,
+      revealDuration * 0.2,
     );
   }
 
-  // Phase 3b: Model scales up from slightly smaller with a satisfying pop
+  // ── Phase 3b: Model scales up with a gentle spring ──
   if (loadedModel && modelPulseFrom && modelPulseTo) {
     tl.fromTo(
       loadedModel.scale,
       modelPulseFrom,
       {
         ...modelPulseTo,
-        duration: revealDuration * 0.45,
-        ease: "back.out(1.4)",
+        duration: revealDuration * 0.5,
+        ease: "back.out(1.2)",
       },
-      revealDuration * 0.25,
+      revealDuration * 0.22,
     );
   }
 
-  // Phase 4: HUD elements enter with staggered cascading slide
-  tl.add(() => {
-    if (hudRoot) gsap.set(hudRoot, { visibility: "visible", opacity: 1 });
-  }, revealDuration * 0.52);
+  // ── Phase 4: HUD fades in as a single layer first, then panels stagger ──
+  tl.to(
+    hudRoot,
+    { opacity: 1, duration: 0.01 },
+    revealDuration * 0.5,
+  );
 
   if (header) {
     tl.fromTo(
       header,
-      { opacity: 0, y: -20 },
-      { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" },
-      revealDuration * 0.54,
+      { opacity: 0, y: -16 },
+      { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" },
+      revealDuration * 0.52,
     );
   }
 
   tl.fromTo(
     leftPanels,
-    { opacity: 0, x: -40, scale: 0.95 },
+    { opacity: 0, x: -30 },
     {
       opacity: 1,
       x: 0,
-      scale: 1,
-      duration: 0.65,
-      stagger: 0.09,
+      duration: 0.7,
+      stagger: 0.08,
       ease: "expo.out",
     },
-    revealDuration * 0.58,
+    revealDuration * 0.56,
   );
 
   tl.fromTo(
     rightPanels,
-    { opacity: 0, x: 40, scale: 0.95 },
+    { opacity: 0, x: 30 },
     {
       opacity: 1,
       x: 0,
-      scale: 1,
-      duration: 0.65,
-      stagger: 0.09,
+      duration: 0.7,
+      stagger: 0.08,
       ease: "expo.out",
     },
-    revealDuration * 0.62,
+    revealDuration * 0.6,
   );
 
   if (statusEl) {
     tl.fromTo(
       statusEl,
-      { opacity: 0, y: 16, scale: 0.9 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(2)" },
-      revealDuration * 0.78,
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
+      revealDuration * 0.75,
     );
   }
 }
