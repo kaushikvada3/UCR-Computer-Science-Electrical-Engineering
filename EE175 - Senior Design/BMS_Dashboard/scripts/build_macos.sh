@@ -31,6 +31,12 @@ python scripts/optimize_pyinstaller_bundle.py --bundle-dir "dist/BMSDashboard.ap
 # Compatibility shim for older updater paths that search next to the app binary.
 cp -f backend/update_helper.py "dist/BMSDashboard.app/Contents/MacOS/update_helper.py"
 
+# Re-sign the bundle with an ad-hoc signature after modifying its contents.
+# PyInstaller ad-hoc signs the bundle during build; any file added afterwards
+# (like the update_helper.py shim above) invalidates that signature and causes
+# macOS Gatekeeper to report the app as "damaged".
+codesign --force --deep --sign - "dist/BMSDashboard.app"
+
 APP_BUNDLE="dist/BMSDashboard.app"
 DMG_PATH="dist/BMSDashboard-${VERSION}-macos-universal2.dmg"
 ZIP_PATH="dist/BMSDashboard-${VERSION}-macos-universal2.zip"
