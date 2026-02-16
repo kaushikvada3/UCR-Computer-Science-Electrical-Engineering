@@ -24,8 +24,7 @@
 <body class="is-booting">
   <div id="boot-loader" role="status" aria-live="polite" aria-label="Loading BMS Dashboard">
     <div id="boot-loader-content">
-      <img id="boot-logo" src="assets/branding/bms-logo.png" alt="BMS Logo" class="boot-loader__logo" />
-      <p class="boot-loader__title">BMS Dashboard</p>
+      <p class="boot-loader__label">BMS Dashboard</p>
       <p id="boot-stage" class="boot-loader__stage">Initializing dashboard...</p>
       <div class="boot-loader__bar" aria-hidden="true">
         <div id="boot-progress-fill" class="boot-loader__fill"></div>
@@ -35,6 +34,9 @@
         <span id="boot-detail" class="boot-loader__detail">Waiting to start...</span>
       </div>
     </div>
+  </div>
+  <div id="chrome-mask" aria-hidden="true">
+    <div class="chrome-mask__bar"></div>
   </div>
   <canvas id="scene"></canvas>
 

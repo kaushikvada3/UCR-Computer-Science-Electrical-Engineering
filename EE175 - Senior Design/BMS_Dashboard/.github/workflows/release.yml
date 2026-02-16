@@ -9,7 +9,27 @@ permissions:
   contents: write
 
 jobs:
+  validate-version:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate tag matches APP_VERSION
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          APP_VERSION="$(python -c 'from backend.version import APP_VERSION; print(APP_VERSION)')"
+          if [[ "${TAG_VERSION}" != "${APP_VERSION}" ]]; then
+            echo "Tag version (${TAG_VERSION}) does not match backend/version.py (${APP_VERSION})."
+            exit 1
+          fi
+
   build-windows:
+    needs: validate-version
     runs-on: windows-2022
     env:
       WIN_CERT_BASE64: ${{ secrets.WIN_CERT_BASE64 }}
@@ -40,6 +60,7 @@ jobs:
           path: dist/release/windows-x64/*
 
   build-macos:
+    needs: validate-version
     runs-on: macos-14
     env:
       APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
@@ -85,6 +106,7 @@ jobs:
           path: dist/release/macos-universal2/*
 
   build-linux:
+    needs: validate-version
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -130,10 +152,31 @@ jobs:
         env:
           REPO_SLUG: ${{ github.repository }}
           TAG_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
           LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
           LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
+          VERSION="${TAG_NAME#v}"
+
+          NOTES_FILE="release-artifacts/release-notes.md"
+          mkdir -p release-artifacts
+          if gh api \
+            --method POST \
+            "repos/${REPO_SLUG}/releases/generate-notes" \
+            -f tag_name="${TAG_NAME}" \
+            -f target_commitish="${GITHUB_SHA}" \
+            --jq '.body' > "${NOTES_FILE}" && [[ -s "${NOTES_FILE}" ]]; then
+            echo "Generated release notes from GitHub."
+          else
+            cat > "${NOTES_FILE}" <<EOF
+          ## BMS Dashboard v${VERSION}
+
+          - Reworked startup to a single-window 3D-to-GUI handoff with no reset/flash between loading and main UI.
+          - Added a model-first boot sequence with medium cinematic timing and mid-transition chrome cue.
+          - Improved startup visual fidelity and stability on both macOS and Windows.
+          EOF
+          fi
 
           WINDOWS_SRC="$(find release-artifacts/windows-release -type f -name 'BMSDashboard-windows-x64-setup.exe' | head -n1 || true)"
           MACOS_ZIP_SRC="$(find release-artifacts/macos-release -type f -name 'BMSDashboard-macos-universal2.zip' | head -n1 || true)"
@@ -188,11 +231,11 @@ jobs:
             fi
           fi
 
-          VERSION="${TAG_NAME#v}"
           ARGS=(
             --output release-artifacts/release-manifest.json
             --version "${VERSION}"
             --channel stable
+            --notes-file "${NOTES_FILE}"
             --repo "${REPO_SLUG}"
             --tag "${TAG_NAME}"
             --windows-file "${WINDOWS_FILE}"
@@ -215,5 +258,6 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release-artifacts/release-notes.md
           files: |
             release-artifacts/upload/*

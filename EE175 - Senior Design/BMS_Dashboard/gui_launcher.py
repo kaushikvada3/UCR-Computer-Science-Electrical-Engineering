@@ -17,11 +17,8 @@ from typing import Any, Optional
 
 from packaging.version import InvalidVersion, Version
 from PyQt6.QtCore import (
-    QEasingCurve,
     QFileSystemWatcher,
     QObject,
-    QParallelAnimationGroup,
-    QPropertyAnimation,
     QRect,
     QThread,
     QTimer,
@@ -30,7 +27,7 @@ from PyQt6.QtCore import (
     pyqtSignal,
     pyqtSlot,
 )
-from PyQt6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPixmap
+from PyQt6.QtGui import QAction, QColor, QIcon
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
@@ -41,7 +38,6 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QProgressBar,
-    QSplashScreen,
 )
 
 from backend.data_stream import SerialWorker
@@ -64,12 +60,9 @@ SERIAL_AUTO_LABEL = "Auto-detect"
 SERIAL_PORT_DEFAULT_SENTINEL = "__default__"
 DEFAULT_WINDOW_WIDTH = 1400
 DEFAULT_WINDOW_HEIGHT = 900
-STARTUP_SHELL_WIDTH = DEFAULT_WINDOW_WIDTH
-STARTUP_SHELL_HEIGHT = DEFAULT_WINDOW_HEIGHT
 STARTUP_MIN_DURATION_MS = 3000
 BOOT_POLL_INTERVAL_MS = 120
 BOOT_POLL_TIMEOUT_MS = 30000
-WINDOW_MORPH_DURATION_MS = 1200
 
 
 def runtime_root() -> Path:
@@ -109,12 +102,28 @@ def resolve_entrypoint(requested: Optional[Path]) -> Path:
 
 
 def find_app_icon_path() -> Optional[Path]:
-    candidate_sets = [
-        ("assets", "icons", "app_icon.ico"),
-        ("assets", "icons", "app_icon.png"),
-        ("assets", "icons", "app_icon.icns"),
-        ("BMS Logo.png",),
-    ]
+    if sys.platform.startswith("win"):
+        candidate_sets = [
+            ("assets", "icons", "app_icon.ico"),
+            ("assets", "icons", "app_icon.png"),
+            ("assets", "icons", "app_icon.icns"),
+            ("BMS Logo.png",),
+        ]
+    elif sys.platform == "darwin":
+        candidate_sets = [
+            ("assets", "icons", "app_icon.icns"),
+            ("assets", "icons", "app_icon.png"),
+            ("assets", "icons", "app_icon.ico"),
+            ("BMS Logo.png",),
+        ]
+    else:
+        candidate_sets = [
+            ("assets", "icons", "app_icon.png"),
+            ("assets", "icons", "app_icon.icns"),
+            ("assets", "icons", "app_icon.ico"),
+            ("BMS Logo.png",),
+        ]
+
     for parts in candidate_sets:
         path = resolve_resource(*parts)
         if path.exists():
@@ -208,7 +217,8 @@ class DashboardWindow(QMainWindow):
         self._boot_poll_timeout_ms: int = BOOT_POLL_TIMEOUT_MS
         self._boot_last_state: Optional[dict[str, Any]] = None
         self._startup_transition_done: bool = False
-        self._startup_transition_animation: Optional[QParallelAnimationGroup] = None
+        self._chrome_cue_applied: bool = False
+        self._startup_connection_target_last: Optional[bool] = None
         self._boot_poll_timer = QTimer(self)
         self._boot_poll_timer.setInterval(self._boot_poll_interval_ms)
         self._boot_poll_timer.timeout.connect(self._poll_boot_state_once)
@@ -277,10 +287,18 @@ class DashboardWindow(QMainWindow):
 
     def handle_connected_port_change(self, connected_port: str):
         self._current_connected_port = connected_port or ""
+        if not self._startup_transition_done:
+            self._send_startup_connection_target()
         self._refresh_status_bar()
 
     def _set_frontend_connection_state(self, connected: bool):
         state_js = "true" if connected else "false"
+        if not self._startup_transition_done:
+            self._startup_connection_target_last = bool(connected)
+            self.view.page().runJavaScript(
+                f"if(window.__bmsSetStartupConnectionTarget) window.__bmsSetStartupConnectionTarget({state_js});"
+            )
+            return
         self.view.page().runJavaScript(
             f"if(window.setConnectionStatus) window.setConnectionStatus({state_js});"
         )
@@ -317,26 +335,40 @@ class DashboardWindow(QMainWindow):
         return QRect(x, y, w, h)
 
     def _enter_startup_shell_mode(self) -> None:
-        startup_flags = Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setAutoFillBackground(False)
-        self.setStyleSheet("QMainWindow { background: transparent; }")
-        self.setWindowFlags(startup_flags)
-        screen = QApplication.primaryScreen()
-        if screen is not None:
-            avail = screen.availableGeometry()
-            sw = min(STARTUP_SHELL_WIDTH, avail.width() - 40)
-            sh = min(STARTUP_SHELL_HEIGHT, avail.height() - 40)
-            self.resize(sw, sh)
-        else:
-            self.resize(STARTUP_SHELL_WIDTH, STARTUP_SHELL_HEIGHT)
-        self._center_window()
-        self.view.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.view.setStyleSheet("background: transparent;")
-        self.view.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        self.setWindowFlags(self._normal_window_flags | Qt.WindowType.Window)
+        self.setGeometry(self._target_dashboard_geometry())
+        self.setWindowOpacity(1.0)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        self.setAutoFillBackground(True)
+        self.setStyleSheet("")
+        self.view.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        self.view.setStyleSheet("")
+        self.view.page().setBackgroundColor(QColor(10, 12, 16))
         if self.toolbar:
             self.toolbar.setVisible(False)
         self.statusBar().setVisible(False)
+        self._chrome_cue_applied = False
+
+    def _apply_chrome_cue(self) -> None:
+        if self._chrome_cue_applied:
+            return
+        if self.toolbar:
+            self.toolbar.setVisible(True)
+        self.statusBar().setVisible(True)
+        self.statusBar().showMessage("Starting dashboard...")
+        self._chrome_cue_applied = True
+
+    def _send_startup_connection_target(self, force: bool = False) -> None:
+        if self._startup_transition_done and not force:
+            return
+        is_connected = self.serial_worker.get_connected_port() is not None
+        if not force and self._startup_connection_target_last is is_connected:
+            return
+        self._startup_connection_target_last = is_connected
+        state_js = "true" if is_connected else "false"
+        self.view.page().runJavaScript(
+            f"if(window.__bmsSetStartupConnectionTarget) window.__bmsSetStartupConnectionTarget({state_js});"
+        )
 
     def _on_view_load_finished(self, ok: bool) -> None:
         if self._startup_transition_done:
@@ -352,6 +384,7 @@ class DashboardWindow(QMainWindow):
             return
         if self._boot_poll_timer.isActive():
             return
+        self._send_startup_connection_target(force=True)
         self._boot_poll_timer.start()
         self._poll_boot_state_once()
 
@@ -383,8 +416,21 @@ class DashboardWindow(QMainWindow):
         elapsed_ms = (time.monotonic() - self._startup_started_at) * 1000.0
         min_time_met = elapsed_ms >= self._startup_min_duration_ms
 
-        ready_by_js = bool(state_dict and state_dict.get("hidden") is True)
-        errored = bool(state_dict and state_dict.get("errored") is True)
+        phase = ""
+        if state_dict is not None:
+            phase = str(state_dict.get("phase", "")).strip().lower()
+
+        if phase == "chrome_cue":
+            self._apply_chrome_cue()
+
+        ready_by_js = bool(
+            state_dict
+            and (phase == "complete" or state_dict.get("hidden") is True)
+        )
+        errored = bool(
+            state_dict
+            and (phase == "error" or state_dict.get("errored") is True)
+        )
 
         if ready_by_js and min_time_met:
             self._transition_to_full_dashboard_window("boot-ready")
@@ -402,51 +448,10 @@ class DashboardWindow(QMainWindow):
         if self._boot_poll_timer.isActive():
             self._boot_poll_timer.stop()
 
-        self.setUpdatesEnabled(False)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self.setAutoFillBackground(True)
-        self.setStyleSheet("")
-
-        # On Windows, WA_TranslucentBackground permanently strips the native
-        # frame even after being disabled.  Force standard decorated flags so
-        # the title-bar with minimize / maximize / close buttons is restored.
-        decorated_flags = (
-            Qt.WindowType.Window
-            | Qt.WindowType.WindowMinimizeButtonHint
-            | Qt.WindowType.WindowMaximizeButtonHint
-            | Qt.WindowType.WindowCloseButtonHint
-            | Qt.WindowType.WindowTitleHint
-            | Qt.WindowType.WindowSystemMenuHint
-        )
-        self.setWindowFlags(decorated_flags)
-
-        self.setMinimumSize(0, 0)
-        self.setMaximumSize(16777215, 16777215)
-        self.view.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self.view.setStyleSheet("")
-        self.view.page().setBackgroundColor(QColor(0, 0, 0))
-
-        if self.toolbar:
-            self.toolbar.setVisible(True)
-        self.statusBar().setVisible(True)
-
-        # Always call show() – setWindowFlags hides the window, and the
-        # native frame must be re-created for the controls to appear.
-        self.show()
-        self.raise_()
-        self.activateWindow()
-        self.setUpdatesEnabled(True)
-
-        if self._startup_transition_animation is not None:
-            self._startup_transition_animation.stop()
-            self._startup_transition_animation.deleteLater()
-            self._startup_transition_animation = None
-        self.setWindowOpacity(1.0)
+        self._apply_chrome_cue()
         self._finish_startup_transition(reason)
 
     def _finish_startup_transition(self, reason: str) -> None:
-        self._startup_transition_animation = None
-        self.setWindowOpacity(1.0)
 
         if reason == "boot-error":
             self.statusBar().showMessage("Startup error: frontend boot failed.", 10000)
@@ -456,6 +461,10 @@ class DashboardWindow(QMainWindow):
             self.statusBar().showMessage("Startup page load failed: opening dashboard anyway.", 10000)
         else:
             self._refresh_status_bar()
+
+        self._send_startup_connection_target(force=True)
+        current_connected = self.serial_worker.get_connected_port() is not None
+        self._set_frontend_connection_state(current_connected)
 
         if self.is_packaged:
             QTimer.singleShot(800, self._resume_staged_update_if_ready)
@@ -498,11 +507,6 @@ class DashboardWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         if self._boot_poll_timer.isActive():
             self._boot_poll_timer.stop()
-        if self._startup_transition_animation is not None:
-            self._startup_transition_animation.stop()
-            self._startup_transition_animation.deleteLater()
-            self._startup_transition_animation = None
-
         if hasattr(self, "serial_worker"):
             self.serial_worker.stop()
             self.serial_thread.quit()
@@ -1063,65 +1067,6 @@ class DashboardWindow(QMainWindow):
                     return f"{int(size)} {unit}"
                 return f"{size:.1f} {unit}"
             size /= 1024.0
-
-
-def _create_splash(logo_path: Optional[Path]) -> Optional[QSplashScreen]:
-    """Build a dark-themed splash screen with the BMS logo and loading text."""
-    SPLASH_W, SPLASH_H = 520, 580
-    LOGO_SIZE = 380
-    BG_COLOR = QColor(13, 13, 15)          # #0d0d0f
-    TITLE_COLOR = QColor(230, 232, 240)
-    SUBTITLE_COLOR = QColor(150, 150, 170)
-
-    canvas = QPixmap(SPLASH_W, SPLASH_H)
-    canvas.fill(BG_COLOR)
-
-    painter = QPainter(canvas)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-    # ── Draw the logo centred in the upper area ──
-    if logo_path and logo_path.exists():
-        logo_pix = QPixmap(str(logo_path))
-        if not logo_pix.isNull():
-            logo_pix = logo_pix.scaled(
-                LOGO_SIZE, LOGO_SIZE,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            x = (SPLASH_W - logo_pix.width()) // 2
-            y = 30
-            painter.drawPixmap(x, y, logo_pix)
-
-    # ── Title text ──
-    title_font = QFont("Inter", 22, QFont.Weight.Bold)
-    painter.setFont(title_font)
-    painter.setPen(TITLE_COLOR)
-    painter.drawText(
-        0, SPLASH_H - 110, SPLASH_W, 40,
-        Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
-        "BMS Dashboard",
-    )
-
-    # ── Subtitle / version ──
-    sub_font = QFont("Inter", 11)
-    painter.setFont(sub_font)
-    painter.setPen(SUBTITLE_COLOR)
-    painter.drawText(
-        0, SPLASH_H - 75, SPLASH_W, 30,
-        Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
-        f"v{APP_VERSION}  ·  UCR EV Lab",
-    )
-
-    painter.end()
-
-    splash = QSplashScreen(canvas, Qt.WindowType.WindowStaysOnTopHint)
-    splash.showMessage(
-        "Initializing...",
-        Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
-        SUBTITLE_COLOR,
-    )
-    return splash
 
 
 def parse_args() -> argparse.Namespace:

@@ -35,20 +35,15 @@ const BOOT_STAGE_WEIGHTS = {
   finalize: 0.05,
 };
 const BOOT_REVEAL_HOLD_MS = 450;
-const BOOT_REVEAL_DURATION_MS = 2400;
-const STARTUP_HANDOFF_TARGET = {
-  windowWidth: 1400,
-  windowHeight: 900,
-  chromeHeight: 64,
-  focusLiftRatio: 0.06,
-  yBiasRatio: 0.08,
-};
+const BOOT_REVEAL_DURATION_MS = 1600;
 
 const bootLoaderEl = document.getElementById("boot-loader");
 const bootProgressFillEl = document.getElementById("boot-progress-fill");
 const bootPercentEl = document.getElementById("boot-percent");
 const bootStageEl = document.getElementById("boot-stage");
 const bootDetailEl = document.getElementById("boot-detail");
+const chromeMaskEl = document.getElementById("chrome-mask");
+const chromeMaskBarEl = document.querySelector(".chrome-mask__bar");
 
 const bootState = {
   stage: "bootstrap",
@@ -66,9 +61,12 @@ const bootState = {
   hidden: false,
   errored: false,
   hideStarted: false,
+  handoffProgress: 0,
+  chromeCueSent: false,
   phase: "loading",
 };
 let bootRevealHoldTimer = 0;
+let startupConnectionTarget = false;
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, Number(value) || 0));
@@ -150,9 +148,9 @@ function maybeFinishBootLoader() {
   if (!(bootState.uiReady && bootState.modelReady)) return;
 
   bootState.hideStarted = true;
-  bootState.phase = "finalize-hold";
+  bootState.phase = "loading";
   setBootStage("finalize", "Finalizing startup...");
-  setBootDetail("Preparing cinematic transition...");
+  setBootDetail("Preparing model handoff...");
   setBootStageProgress("finalize", 1);
 
   if (bootRevealHoldTimer) {
@@ -165,71 +163,8 @@ function maybeFinishBootLoader() {
   }, BOOT_REVEAL_HOLD_MS);
 }
 
-function projectWorldPointToScreen(point, viewportWidth, viewportHeight, aspectOverride = 0) {
-  if (!point || !camera) {
-    return {
-      x: viewportWidth * 0.5,
-      y: viewportHeight * 0.5,
-    };
-  }
-
-  let projectionCamera = camera;
-  if (Number.isFinite(aspectOverride) && aspectOverride > 0) {
-    projectionCamera = camera.clone();
-    projectionCamera.aspect = aspectOverride;
-    projectionCamera.updateProjectionMatrix();
-    projectionCamera.position.copy(camera.position);
-    projectionCamera.quaternion.copy(camera.quaternion);
-    projectionCamera.updateMatrixWorld(true);
-  }
-
-  const projected = point.clone().project(projectionCamera);
-  if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y)) {
-    return {
-      x: viewportWidth * 0.5,
-      y: viewportHeight * 0.5,
-    };
-  }
-
-  return {
-    x: ((projected.x + 1) * 0.5) * viewportWidth,
-    y: ((1 - projected.y) * 0.5) * viewportHeight,
-  };
-}
-
-function getModelHandoffScreenPoint() {
-  const viewportWidth = Math.max(window.innerWidth, 1);
-  const viewportHeight = Math.max(window.innerHeight, 1);
-  const fallback = { x: viewportWidth * 0.5, y: viewportHeight * 0.5 };
-  if (!loadedModel || !camera || !controls) return fallback;
-
-  const bounds = new THREE.Box3().setFromObject(loadedModel);
-  const focusPoint = bounds.isEmpty()
-    ? controls.target.clone()
-    : bounds.getCenter(new THREE.Vector3());
-  if (!bounds.isEmpty()) {
-    const size = bounds.getSize(new THREE.Vector3());
-    focusPoint.y += size.y * STARTUP_HANDOFF_TARGET.focusLiftRatio;
-  }
-
-  const targetCanvasHeight = Math.max(
-    STARTUP_HANDOFF_TARGET.windowHeight - STARTUP_HANDOFF_TARGET.chromeHeight,
-    1,
-  );
-  const targetAspect = STARTUP_HANDOFF_TARGET.windowWidth / targetCanvasHeight;
-  const projected = projectWorldPointToScreen(focusPoint, viewportWidth, viewportHeight, targetAspect);
-  const biasedY = projected.y + (viewportHeight * STARTUP_HANDOFF_TARGET.yBiasRatio);
-
-  return {
-    x: clamp(projected.x, 0, viewportWidth),
-    y: clamp(biasedY, 0, viewportHeight),
-  };
-}
-
 function runRevealSequence() {
   const loaderContent = document.getElementById("boot-loader-content");
-  const logoEl = document.getElementById("boot-logo");
-  const loaderTitleEl = document.querySelector(".boot-loader__title");
   const loaderBarEl = document.querySelector(".boot-loader__bar");
   const loaderMetaEl = document.querySelector(".boot-loader__meta");
   const sceneCanvas = document.getElementById("scene");
@@ -237,184 +172,230 @@ function runRevealSequence() {
   const detailPanel = document.querySelector(".detail-panel");
   const header = document.querySelector(".hud__header");
 
-  if (!bootLoaderEl || !gsap) {
+  const finishImmediately = () => {
+    const startupBlend = startupConnectionTarget ? 1 : 0;
+    connectionVisualProgress = startupBlend;
+    connectionTransitionFrom = startupBlend;
+    connectionTransitionTo = startupBlend;
+    connectionTransitionActive = false;
+    applyShellTransparency(startupBlend);
+    applyModelConnectionPose(startupBlend);
+
+    bootState.chromeCueSent = true;
+    bootState.handoffProgress = 1;
     bootState.hidden = true;
     bootState.phase = "complete";
+    document.body.classList.add("boot-chrome-cue");
     document.body.classList.remove("is-booting", "is-revealing");
     if (bootLoaderEl) bootLoaderEl.remove();
+    if (hudRoot) {
+      hudRoot.style.visibility = "visible";
+      hudRoot.style.opacity = "1";
+    }
+    if (detailPanel) {
+      detailPanel.style.visibility = "visible";
+      detailPanel.style.opacity = "1";
+    }
+    if (sceneCanvas) {
+      sceneCanvas.style.visibility = "visible";
+      sceneCanvas.style.opacity = "1";
+    }
+    if (chromeMaskBarEl) {
+      chromeMaskBarEl.style.opacity = "0";
+      chromeMaskBarEl.style.transform = "translateY(-18px)";
+    }
+  };
+
+  if (!bootLoaderEl || !gsap) {
+    finishImmediately();
     return;
   }
+
   const leftPanels = gsap.utils.toArray(".left-column .glass-panel");
   const rightPanels = gsap.utils.toArray(".right-column .glass-panel");
   const statusEl = document.querySelector(".status");
 
-  bootState.phase = "reveal";
+  bootState.phase = "handoff";
+  bootState.handoffProgress = 0;
+  bootState.chromeCueSent = false;
   document.body.classList.add("is-revealing");
   document.body.classList.remove("is-booting");
 
   const revealDuration = BOOT_REVEAL_DURATION_MS / 1000;
-  const handoffPoint = getModelHandoffScreenPoint();
-  const logoRect = logoEl?.getBoundingClientRect() || null;
-  const logoCenterX = logoRect ? (logoRect.left + (logoRect.width * 0.5)) : (window.innerWidth * 0.5);
-  const logoCenterY = logoRect ? (logoRect.top + (logoRect.height * 0.5)) : (window.innerHeight * 0.5);
-  const logoMoveX = handoffPoint.x - logoCenterX;
-  const logoMoveY = handoffPoint.y - logoCenterY;
-  const modelPulseTo = loadedModel
+  const modelTargetBlend = startupConnectionTarget ? 1 : 0;
+  const cameraEnd = camera.position.clone();
+  const targetEnd = controls.target.clone();
+  const cameraStart = cameraEnd.clone().add(new THREE.Vector3(1.6, 1.2, 2.9));
+  const targetStart = targetEnd.clone().add(new THREE.Vector3(-0.35, 0.16, 0.12));
+  camera.position.copy(cameraStart);
+  controls.target.copy(targetStart);
+  controls.update();
+
+  const modelScaleTo = loadedModel
     ? { x: loadedModel.scale.x, y: loadedModel.scale.y, z: loadedModel.scale.z }
     : null;
-  const modelPulseFrom = modelPulseTo
-    ? { x: modelPulseTo.x * 0.88, y: modelPulseTo.y * 0.88, z: modelPulseTo.z * 0.88 }
+  const modelScaleFrom = modelScaleTo
+    ? { x: modelScaleTo.x * 0.92, y: modelScaleTo.y * 0.92, z: modelScaleTo.z * 0.92 }
     : null;
 
-  // Pre-set everything to GPU-composited layers before the timeline starts.
-  // This prevents mid-animation repaints that cause flicker.
   const allAnimTargets = [
-    loaderContent, logoEl, loaderTitleEl, bootStageEl,
-    loaderBarEl, loaderMetaEl, sceneCanvas, hudRoot,
-    header, ...leftPanels, ...rightPanels, statusEl,
+    loaderContent, bootStageEl, loaderBarEl, loaderMetaEl,
+    hudRoot, detailPanel, header, statusEl,
+    chromeMaskEl, chromeMaskBarEl, ...leftPanels, ...rightPanels,
   ].filter(Boolean);
   gsap.set(allAnimTargets, { willChange: "transform, opacity" });
 
-  // Make scene and hud visible but fully transparent before anything moves.
-  // This avoids the flash from toggling visibility mid-frame.
-  if (sceneCanvas) gsap.set(sceneCanvas, { visibility: "visible", opacity: 0 });
+  if (sceneCanvas) gsap.set(sceneCanvas, { visibility: "visible", opacity: 1 });
   if (hudRoot) gsap.set(hudRoot, { visibility: "visible", opacity: 0 });
+  if (detailPanel) gsap.set(detailPanel, { visibility: "visible", opacity: 0 });
+  if (chromeMaskBarEl) gsap.set(chromeMaskBarEl, { opacity: 1, y: 0 });
+
+  const cameraBlend = { t: 0 };
+  const connectionBlend = { t: connectionVisualProgress };
 
   const tl = gsap.timeline({
-    defaults: { ease: "power3.out", force3D: true },
+    defaults: { ease: "power3.out" },
+    onUpdate: () => {
+      const progress = Number(tl.progress().toFixed(3));
+      bootState.handoffProgress = progress;
+      if (!bootState.chromeCueSent && progress >= 0.52) {
+        bootState.chromeCueSent = true;
+        bootState.phase = "chrome_cue";
+        document.body.classList.add("boot-chrome-cue");
+      }
+    },
     onComplete: () => {
       bootState.hidden = true;
       bootState.phase = "complete";
+      bootState.handoffProgress = 1;
       document.body.classList.remove("is-revealing");
-      // Clean up will-change to free GPU memory
       gsap.set(allAnimTargets, { willChange: "auto", clearProps: "willChange" });
       if (bootLoaderEl) bootLoaderEl.remove();
       gsap.set(
-        [sceneCanvas, hudRoot, detailPanel, header,
-         ...leftPanels, ...rightPanels, statusEl].filter(Boolean),
+        [sceneCanvas, hudRoot, detailPanel, header, statusEl, ...leftPanels, ...rightPanels].filter(Boolean),
         { clearProps: "all" },
       );
+      if (chromeMaskBarEl) {
+        gsap.set(chromeMaskBarEl, { opacity: 0, y: -18 });
+      }
     },
   });
 
-  // ── Phase 1: Glass card interior dissolves ──
   tl.to(
-    [loaderTitleEl, bootStageEl, loaderBarEl, loaderMetaEl].filter(Boolean),
+    cameraBlend,
     {
-      opacity: 0,
-      y: 12,
-      duration: 0.4,
-      stagger: 0.04,
-      ease: "power2.in",
+      t: 1,
+      duration: revealDuration * 0.35,
+      ease: "expo.out",
+      onUpdate: () => {
+        camera.position.lerpVectors(cameraStart, cameraEnd, cameraBlend.t);
+        controls.target.lerpVectors(targetStart, targetEnd, cameraBlend.t);
+        controls.update();
+      },
     },
     0,
   );
 
-  // ── Phase 2: Logo drifts toward model and fades ──
-  if (logoEl) {
-    tl.to(
-      logoEl,
-      {
-        x: logoMoveX,
-        y: logoMoveY,
-        scale: 1.5,
-        opacity: 0,
-        duration: revealDuration * 0.5,
-        ease: "expo.inOut",
-      },
-      0.1,
-    );
-  }
-
-  // ── Phase 2b: Glass card shrinks away ──
-  if (loaderContent) {
-    tl.to(
-      loaderContent,
-      {
-        opacity: 0,
-        scale: 0.9,
-        duration: 0.55,
-        ease: "power2.inOut",
-      },
-      0.15,
-    );
-  }
-
-  // ── Phase 3: 3D scene fades in (opacity only — no CSS filter on canvas) ──
-  if (sceneCanvas) {
-    tl.to(
-      sceneCanvas,
-      {
-        opacity: 1,
-        duration: revealDuration * 0.45,
-        ease: "power2.inOut",
-      },
-      revealDuration * 0.2,
-    );
-  }
-
-  // ── Phase 3b: Model scales up with a gentle spring ──
-  if (loadedModel && modelPulseFrom && modelPulseTo) {
+  if (loadedModel && modelScaleFrom && modelScaleTo) {
     tl.fromTo(
       loadedModel.scale,
-      modelPulseFrom,
+      modelScaleFrom,
       {
-        ...modelPulseTo,
-        duration: revealDuration * 0.5,
-        ease: "back.out(1.2)",
+        ...modelScaleTo,
+        duration: revealDuration * 0.32,
+        ease: "back.out(1.25)",
       },
-      revealDuration * 0.22,
+      revealDuration * 0.08,
     );
   }
 
-  // ── Phase 4: HUD fades in as a single layer first, then panels stagger ──
+  tl.to(
+    connectionBlend,
+    {
+      t: modelTargetBlend,
+      duration: revealDuration * 0.60,
+      ease: "sine.inOut",
+      onStart: () => {
+        connectionTransitionActive = false;
+      },
+      onUpdate: () => {
+        connectionVisualProgress = connectionBlend.t;
+        applyShellTransparency(connectionVisualProgress);
+        applyModelConnectionPose(connectionVisualProgress);
+      },
+    },
+    revealDuration * 0.15,
+  );
+
+  tl.to(
+    chromeMaskBarEl,
+    {
+      opacity: 0,
+      y: -18,
+      duration: revealDuration * 0.32,
+      ease: "power2.out",
+    },
+    revealDuration * 0.52,
+  );
+
+  tl.to(
+    loaderContent,
+    {
+      opacity: 0,
+      y: 10,
+      duration: revealDuration * 0.22,
+      ease: "power2.in",
+    },
+    revealDuration * 0.78,
+  );
+
   tl.to(
     hudRoot,
-    { opacity: 1, duration: 0.01 },
-    revealDuration * 0.5,
+    { opacity: 1, duration: revealDuration * 0.24, ease: "power2.out" },
+    revealDuration * 0.45,
   );
 
   if (header) {
     tl.fromTo(
       header,
       { opacity: 0, y: -16 },
-      { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" },
-      revealDuration * 0.52,
+      { opacity: 1, y: 0, duration: revealDuration * 0.26, ease: "power3.out" },
+      revealDuration * 0.49,
     );
   }
 
   tl.fromTo(
     leftPanels,
-    { opacity: 0, x: -30 },
+    { opacity: 0, x: -24 },
     {
       opacity: 1,
       x: 0,
-      duration: 0.7,
-      stagger: 0.08,
-      ease: "expo.out",
+      duration: revealDuration * 0.30,
+      stagger: revealDuration * 0.03,
+      ease: "power3.out",
     },
-    revealDuration * 0.56,
+    revealDuration * 0.54,
   );
 
   tl.fromTo(
     rightPanels,
-    { opacity: 0, x: 30 },
+    { opacity: 0, x: 24 },
     {
       opacity: 1,
       x: 0,
-      duration: 0.7,
-      stagger: 0.08,
-      ease: "expo.out",
+      duration: revealDuration * 0.30,
+      stagger: revealDuration * 0.03,
+      ease: "power3.out",
     },
-    revealDuration * 0.6,
+    revealDuration * 0.58,
   );
 
   if (statusEl) {
     tl.fromTo(
       statusEl,
-      { opacity: 0, y: 12 },
-      { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
-      revealDuration * 0.75,
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: revealDuration * 0.22, ease: "power2.out" },
+      revealDuration * 0.70,
     );
   }
 }
@@ -443,6 +424,7 @@ function setBootError(message, error = null) {
     bootRevealHoldTimer = 0;
   }
   bootState.errored = true;
+  bootState.handoffProgress = 0;
   bootState.phase = "error";
   if (bootLoaderEl) {
     bootLoaderEl.classList.remove("is-hidden");
@@ -456,6 +438,14 @@ function setBootError(message, error = null) {
   }
 }
 
+window.__bmsSetStartupConnectionTarget = function __bmsSetStartupConnectionTarget(connected) {
+  startupConnectionTarget = Boolean(connected);
+  return {
+    ok: true,
+    target: startupConnectionTarget,
+  };
+};
+
 window.__bmsBootDebug = function __bmsBootDebug() {
   return {
     stage: bootState.stage,
@@ -467,6 +457,7 @@ window.__bmsBootDebug = function __bmsBootDebug() {
     hidden: bootState.hidden,
     errored: bootState.errored,
     phase: bootState.phase,
+    handoffProgress: Number((bootState.handoffProgress || 0).toFixed(3)),
   };
 };
 
@@ -3025,6 +3016,19 @@ function positionDetailPanel() {
 
 window.setConnectionStatus = setConnectionStatus;
 setConnectionStatus(false);
+
+// Compatibility helper for explicit hard-snap requests.
+// The startup handoff now prefers __bmsSetStartupConnectionTarget().
+window.setConnectionStatusInstant = function (connected) {
+  const target = connected ? 1 : 0;
+  connectionVisualProgress = target;
+  connectionTransitionTo = target;
+  connectionTransitionFrom = target;
+  connectionTransitionActive = false;
+  applyShellTransparency(target);
+  applyModelConnectionPose(target);
+  setConnectionStatus(connected);
+};
 
 function updateHud(data) {
   const cells = Array.isArray(data.cells) ? data.cells : [];
