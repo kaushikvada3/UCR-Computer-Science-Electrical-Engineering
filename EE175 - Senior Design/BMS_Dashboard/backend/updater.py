@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -51,13 +52,24 @@ class UpdateInfo:
 DEFAULT_UPDATE_REPO_SLUG = "kaushikvada3/UCR-Computer-Science-Electrical-Engineering"
 
 
-def default_update_log_path() -> Path:
-    local_appdata = os.environ.get("LOCALAPPDATA", "").strip()
-    if local_appdata:
-        base_dir = Path(local_appdata)
+def _default_update_state_root() -> Path:
+    if sys.platform.startswith("win"):
+        local_appdata = os.environ.get("LOCALAPPDATA", "").strip()
+        base_dir = Path(local_appdata) if local_appdata else Path.home() / "AppData" / "Local"
+    elif sys.platform == "darwin":
+        base_dir = Path.home() / "Library" / "Application Support"
     else:
-        base_dir = Path.home() / "AppData" / "Local"
-    return base_dir / "BMS Dashboard" / "logs" / "update.log"
+        state_home = os.environ.get("XDG_STATE_HOME", "").strip()
+        base_dir = Path(state_home) if state_home else Path.home() / ".local" / "state"
+    return base_dir / "BMS Dashboard"
+
+
+def default_update_log_path() -> Path:
+    return _default_update_state_root() / "logs" / "update.log"
+
+
+def default_update_result_path() -> Path:
+    return _default_update_state_root() / "updates" / "last-result.json"
 
 
 def _append_update_log(message: str, log_path: Optional[Path] = None) -> Path:
@@ -431,6 +443,8 @@ class ReleaseUpdater:
         installer_path: Path,
         app_bundle_path: Optional[Path] = None,
         log_path: Optional[Path] = None,
+        version: str = "",
+        result_path: Optional[Path] = None,
     ) -> Dict[str, str]:
         installer_path = installer_path.resolve()
         log_file = _append_update_log(f"Preparing seamless update: {installer_path}", log_path)
@@ -459,6 +473,7 @@ class ReleaseUpdater:
                 app_bundle_path = Path(sys.executable).resolve()
 
         if sys.platform == "darwin":
+            helper_result_path = (result_path or default_update_result_path()).expanduser()
             helper_args = [
                 str(Path(sys.executable).resolve()),
                 "--run-update-helper",
@@ -469,16 +484,37 @@ class ReleaseUpdater:
                 "--wait-pid",
                 str(os.getpid()),
                 "--relaunch",
+                "--result-file",
+                str(helper_result_path),
             ]
+            if version:
+                helper_args.extend(["--update-version", str(version)])
             _append_update_log(f"Launching bundled helper mode: {' '.join(helper_args)}", log_file)
 
+            needs_elevation = not os.access(app_bundle_path.parent, os.W_OK)
             try:
-                subprocess.Popen(
-                    helper_args,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
+                log_file.parent.mkdir(parents=True, exist_ok=True)
+                with log_file.open("ab") as log_stream:
+                    if needs_elevation:
+                        command = " ".join(shlex.quote(arg) for arg in helper_args)
+                        script = f"do shell script {json.dumps(command)} with administrator privileges"
+                        _append_update_log(
+                            "Install location is protected; requesting administrator privileges.",
+                            log_file,
+                        )
+                        subprocess.Popen(
+                            ["osascript", "-e", script],
+                            stdout=log_stream,
+                            stderr=log_stream,
+                            start_new_session=True,
+                        )
+                    else:
+                        subprocess.Popen(
+                            helper_args,
+                            stdout=log_stream,
+                            stderr=log_stream,
+                            start_new_session=True,
+                        )
             except Exception as exc:
                 _append_update_log(f"Failed to launch bundled helper mode: {exc}", log_file)
                 return {
@@ -488,12 +524,22 @@ class ReleaseUpdater:
                 }
 
             _append_update_log("Bundled helper mode launched successfully", log_file)
+            if needs_elevation:
+                return {
+                    "status": "permission_prompt",
+                    "message": "Administrator permission requested. Applying update in place.",
+                    "log_path": str(log_file),
+                    "requires_quit": "true",
+                    "installer_path": str(installer_path),
+                    "result_path": str(helper_result_path),
+                }
             return {
                 "status": "installing",
-                "message": "Installing staged update and restarting application.",
+                "message": "Installing update in place and restarting application.",
                 "log_path": str(log_file),
                 "requires_quit": "true",
                 "installer_path": str(installer_path),
+                "result_path": str(helper_result_path),
             }
 
         launch_result = ReleaseUpdater.launch_guided_install(

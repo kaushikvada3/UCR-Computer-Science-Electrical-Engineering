@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -11,6 +12,7 @@ import sys
 import tempfile
 import time
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -178,19 +180,60 @@ def _relaunch_target(target_app: Path) -> None:
     subprocess.Popen([str(target_app)])
 
 
+def _write_result(
+    result_file: Path | None,
+    *,
+    status: str,
+    version: str,
+    target: Path,
+    installer: Path,
+    error: str = "",
+) -> None:
+    if result_file is None:
+        return
+    payload = {
+        "status": status,
+        "version": version,
+        "target": str(target),
+        "installer": str(installer),
+        "error": error,
+        "completed_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        result_file.parent.mkdir(parents=True, exist_ok=True)
+        temp_file = result_file.with_suffix(result_file.suffix + ".tmp")
+        temp_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        temp_file.replace(result_file)
+    except Exception as exc:
+        print(f"Failed to write helper result file: {exc}", file=sys.stderr)
+
+
 def run_update_helper(
     *,
     installer: Path,
     target_app: Path,
     wait_pid: int | None = None,
     relaunch: bool = False,
+    result_file: Path | None = None,
+    version: str = "",
 ) -> int:
     installer_path = installer.expanduser().resolve()
     target_path = target_app.expanduser().resolve()
+    result_path = result_file.expanduser() if result_file else None
+    update_version = str(version or "").strip()
 
     if wait_pid:
         if not wait_for_pid(wait_pid):
-            print(f"Timeout waiting for process {wait_pid} to exit", file=sys.stderr)
+            message = f"Timeout waiting for process {wait_pid} to exit"
+            print(message, file=sys.stderr)
+            _write_result(
+                result_path,
+                status="error",
+                version=update_version,
+                target=target_path,
+                installer=installer_path,
+                error=message,
+            )
             return 1
         time.sleep(0.75)
 
@@ -203,15 +246,47 @@ def run_update_helper(
         elif suffix == ".dmg" and sys.platform == "darwin":
             _install_from_dmg(installer_path, target_path)
         else:
-            print(f"Unsupported update payload for this platform: {installer_path}", file=sys.stderr)
+            message = f"Unsupported update payload for this platform: {installer_path}"
+            print(message, file=sys.stderr)
+            _write_result(
+                result_path,
+                status="error",
+                version=update_version,
+                target=target_path,
+                installer=installer_path,
+                error=message,
+            )
             return 1
     except Exception as exc:
-        print(f"Update helper failed: {exc}", file=sys.stderr)
+        message = f"Update helper failed: {exc}"
+        print(message, file=sys.stderr)
+        _write_result(
+            result_path,
+            status="error",
+            version=update_version,
+            target=target_path,
+            installer=installer_path,
+            error=str(exc),
+        )
         return 1
 
+    relaunch_error = ""
     if relaunch:
-        time.sleep(0.35)
-        _relaunch_target(target_path)
+        try:
+            time.sleep(0.35)
+            _relaunch_target(target_path)
+        except Exception as exc:
+            relaunch_error = f"Relaunch failed: {exc}"
+            print(relaunch_error, file=sys.stderr)
+
+    _write_result(
+        result_path,
+        status="success",
+        version=update_version,
+        target=target_path,
+        installer=installer_path,
+        error=relaunch_error,
+    )
     return 0
 
 
@@ -221,6 +296,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--target-app", required=True, help="Path to installed app target")
     parser.add_argument("--wait-pid", type=int, help="PID to wait for before applying update")
     parser.add_argument("--relaunch", action="store_true", help="Relaunch app after install")
+    parser.add_argument("--result-file", type=Path, default=None, help="Path to write helper result JSON")
+    parser.add_argument("--update-version", default="", help="Version string being applied")
     return parser
 
 
@@ -231,6 +308,8 @@ def main(argv: list[str] | None = None) -> int:
         target_app=Path(args.target_app),
         wait_pid=args.wait_pid,
         relaunch=bool(args.relaunch),
+        result_file=args.result_file,
+        version=args.update_version,
     )
 
 
