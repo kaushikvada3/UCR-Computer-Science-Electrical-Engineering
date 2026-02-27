@@ -2588,6 +2588,7 @@ const CELL_VOLTAGE_RED_MAX = 3.5;
 const CELL_VOLTAGE_GREEN_MAX = 3.63;
 const LOW_CELL_MIN_FILL_PERCENT = 10;
 const CELL_COUNT = 10;
+const FAN_ESTIMATED_RPM_PER_DUTY = 27;
 
 let currentState = createBlankState();
 const cellVoltageHistory = new Map();
@@ -2894,6 +2895,46 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function fanDutyFromAutoTemperature(tempC) {
+  const points = [
+    { temp: 30, duty: 20 },
+    { temp: 35, duty: 35 },
+    { temp: 40, duty: 55 },
+    { temp: 45, duty: 75 },
+    { temp: 50, duty: 100 },
+  ];
+
+  if (!isFiniteNumber(tempC)) return points[0].duty;
+  if (tempC <= points[0].temp) return points[0].duty;
+
+  for (let i = 1; i < points.length; i += 1) {
+    const lo = points[i - 1];
+    const hi = points[i];
+    if (tempC <= hi.temp) {
+      const alpha = (tempC - lo.temp) / (hi.temp - lo.temp);
+      return Math.round(lo.duty + alpha * (hi.duty - lo.duty));
+    }
+  }
+
+  return points[points.length - 1].duty;
+}
+
+function estimateRpmFromDuty(duty) {
+  const clampedDuty = clamp(Math.round(Number(duty) || 0), 0, 100);
+  return clampedDuty * FAN_ESTIMATED_RPM_PER_DUTY;
+}
+
+function simulationFanDutyFromCells(cells) {
+  if (!isFanAuto) {
+    return clamp(parseInt(fanSlider.value, 10) || 0, 0, 100);
+  }
+  const hottest = (Array.isArray(cells) ? cells : [])
+    .map((cell) => cell?.temperature)
+    .filter((temp) => isFiniteNumber(temp))
+    .reduce((acc, temp) => Math.max(acc, temp), -Infinity);
+  return Number.isFinite(hottest) ? fanDutyFromAutoTemperature(hottest) : 20;
+}
+
 function normalizeSetpoint(rawValue, min, max) {
   const parsed = parseFloat(rawValue);
   if (!Number.isFinite(parsed)) {
@@ -3045,50 +3086,29 @@ function updateHud(data) {
   }
   packTempEl.textContent = validTemps.length ? `${Math.max(...validTemps).toFixed(1)} \u00B0C` : "-- \u00B0C";
 
-  const fan1Rpm = parseRpmValue(data.fan1?.rpm)
+  const fan1TelemetryRpm = parseRpmValue(data.fan1?.rpm)
     ?? parseRpmValue(data.fan1_rpm)
     ?? parseRpmValue(data.fan?.rpm)
     ?? parseRpmValue(currentState.fan1?.rpm)
     ?? 0;
-  const fan2Rpm = parseRpmValue(data.fan2?.rpm)
+  const fan2TelemetryRpm = parseRpmValue(data.fan2?.rpm)
     ?? parseRpmValue(data.fan2_rpm)
     ?? parseRpmValue(data.fan?.rpm2)
     ?? parseRpmValue(currentState.fan2?.rpm)
-    ?? (fan1Rpm > 0 ? fan1Rpm : 0);
-  fanSpinRpm = Math.max(fan1Rpm, fan2Rpm, 0);
-  if (fanMeshes.length === 1) {
-    fanMeshes[0].rpm = fanSpinRpm;
-  } else if (fanMeshes.length > 1) {
-    const hasDualTelemetry = fan1Rpm > 0 && fan2Rpm > 0;
-    const xValues = fanMeshes
-      .map((entry) => Number.isFinite(entry?.worldX) ? entry.worldX : null)
-      .filter((value) => value !== null);
-    const splitX = xValues.length
-      ? (Math.min(...xValues) + Math.max(...xValues)) / 2
-      : 0;
-    fanMeshes.forEach((entry, index) => {
-      if (!entry) return;
-      if (hasDualTelemetry && (entry.fanId === 1 || entry.fanId === 2)) {
-        entry.rpm = entry.fanId === 1 ? fan1Rpm : fan2Rpm;
-        return;
-      }
-      if (hasDualTelemetry) {
-        const x = Number.isFinite(entry.worldX) ? entry.worldX : 0;
-        entry.rpm = x <= splitX ? fan1Rpm : fan2Rpm;
-        return;
-      }
-      // If only one fan RPM is available, spin all blades with the available value.
-      entry.rpm = fanSpinRpm;
-    });
-  }
+    ?? 0;
+  const fan1Rpm = fan1TelemetryRpm > 0 ? fan1TelemetryRpm : fan2TelemetryRpm;
+  fanSpinRpm = Math.max(fan1Rpm, 0);
+  fanMeshes.forEach((entry) => {
+    if (!entry) return;
+    entry.rpm = fanSpinRpm;
+  });
   fanSpeed1El.textContent = fan1Rpm > 0 ? `${Math.round(fan1Rpm).toLocaleString()} RPM` : "-- RPM";
-  fanSpeed2El.textContent = fan2Rpm > 0 ? `${Math.round(fan2Rpm).toLocaleString()} RPM` : "-- RPM";
+  fanSpeed2El.textContent = "-- RPM";
 
   // Trigger data pulse with speed based on data rate
   // Use average fan speed as a proxy for data transmission rate
-  const avgFanSpeed = (fan1Rpm + fan2Rpm) / 2;
-  if (avgFanSpeed > 0) {
-    triggerDataPulse(avgFanSpeed);
+  if (fan1Rpm > 0) {
+    triggerDataPulse(fan1Rpm);
   }
 
   const cellsById = new Map();
@@ -3267,15 +3287,25 @@ function updateResponsiveUiScale() {
   );
   document.documentElement.style.setProperty("--ui-scale", scale.toFixed(3));
 }
-
 // --- QWebChannel / Bridge Logic ---
 let backendLink = null;
+
+// Global command queue — Python polls this via runJavaScript
+window.__bmsCommandQueue = [];
+window.__bmsDrainCommands = function () {
+  const cmds = window.__bmsCommandQueue.splice(0);
+  return cmds.length ? JSON.stringify(cmds) : "";
+};
 
 // Initialize Channel
 if (typeof QWebChannel !== "undefined" && window.qt?.webChannelTransport) {
   new QWebChannel(qt.webChannelTransport, function (channel) {
     backendLink = channel.objects.backend;
-    console.log("Connected to backend bridge via QWebChannel");
+    if (backendLink) {
+      console.log("Connected to backend bridge via QWebChannel");
+    } else {
+      console.warn("Backend object not found in channel.objects");
+    }
   });
 } else {
   console.warn("QWebChannel not found. Running in standalone/mock mode?");
@@ -3297,11 +3327,17 @@ function sendBackendCommand(cmd) {
     return;
   }
 
-  if (backendLink) {
-    console.log("Sending to backend:", cmd);
-    backendLink.sendCommand(cmd);
-  } else {
-    console.log("Mock Send:", cmd);
+  // Push to command queue (Python polls this)
+  window.__bmsCommandQueue.push(cmd);
+  console.log("[BMS] Queued command:", cmd);
+
+  // Also try QWebChannel direct call
+  if (backendLink && backendLink.sendCommand) {
+    try {
+      backendLink.sendCommand(cmd);
+    } catch (err) {
+      console.error("sendCommand call failed:", err);
+    }
   }
 }
 
@@ -3420,19 +3456,61 @@ eloadCurrentInput.addEventListener("change", (e) => {
 });
 
 // -- Fan Control --
+let _fanThrottleTimer = 0;
+let _fanLastSendTime = 0;
+let _fanPendingDuty = -1;
+
 fanAutoBtn.addEventListener("click", () => {
   setFanMode(true);
   sendBackendCommand("FAN:AUTO");
+  if (simulationEnabled) {
+    mockStream();
+  }
 });
 
 fanManualBtn.addEventListener("click", () => {
   setFanMode(false);
   sendBackendCommand("FAN:MANUAL");
+  if (simulationEnabled) {
+    mockStream();
+  }
 });
 
+function _fanSendThrottled(duty) {
+  const now = Date.now();
+  const elapsed = now - _fanLastSendTime;
+  if (elapsed >= 100) {
+    // Send immediately
+    _fanLastSendTime = now;
+    _fanPendingDuty = -1;
+    sendBackendCommand(`FAN:SET:${duty}`);
+  } else {
+    // Schedule trailing send for the latest value
+    _fanPendingDuty = duty;
+    if (!_fanThrottleTimer) {
+      _fanThrottleTimer = window.setTimeout(() => {
+        _fanThrottleTimer = 0;
+        if (_fanPendingDuty >= 0) {
+          _fanLastSendTime = Date.now();
+          sendBackendCommand(`FAN:SET:${_fanPendingDuty}`);
+          _fanPendingDuty = -1;
+        }
+      }, 100 - elapsed);
+    }
+  }
+}
+
 fanSlider.addEventListener("input", (e) => {
-  fanValue.textContent = `${e.target.value}%`;
-  updateSliderUI(e.target);
+  const duty = clamp(parseInt(e.target.value, 10) || 0, 0, 100);
+  fanSlider.value = duty.toString();
+  fanValue.textContent = `${duty}%`;
+  updateSliderUI(fanSlider);
+  if (!isFanAuto) {
+    _fanSendThrottled(duty);
+  }
+  if (simulationEnabled) {
+    mockStream();
+  }
 });
 
 fanSlider.addEventListener("change", (e) => {
@@ -3440,7 +3518,16 @@ fanSlider.addEventListener("change", (e) => {
   fanSlider.value = duty.toString();
   fanValue.textContent = `${duty}%`;
   updateSliderUI(fanSlider);
-  sendBackendCommand(`FAN:SET:${duty}`);
+  // On release, cancel pending throttle and send final value immediately
+  if (_fanThrottleTimer) { window.clearTimeout(_fanThrottleTimer); _fanThrottleTimer = 0; }
+  _fanPendingDuty = -1;
+  if (!isFanAuto) {
+    _fanLastSendTime = Date.now();
+    sendBackendCommand(`FAN:SET:${duty}`);
+  }
+  if (simulationEnabled) {
+    mockStream();
+  }
 });
 
 if (simulateDataToggle) {
@@ -3650,16 +3737,18 @@ function mockStream() {
   const mockCurrent = Number(((Math.random() - 0.5) * 0.2).toFixed(3));
   const mockVoltage = Number((36 + Math.random() * 2).toFixed(2));
   const mockActualCurrent = Math.max(0, Math.abs(mockCurrent));
+  const simulatedDuty = simulationFanDutyFromCells(cells);
+  const simulatedRpm = estimateRpmFromDuty(simulatedDuty);
 
   window.updateDashboard({
     __simulated: true,
     cells,
     pack_current: mockCurrent,
-    fan1: { rpm: 900 + Math.round(Math.random() * 500) },
-    fan2: { rpm: 900 + Math.round(Math.random() * 500) },
+    fan1: { rpm: simulatedRpm },
+    fan2: { rpm: 0 },
     fan_control: {
       auto: isFanAuto,
-      duty: parseInt(fanSlider.value, 10) || 0,
+      duty: simulatedDuty,
     },
     eload: {
       enabled: eloadToggle.checked,

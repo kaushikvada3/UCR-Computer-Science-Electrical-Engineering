@@ -1,0 +1,332 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumitem}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tikz}
+
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\erfc}{\operatorname{erfc}}
+\newcommand{\erf}{\operatorname{erf}}
+
+\title{EE114 -- Homework 5}
+\author{Kaushik Vada}
+\date{}
+
+\begin{document}
+\maketitle
+
+%% ============================================================
+%% PROBLEM 2.7.1
+%% ============================================================
+\section*{Problem 2.7.1}
+
+\textbf{Setup (Quiz 2.6):} Monitor three phone calls; each is voice or data.
+$N$ = number of voice calls with PMF
+\[
+P_N(n)=\begin{cases}0.1 & n=0,\\0.3 & n=1,2,3,\\0 & \text{otherwise.}\end{cases}
+\]
+Voice calls cost 25 cents each; data calls cost 40 cents each.
+The total cost is $T$ cents. From Quiz 2.6 part (1): $T = 25N + 40(3-N) = 120 - 15N$.
+
+\medskip
+\textbf{(a) Find $E[T]$ using Theorem 2.10} (the derived-variable theorem $E[g(X)] = \sum_x g(x)P_X(x)$):
+\begin{align*}
+E[T] &= E[120-15N] = \sum_{n=0}^{3}(120-15n)\,P_N(n)\\
+      &= (120)(0.1)+(105)(0.3)+(90)(0.3)+(75)(0.3)\\
+      &= 12 + 31.5 + 27 + 22.5\\
+      &= \boxed{93 \text{ cents}}.
+\end{align*}
+
+\textbf{(b) Find $E[T]$ using Definition 2.14} (standard expected value $E[T]=\sum_t t\,P_T(t)$):
+
+First we need $P_T(t)$. Since $T=120-15N$:
+\[
+\begin{array}{c|cccc}
+n & 0 & 1 & 2 & 3\\\hline
+t=120-15n & 120 & 105 & 90 & 75\\
+P_N(n) & 0.1 & 0.3 & 0.3 & 0.3
+\end{array}
+\]
+So $P_T(t)$ is:
+\[
+P_T(t)=\begin{cases}0.1 & t=120,\\0.3 & t=75,90,105,\\0 & \text{otherwise.}\end{cases}
+\]
+Then:
+\begin{align*}
+E[T] &= \sum_t t\,P_T(t) = 75(0.3)+90(0.3)+105(0.3)+120(0.1)\\
+      &= 22.5+27+31.5+12 = \boxed{93 \text{ cents}}.
+\end{align*}
+Both methods give $E[T]=93$ cents, as expected.
+
+%% ============================================================
+%% PROBLEM 2.8.3
+%% ============================================================
+\section*{Problem 2.8.3}
+
+\textbf{Setup (Problem 2.4.2):} The random variable $X$ has CDF
+\[
+F_X(x)=\begin{cases}0 & x<-1,\\0.2 & -1\le x<0,\\0.7 & 0\le x<1,\\1 & x\ge 1.\end{cases}
+\]
+From the CDF we extract the PMF:
+\[
+P_X(x)=\begin{cases}0.2 & x=-1,\\0.5 & x=0,\\0.3 & x=1,\\0 & \text{otherwise.}\end{cases}
+\]
+First compute $E[X]$:
+\[
+E[X] = (-1)(0.2)+(0)(0.5)+(1)(0.3) = -0.2+0+0.3 = 0.1.
+\]
+Next compute $E[X^2]$:
+\[
+E[X^2] = (-1)^2(0.2)+(0)^2(0.5)+(1)^2(0.3) = 0.2+0+0.3 = 0.5.
+\]
+Therefore:
+\[
+\Var[X] = E[X^2]-(E[X])^2 = 0.5 - (0.1)^2 = 0.5 - 0.01 = \boxed{0.49}.
+\]
+
+%% ============================================================
+%% PROBLEM 2.8.5
+%% ============================================================
+\section*{Problem 2.8.5}
+
+$X$ has the binomial PMF $P_X(x)=\binom{4}{x}(1/2)^4$ for $x=0,1,2,3,4$.
+
+This is a Binomial$(n=4, p=1/2)$ random variable.
+
+\textbf{(a) Standard deviation:}
+
+For a Binomial$(n,p)$: $E[X]=np=4(1/2)=2$, $\Var[X]=np(1-p)=4(1/2)(1/2)=1$.
+\[
+\sigma_X = \sqrt{\Var[X]} = \sqrt{1} = \boxed{1}.
+\]
+
+\textbf{(b)} We need $P[\mu_X - \sigma_X \le X \le \mu_X + \sigma_X] = P[2-1 \le X \le 2+1] = P[1\le X\le 3]$.
+\begin{align*}
+P[1\le X\le 3] &= P_X(1)+P_X(2)+P_X(3)\\
+&= \binom{4}{1}\!\left(\tfrac{1}{2}\right)^4 + \binom{4}{2}\!\left(\tfrac{1}{2}\right)^4 + \binom{4}{3}\!\left(\tfrac{1}{2}\right)^4\\
+&= \frac{4+6+4}{16} = \frac{14}{16} = \boxed{\dfrac{7}{8} = 0.875}.
+\end{align*}
+
+%% ============================================================
+%% PROBLEM 2.8.8
+%% ============================================================
+\section*{Problem 2.8.8}
+
+Given $X$ with mean $\mu_X$ and variance $\sigma_X^2$, let
+\[
+Y = \frac{1}{\sigma_X}(X-\mu_X).
+\]
+
+\textbf{Mean of $Y$:}
+\[
+E[Y] = E\!\left[\frac{X-\mu_X}{\sigma_X}\right] = \frac{1}{\sigma_X}\bigl(E[X]-\mu_X\bigr) = \frac{1}{\sigma_X}(\mu_X - \mu_X) = \boxed{0}.
+\]
+
+\textbf{Variance of $Y$:}
+\[
+\Var[Y] = \Var\!\left[\frac{X-\mu_X}{\sigma_X}\right] = \frac{1}{\sigma_X^2}\,\Var[X-\mu_X] = \frac{1}{\sigma_X^2}\,\Var[X] = \frac{\sigma_X^2}{\sigma_X^2} = \boxed{1}.
+\]
+
+(We used $\Var[aX+b]=a^2\Var[X]$, and shifting by a constant does not change the variance.)
+
+%% ============================================================
+%% PROBLEM 3.4.2
+%% ============================================================
+\section*{Problem 3.4.2}
+
+$Y$ is an exponential random variable with $\Var[Y]=25$.
+
+For an exponential$(\lambda)$ RV: $E[Y]=1/\lambda$ and $\Var[Y]=1/\lambda^2$.
+
+From $\Var[Y]=1/\lambda^2=25$ we get $\lambda = 1/5$.
+
+\medskip
+\textbf{(a) PDF of $Y$:}
+\[
+f_Y(y) = \begin{cases}\dfrac{1}{5}\,e^{-y/5} & y\ge 0,\\[6pt] 0 & \text{otherwise.}\end{cases}
+\]
+\[
+\boxed{f_Y(y)=\frac{1}{5}\,e^{-y/5},\quad y\ge 0.}
+\]
+
+\textbf{(b)} $E[Y^2]$:
+\[
+E[Y^2] = \Var[Y]+(E[Y])^2 = 25 + \left(\frac{1}{\lambda}\right)^2 = 25+25 = \boxed{50}.
+\]
+
+\textbf{(c)} $P[Y>5]$:
+\[
+P[Y>5] = \int_5^{\infty}\frac{1}{5}e^{-y/5}\,dy = e^{-5/5} = e^{-1} = \boxed{e^{-1}\approx 0.3679}.
+\]
+
+%% ============================================================
+%% PROBLEM 3.4.4
+%% ============================================================
+\section*{Problem 3.4.4}
+
+$Y$ is an Erlang$(n=2,\,\lambda=2)$ random variable.
+
+The Erlang$(n,\lambda)$ PDF is
+\[
+f_Y(y)=\frac{\lambda^n y^{n-1}e^{-\lambda y}}{(n-1)!},\quad y\ge 0.
+\]
+With $n=2$, $\lambda=2$:
+\[
+f_Y(y)=4y\,e^{-2y},\quad y\ge 0.
+\]
+
+\textbf{(a)} $E[Y] = n/\lambda = 2/2 = \boxed{1}$.
+
+\textbf{(b)} $\Var[Y] = n/\lambda^2 = 2/4 = \boxed{1/2}$.
+
+\textbf{(c)} $P[0.5\le Y < 1.5]$:
+
+The CDF of an Erlang$(2,\lambda)$ is
+\[
+F_Y(y)=1-e^{-\lambda y}-\lambda y\,e^{-\lambda y}=1-(1+\lambda y)e^{-\lambda y},\quad y\ge 0.
+\]
+With $\lambda=2$:
+\begin{align*}
+F_Y(y) &= 1-(1+2y)e^{-2y}.
+\end{align*}
+Therefore:
+\begin{align*}
+P[0.5\le Y<1.5] &= F_Y(1.5)-F_Y(0.5)\\
+&= \bigl[1-(1+3)e^{-3}\bigr]-\bigl[1-(1+1)e^{-1}\bigr]\\
+&= \bigl[1-4e^{-3}\bigr]-\bigl[1-2e^{-1}\bigr]\\
+&= 2e^{-1}-4e^{-3}\\
+&\approx 2(0.36788)-4(0.04979)\\
+&\approx 0.73576 - 0.19915\\
+&= \boxed{0.5366}.
+\end{align*}
+
+%% ============================================================
+%% PROBLEM 3.4.7
+%% ============================================================
+\section*{Problem 3.4.7}
+
+The PDF of $X$ is
+\[
+f_X(x)=\begin{cases}\dfrac{1}{2}\,e^{-x/2} & x\ge 0,\\[6pt] 0 & \text{otherwise.}\end{cases}
+\]
+This is an exponential distribution with $\lambda=1/2$.
+
+\medskip
+\textbf{(a)} $P[1\le X\le 2]$:
+\begin{align*}
+P[1\le X\le 2] &= \int_1^2 \frac{1}{2}e^{-x/2}\,dx = \bigl[-e^{-x/2}\bigr]_1^2 = -e^{-1}-(-e^{-1/2})\\
+&= e^{-1/2}-e^{-1} \approx 0.6065-0.3679 = \boxed{0.2387}.
+\end{align*}
+
+\textbf{(b) CDF:}
+\[
+F_X(x)=\begin{cases}0 & x<0,\\1-e^{-x/2} & x\ge 0.\end{cases}
+\]
+\[
+\boxed{F_X(x)=1-e^{-x/2},\quad x\ge 0.}
+\]
+
+\textbf{(c)} $E[X]=1/\lambda = 1/(1/2)=\boxed{2}$.
+
+\textbf{(d)} $\Var[X]=1/\lambda^2 = 1/(1/4)=\boxed{4}$.
+
+%% ============================================================
+%% PROBLEM 3.5.1
+%% ============================================================
+\section*{Problem 3.5.1}
+
+The peak temperature $T$ is a Gaussian$(85,10)$ random variable, meaning $\mu=85$ and $\sigma^2=10$ (so $\sigma=\sqrt{10}$).
+
+We standardize: $Z=(T-\mu)/\sigma = (T-85)/\sqrt{10}$ is $N(0,1)$.
+
+\medskip
+\textbf{$P[T>100]$:}
+\begin{align*}
+P[T>100] &= P\!\left[Z>\frac{100-85}{\sqrt{10}}\right] = P\!\left[Z>\frac{15}{\sqrt{10}}\right] = P[Z>4.743]\\
+&= Q(4.743) \approx \boxed{1.07\times 10^{-6}}.
+\end{align*}
+
+\textbf{$P[T<60]$:}
+\begin{align*}
+P[T<60] &= P\!\left[Z<\frac{60-85}{\sqrt{10}}\right] = P\!\left[Z<\frac{-25}{\sqrt{10}}\right] = P[Z<-7.906]\\
+&= Q(7.906) \approx \boxed{1.30\times 10^{-15}}.
+\end{align*}
+This is essentially zero.
+
+\textbf{$P[70\le T\le 100]$:}
+\begin{align*}
+P[70\le T\le 100] &= P\!\left[\frac{70-85}{\sqrt{10}}\le Z\le \frac{100-85}{\sqrt{10}}\right]\\
+&= P[-4.743\le Z\le 4.743]\\
+&= \Phi(4.743)-\Phi(-4.743)\\
+&= 1-2Q(4.743) \approx 1-2(1.07\times 10^{-6}) \approx \boxed{0.999998}.
+\end{align*}
+
+%% ============================================================
+%% PROBLEM 3.5.4
+%% ============================================================
+\section*{Problem 3.5.4}
+
+\textbf{Show that} $Q(z)=\frac{1}{2}\erfc\!\left(\frac{z}{\sqrt{2}}\right)$.
+
+\medskip
+\textbf{Proof.} By definition:
+\[
+Q(z) = \frac{1}{\sqrt{2\pi}}\int_z^{\infty} e^{-t^2/2}\,dt.
+\]
+Substitute $u = t/\sqrt{2}$, so $t=\sqrt{2}\,u$, $dt=\sqrt{2}\,du$.
+When $t=z$, $u=z/\sqrt{2}$; when $t\to\infty$, $u\to\infty$.
+\begin{align*}
+Q(z) &= \frac{1}{\sqrt{2\pi}}\int_{z/\sqrt{2}}^{\infty} e^{-(\sqrt{2}\,u)^2/2}\,\sqrt{2}\,du\\
+&= \frac{1}{\sqrt{2\pi}}\int_{z/\sqrt{2}}^{\infty} e^{-u^2}\,\sqrt{2}\,du\\
+&= \frac{\sqrt{2}}{\sqrt{2\pi}}\int_{z/\sqrt{2}}^{\infty} e^{-u^2}\,du\\
+&= \frac{1}{\sqrt{\pi}}\int_{z/\sqrt{2}}^{\infty} e^{-u^2}\,du.
+\end{align*}
+Now recall $\erfc(w)=\frac{2}{\sqrt{\pi}}\int_w^{\infty}e^{-x^2}\,dx$, so
+\[
+\frac{1}{\sqrt{\pi}}\int_{z/\sqrt{2}}^{\infty}e^{-u^2}\,du = \frac{1}{2}\cdot\frac{2}{\sqrt{\pi}}\int_{z/\sqrt{2}}^{\infty}e^{-u^2}\,du = \frac{1}{2}\,\erfc\!\left(\frac{z}{\sqrt{2}}\right).
+\]
+Therefore:
+\[
+\boxed{Q(z)=\frac{1}{2}\,\erfc\!\left(\frac{z}{\sqrt{2}}\right).} \qed
+\]
+
+%% ============================================================
+%% PROBLEM 3.5.8
+%% ============================================================
+\section*{Problem 3.5.8}
+
+We verify that for $x\ge 0$: $\Phi(x)=\frac{1}{2}+\frac{1}{2}\erf\!\left(\frac{x}{\sqrt{2}}\right)$.
+
+\medskip
+\textbf{(a)} Let $Y\sim N(0,1/2)$, so $f_Y(y)=\frac{1}{\sqrt{\pi}}\,e^{-y^2}$.
+
+Compute $F_Y(y)$:
+\begin{align*}
+F_Y(y) &= \int_{-\infty}^{y}\frac{1}{\sqrt{\pi}}\,e^{-u^2}\,du = \frac{1}{\sqrt{\pi}}\int_{-\infty}^{y}e^{-u^2}\,du.
+\end{align*}
+Split the integral:
+\begin{align*}
+F_Y(y) &= \frac{1}{\sqrt{\pi}}\left(\int_{-\infty}^{0}e^{-u^2}\,du + \int_0^{y}e^{-u^2}\,du\right).
+\end{align*}
+Since $\int_{-\infty}^{0}e^{-u^2}\,du = \frac{\sqrt{\pi}}{2}$ and $\erf(y)=\frac{2}{\sqrt{\pi}}\int_0^y e^{-u^2}\,du$:
+\begin{align*}
+F_Y(y) &= \frac{1}{\sqrt{\pi}}\cdot\frac{\sqrt{\pi}}{2} + \frac{1}{\sqrt{\pi}}\int_0^y e^{-u^2}\,du\\
+&= \frac{1}{2}+\frac{1}{2}\cdot\frac{2}{\sqrt{\pi}}\int_0^y e^{-u^2}\,du\\
+&= \boxed{\frac{1}{2}+\frac{1}{2}\erf(y)}.
+\end{align*}
+
+\textbf{(b)} If $Y\sim N(0,1/2)$, then $Z=\sqrt{2}\,Y\sim N(0,1)$, i.e.\ $Y=Z/\sqrt{2}$.
+
+For $z\ge 0$:
+\begin{align*}
+\Phi(z) &= F_Z(z) = P[Z\le z] = P\!\left[Y\le \frac{z}{\sqrt{2}}\right] = F_Y\!\left(\frac{z}{\sqrt{2}}\right)\\
+&= \frac{1}{2}+\frac{1}{2}\,\erf\!\left(\frac{z}{\sqrt{2}}\right).
+\end{align*}
+Therefore:
+\[
+\boxed{\Phi(x) = \frac{1}{2}+\frac{1}{2}\,\erf\!\left(\frac{x}{\sqrt{2}}\right),\quad x\ge 0.} \qed
+\]
+
+\end{document}

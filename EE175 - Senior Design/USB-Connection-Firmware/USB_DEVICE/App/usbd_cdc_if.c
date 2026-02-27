@@ -31,7 +31,13 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#define CMD_BUF_SIZE 64
+static uint8_t cmd_buffer[CMD_BUF_SIZE];
+static uint16_t cmd_index = 0;
 
+// Double-buffered command: when a complete line arrives, copy here for main loop
+volatile uint8_t cmd_ready[CMD_BUF_SIZE];
+volatile uint8_t cmd_ready_flag = 0;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -259,6 +265,26 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
+  // Accumulate bytes into cmd_buffer until newline
+  for (uint32_t i = 0; i < *Len; i++) {
+      uint8_t ch = Buf[i];
+      if (ch == '\n' || ch == '\r') {
+          if (cmd_index > 0 && !cmd_ready_flag) {
+              cmd_buffer[cmd_index] = '\0';
+              // Copy to ready buffer for main loop
+              for (uint16_t j = 0; j <= cmd_index; j++) {
+                  cmd_ready[j] = cmd_buffer[j];
+              }
+              cmd_ready_flag = 1;
+              cmd_index = 0;
+          }
+      } else {
+          if (cmd_index < CMD_BUF_SIZE - 1) {
+              cmd_buffer[cmd_index++] = ch;
+          }
+      }
+  }
+
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);

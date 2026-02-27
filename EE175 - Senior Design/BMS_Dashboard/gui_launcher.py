@@ -8,14 +8,68 @@ import http.server
 import json
 import logging
 import os
+import shutil
 import socketserver
 import sys
+import sysconfig
 import threading
 import time
 from pathlib import Path
 from typing import Any, Optional
 
 from packaging.version import InvalidVersion, Version
+
+
+def _bootstrap_macos_qt_runtime() -> None:
+    """Work around Qt plugin loading issues from iCloud-backed virtualenv paths."""
+    if sys.platform != "darwin" or getattr(sys, "frozen", False):
+        return
+    if os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH"):
+        return
+
+    purelib = Path(sysconfig.get_paths().get("purelib", ""))
+    qt_root = purelib / "PyQt6" / "Qt6"
+    if not qt_root.exists():
+        return
+
+    qt_root_text = str(qt_root).lower()
+    if "mobile documents" not in qt_root_text and "clouddocs" not in qt_root_text:
+        return
+
+    cache_root = Path.home() / "Library" / "Caches" / "BMSDashboard"
+    cached_qt_root = cache_root / "qt6-runtime"
+    marker_file = cached_qt_root / ".source-path"
+
+    try:
+        cache_root.mkdir(parents=True, exist_ok=True)
+        source_marker = str(qt_root)
+        marker_matches = (
+            marker_file.exists() and marker_file.read_text(encoding="utf-8").strip() == source_marker
+        )
+        if not marker_matches:
+            staging_root = cache_root / f"qt6-runtime-staging-{os.getpid()}"
+            if staging_root.exists():
+                shutil.rmtree(staging_root)
+            # copy() avoids preserving problematic metadata from File Provider paths.
+            shutil.copytree(qt_root, staging_root, copy_function=shutil.copy)
+            (staging_root / ".source-path").write_text(source_marker, encoding="utf-8")
+            if cached_qt_root.exists():
+                shutil.rmtree(cached_qt_root)
+            staging_root.rename(cached_qt_root)
+    except Exception as exc:  # pragma: no cover - environment-specific fallback
+        print(f"[BMS] Qt runtime bootstrap skipped: {exc}", file=sys.stderr)
+        return
+
+    os.environ.setdefault("QT_PLUGIN_PATH", str(cached_qt_root / "plugins"))
+    os.environ.setdefault(
+        "QT_QPA_PLATFORM_PLUGIN_PATH",
+        str(cached_qt_root / "plugins" / "platforms"),
+    )
+    os.environ.setdefault("DYLD_FRAMEWORK_PATH", str(cached_qt_root / "lib"))
+
+
+_bootstrap_macos_qt_runtime()
+
 from PyQt6.QtCore import (
     QFileSystemWatcher,
     QObject,
@@ -163,9 +217,11 @@ class Bridge(QObject):
         super().__init__()
         self.serial_worker = serial_worker
 
-    @pyqtSlot(str, name="sendCommand")
-    def sendCommand(self, command: str):
+    @pyqtSlot(str, result=str)
+    def sendCommand(self, command: str) -> str:
+        print(f"[BRIDGE] sendCommand received: {command!r}", flush=True)
         self.serial_worker.send_command(command)
+        return "ok"
 
 
 class UpdateProgressDialog(QDialog):
@@ -424,6 +480,12 @@ class DashboardWindow(QMainWindow):
         self.load_page()
         self._refresh_status_bar()
 
+        # Poll JS command queue (fallback for when QWebChannel sendCommand doesn't work)
+        self._cmd_poll_timer = QTimer(self)
+        self._cmd_poll_timer.setInterval(50)
+        self._cmd_poll_timer.timeout.connect(self._poll_js_command_queue)
+        self._cmd_poll_timer.start()
+
         if self.updater and auto_update_check and self.is_packaged:
             QTimer.singleShot(2500, lambda: self.check_for_updates_async(manual=False))
 
@@ -432,6 +494,25 @@ class DashboardWindow(QMainWindow):
         self.view.page().runJavaScript(
             f"if(window.updateDashboard) window.updateDashboard({json_str});"
         )
+
+    def _poll_js_command_queue(self):
+        """Poll the JS command queue and forward commands to serial."""
+        self.view.page().runJavaScript(
+            "window.__bmsDrainCommands ? window.__bmsDrainCommands() : ''",
+            self._process_drained_commands,
+        )
+
+    def _process_drained_commands(self, result):
+        """Callback for drained JS commands."""
+        if not result:
+            return
+        try:
+            cmds = json.loads(result)
+            for cmd in cmds:
+                print(f"[CMD-POLL] Forwarding: {cmd!r}", flush=True)
+                self.serial_worker.send_command(str(cmd))
+        except Exception as e:
+            print(f"[CMD-POLL] Error: {e}", flush=True)
 
     def handle_connection_status(self, is_connected: bool):
         self._set_frontend_connection_state(is_connected)

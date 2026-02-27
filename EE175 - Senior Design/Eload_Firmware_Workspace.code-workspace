@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../../../STM32Cube/Eload_Firmware"
+		},
+		{
+			"path": "BMS_Dashboard"
+		}
+	],
+	"settings": {}
+}

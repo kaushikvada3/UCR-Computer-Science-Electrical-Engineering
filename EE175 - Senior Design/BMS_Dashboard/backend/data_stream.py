@@ -40,7 +40,19 @@ INDEXED_TEMP_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 CURRENT_FRAME_RE = re.compile(
-    r'(?:^|\b)(?:current|i)\s*:\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)\s*(?:a|amp|amps)?\b',
+    r'(?:^|\b)(?:current|i)\s*(?::|->)\s*([-+]?(?:\d+\.\d+|\d+|\.\d+)(?:[eE][-+]?\d+)?)\s*(?:a|amp|amps)?\b',
+    re.IGNORECASE,
+)
+FAN_INLINE_CTRL_RE = re.compile(
+    r'\bFAN\s*:\s*AUTO\s*=\s*(\d+)\s*,\s*DUTY\s*=\s*(\d+)\s*,\s*RPM\s*=\s*(\d+)\b',
+    re.IGNORECASE,
+)
+FAN_RPM_LINE_RE = re.compile(
+    r'\bFan\s*(?:->|:)\s*(\d+)\s*RPM\b',
+    re.IGNORECASE,
+)
+FAN_STATUS_LINE_RE = re.compile(
+    r'\bfan_auto\s*:\s*(\d+)\s+fan_duty\s*:\s*(\d+)\b',
     re.IGNORECASE,
 )
 NON_VOLTAGE_HINT_RE = re.compile(
@@ -74,6 +86,7 @@ class SerialWorker(QObject):
         self._pending_timeout_s = 0.30
         self._last_pack_current = 0.0
         self._has_last_pack_current = False
+        self._last_fan_ctrl = {}  # Persist fan data across frame boundaries
         self._is_connected = False
 
     def start_monitoring(self):
@@ -149,7 +162,10 @@ class SerialWorker(QObject):
                 except serial.SerialException as e:
                     logger.error(f"Serial error: {e}")
                     self._mark_disconnected()
-                    self.serial_conn.close()
+                    try:
+                        self.serial_conn.close()
+                    except Exception:
+                        pass
                     self.serial_conn = None
                     self.voltage_buffer.clear()
                     self._saw_structured_frame = False
@@ -269,18 +285,25 @@ class SerialWorker(QObject):
             self._saw_structured_frame = True
             return json_frame
 
+        # Extract indexed cells/temps BEFORE current so that combined lines
+        # like "C1:3.5 C2:3.6 ... | I:-0.046A" are fully parsed.
+        indexed_cells = self._extract_indexed_series(line, INDEXED_CELL_TOKEN_RE)
+        indexed_temps = self._extract_indexed_series(line, INDEXED_TEMP_TOKEN_RE)
         current = self._extract_current(line)
+        fan_ctrl_inline = self._extract_fan_ctrl_inline(line)
+
         if current is not None:
             self._last_pack_current = float(current)
             self._has_last_pack_current = True
-            if self._pending_frame:
-                self._pending_frame["i"] = self._last_pack_current
-                self._pending_started_at = now
-                return self._finalize_pending_frame(force=False)
-            return {"i": self._last_pack_current}
+        if fan_ctrl_inline:
+            self._last_fan_ctrl.update(fan_ctrl_inline)
+            self._ensure_pending_frame(expect_ntc=bool(indexed_cells))
+            # Merge fan data incrementally (RPM and status come on separate lines)
+            existing_fan = self._pending_frame.get("fan_ctrl", {})
+            existing_fan.update(fan_ctrl_inline)
+            self._pending_frame["fan_ctrl"] = existing_fan
+            self._pending_started_at = now
 
-        indexed_cells = self._extract_indexed_series(line, INDEXED_CELL_TOKEN_RE)
-        indexed_temps = self._extract_indexed_series(line, INDEXED_TEMP_TOKEN_RE)
         if indexed_cells or indexed_temps:
             self._ensure_pending_frame(expect_ntc=bool(indexed_cells))
             if indexed_cells:
@@ -289,7 +312,16 @@ class SerialWorker(QObject):
             if indexed_temps:
                 self._pending_frame["t"] = indexed_temps[:10]
                 self._pending_started_at = now
+            if current is not None:
+                self._pending_frame["i"] = self._last_pack_current
             return self._finalize_pending_frame(force=False)
+
+        if current is not None:
+            if self._pending_frame:
+                self._pending_frame["i"] = self._last_pack_current
+                self._pending_started_at = now
+                return self._finalize_pending_frame(force=False)
+            return {"i": self._last_pack_current}
 
         if FRAME_HEADER_RE.search(line):
             self._reset_pending_frame(expect_ntc=True)
@@ -352,6 +384,9 @@ class SerialWorker(QObject):
             or INDEXED_CELL_TOKEN_RE.search(line)
             or INDEXED_TEMP_TOKEN_RE.search(line)
             or CURRENT_FRAME_RE.search(line)
+            or FAN_INLINE_CTRL_RE.search(line)
+            or FAN_RPM_LINE_RE.search(line)
+            or FAN_STATUS_LINE_RE.search(line)
         )
 
     def _reset_pending_frame(self, expect_ntc: bool = False):
@@ -419,6 +454,12 @@ class SerialWorker(QObject):
             raw_out["ntc_c"] = ntc_c
             if "t" not in raw_out:
                 raw_out["t"] = self._map_thermistors_to_cells(ntc_c, len(raw_out["v"]))
+
+        # Propagate fan_ctrl — use pending frame data or persistent last known
+        if "fan_ctrl" in self._pending_frame:
+            raw_out["fan_ctrl"] = self._pending_frame["fan_ctrl"]
+        elif self._last_fan_ctrl:
+            raw_out["fan_ctrl"] = dict(self._last_fan_ctrl)
 
         self._saw_structured_frame = True
         self._reset_pending_frame()
@@ -675,6 +716,44 @@ class SerialWorker(QObject):
         except (TypeError, ValueError):
             return None
 
+    def _extract_fan_ctrl_inline(self, line: str) -> Optional[Dict[str, int]]:
+        """
+        Extract fan control data from either:
+        - Inline: `FAN:AUTO=1,DUTY=55,RPM=1485`
+        - Separate: `Fan -> 783 RPM` or `fan_auto:1 fan_duty:29`
+        Returns partial dict that gets merged into pending_frame['fan_ctrl'].
+        """
+        # Try combined inline format first
+        match = FAN_INLINE_CTRL_RE.search(line)
+        if match:
+            try:
+                auto = 1 if int(match.group(1)) else 0
+                duty = int(match.group(2))
+                rpm = int(match.group(3))
+                return {"auto": auto, "duty": max(0, min(100, duty)), "rpm": max(0, rpm)}
+            except (TypeError, ValueError):
+                pass
+
+        # Try "Fan -> 783 RPM" format
+        rpm_match = FAN_RPM_LINE_RE.search(line)
+        if rpm_match:
+            try:
+                return {"rpm": max(0, int(rpm_match.group(1)))}
+            except (TypeError, ValueError):
+                pass
+
+        # Try "fan_auto:1 fan_duty:29" format
+        status_match = FAN_STATUS_LINE_RE.search(line)
+        if status_match:
+            try:
+                auto = 1 if int(status_match.group(1)) else 0
+                duty = max(0, min(100, int(status_match.group(2))))
+                return {"auto": auto, "duty": duty}
+            except (TypeError, ValueError):
+                pass
+
+        return None
+
     def _extract_indexed_series(self, line: str, regex: re.Pattern, limit: int = 10) -> List[float]:
         """Extract indexed values like C1: 3.54 ... and return ordered values by index."""
         values_by_index = {}
@@ -832,7 +911,7 @@ class SerialWorker(QObject):
             power_value = self._coerce_numeric(eload.get("p", eload.get("power")))
             pack_current = self._coerce_numeric(raw.get("i"))
 
-            return {
+            result = {
                 "cells": cells,
                 "fan1": {"rpm": fan_rpm},  # Keeping fan1/fan2 struct for now, mapping both to same rpm
                 "fan2": {"rpm": fan_rpm},
@@ -845,15 +924,21 @@ class SerialWorker(QObject):
                     "actual_current": float(measured_current if measured_current is not None else 0.0),
                     "power": float(power_value if power_value is not None else 0.0)
                 },
-                "fan_control": {
-                    "auto": bool(fan_ctrl.get("auto", True)),
-                    "duty": int(fan_ctrl.get("duty", 0))
-                },
                 "thermistors": {
                     "raw": raw.get("ntc_raw", []),
                     "celsius": raw.get("ntc_c", []),
                 },
             }
+
+            # Only include fan_control when firmware actually sent fan_ctrl data,
+            # otherwise the GUI's local mode (set by user clicks) is preserved.
+            if fan_ctrl:
+                result["fan_control"] = {
+                    "auto": bool(fan_ctrl.get("auto", True)),
+                    "duty": int(fan_ctrl.get("duty", 0))
+                }
+
+            return result
         except Exception as e:
             logger.error(f"Transformation error: {e}")
             return {}
@@ -869,7 +954,15 @@ class SerialWorker(QObject):
         
         if target_port:
             try:
-                self.serial_conn = serial.Serial(target_port, self.baudrate, timeout=1)
+                conn = serial.Serial()
+                conn.port = target_port
+                conn.baudrate = self.baudrate
+                conn.timeout = 1
+                conn.dtr = False
+                conn.rts = False
+                conn.open()
+                time.sleep(0.1)  # let USB CDC stabilize
+                self.serial_conn = conn
                 logger.info(f"Connected to {target_port}")
                 self.connected_port = target_port
                 self.connected_port_changed.emit(target_port)
@@ -934,14 +1027,15 @@ class SerialWorker(QObject):
 
     def send_command(self, cmd_str: str):
         """Send a command string to the serial device."""
+        print(f"[SERIAL] send_command called: {cmd_str!r}, conn={self.serial_conn is not None}, open={self.serial_conn.is_open if self.serial_conn else 'N/A'}", flush=True)
         if self.serial_conn and self.serial_conn.is_open:
             try:
                 # Ensure newline termination if not present
                 if not cmd_str.endswith('\n'):
                     cmd_str += '\n'
                 self.serial_conn.write(cmd_str.encode('utf-8'))
-                logger.info(f"Sent: {cmd_str.strip()}")
+                print(f"[SERIAL] Sent OK: {cmd_str.strip()}", flush=True)
             except Exception as e:
-                logger.error(f"Failed to send command: {e}")
+                print(f"[SERIAL] Failed to send: {e}", flush=True)
         else:
-            logger.warning("Cannot send command: Serial not connected")
+            print("[SERIAL] Cannot send: Serial not connected", flush=True)

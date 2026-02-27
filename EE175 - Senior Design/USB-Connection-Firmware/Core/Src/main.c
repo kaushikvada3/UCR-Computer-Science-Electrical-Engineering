@@ -18,6 +18,7 @@
 #include "usbd_cdc_if.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 /* USER CODE END Includes */
 
@@ -43,6 +44,15 @@
 #define NTC_BETA          3950.0f   // Beta coefficient
 #define NTC_SERIES_R      10000.0f  // Series resistor value (Ohms)
 #define NTC_VCC           3.3f      // Supply voltage
+
+// Fan Control Parameters
+#define FAN_PWM_MAX       999       // TIM17 ARR value (0-999 = 0-100% duty)
+#define FAN_TACH_TIMER_FREQ 1000000 // TIM3 tick rate: 48MHz / (47+1) = 1MHz
+#define FAN_PULSES_PER_REV  2       // Most fans output 2 pulses per revolution
+#define FAN_RPM_TIMEOUT_MS  2000    // If no tach pulse for 2s, fan is stopped/stalled
+#define FAN_RPM_AVG_SAMPLES 4       // Moving average window size
+#define FAN_RPM_MAX         15000   // Max plausible RPM (reject noise above this)
+#define FAN_RPM_RATED       2700    // Fan's maximum rated RPM at 100% duty
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,10 +67,31 @@ DMA_HandleTypeDef hdma_adc2;
 
 I2C_HandleTypeDef hi2c1;
 
+TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim17;
+
 /* USER CODE BEGIN PV */
-char data_buffer[256];
+char data_buffer[512];
 uint8_t bms_addr = 0;
 uint8_t use_crc = 0; // 0 = No CRC, 1 = Use CRC
+
+// Fan Control Variables
+volatile uint32_t fan_tach_capture_last = 0;   // Previous capture value
+volatile uint32_t fan_tach_period = 0;         // Period between falling edges (in µs)
+volatile uint8_t  fan_tach_new_data = 0;       // Flag: new capture available
+volatile uint32_t fan_tach_last_tick = 0;      // HAL_GetTick() at last capture (for timeout)
+volatile uint16_t fan_tach_overflow_count = 0; // Timer overflow count (for low-RPM measurement)
+uint16_t fan_duty = 0;                         // Current PWM duty (0-999)
+uint32_t fan_rpm = 0;                          // Calculated RPM
+uint32_t fan_rpm_buf[FAN_RPM_AVG_SAMPLES];     // Moving average buffer
+uint8_t  fan_rpm_idx = 0;                      // Current index into averaging buffer
+uint8_t  fan_rpm_filled = 0;                   // 1 once buffer has been fully populated
+uint8_t  fan_auto_mode = 1;                    // 1 = auto (temp-based), 0 = manual (dashboard controls)
+uint8_t  fan_manual_duty = 0;                  // Manual duty cycle set by dashboard (0-100%)
+
+// USB Command receive (from usbd_cdc_if.c)
+extern volatile uint8_t cmd_ready[];
+extern volatile uint8_t cmd_ready_flag;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,7 +101,12 @@ static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM17_Init(void);
 /* USER CODE BEGIN PFP */
+void Fan_SetSpeed(uint8_t percent);
+uint32_t Fan_GetRPM(void);
+void Process_USB_Command(const char *cmd);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -260,6 +296,8 @@ int main(void)
   MX_I2C1_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
+  MX_TIM3_Init();
+  MX_TIM17_Init();
   /* USER CODE BEGIN 2 */
 
   // USB D+ pull-up on PC2 is now handled automatically by
@@ -267,6 +305,26 @@ int main(void)
   // by the USB stack during USBD_Start() inside MX_USB_DEVICE_Init().
   // Allow time for Windows to complete enumeration before proceeding.
   HAL_Delay(500);
+
+  // --- Start Fan PWM (TIM17 CH1 on PB9) ---
+  HAL_TIM_PWM_Start(&htim17, TIM_CHANNEL_1);
+  __HAL_TIM_MOE_ENABLE(&htim17);   // Force Main Output Enable for advanced timer
+  Fan_SetSpeed(100);  // Fan at 100% for testing
+
+  // --- Start Fan Tach Input Capture (TIM3 CH1 on PC6) ---
+  // Re-configure PC6 with internal pull-up (tach is open-drain)
+  {
+      GPIO_InitTypeDef gpio = {0};
+      gpio.Pin = GPIO_PIN_6;
+      gpio.Mode = GPIO_MODE_AF_PP;
+      gpio.Pull = GPIO_PULLUP;
+      gpio.Speed = GPIO_SPEED_FREQ_LOW;
+      gpio.Alternate = GPIO_AF2_TIM3;
+      HAL_GPIO_Init(GPIOC, &gpio);
+  }
+  HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
+  __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);  // Enable overflow interrupt for low-RPM tracking
+  fan_tach_last_tick = HAL_GetTick();
 
   // Initial Scan
   Discover_BMS();
@@ -293,6 +351,12 @@ int main(void)
         continue;
     }
 
+    // --- 0. CHECK FOR USB COMMANDS FROM DASHBOARD ---
+    if (cmd_ready_flag) {
+        Process_USB_Command((const char *)cmd_ready);
+        cmd_ready_flag = 0;
+    }
+
     // --- 1. READ BMS CELL VOLTAGES ---
     uint8_t raw[20] = {0};
     BQ_ReadRegs(VC1_HI_BYTE, raw, 20);
@@ -315,15 +379,10 @@ int main(void)
                  "ADDR: 0x%02X (CRC ON) | V=0.000 (Check Voltages)\r\n", bms_addr);
              CDC_Transmit_FS((uint8_t*)data_buffer, len);
         }
-    } else {
-        // SUCCESS - Format all 10 cells with current
-        int len = snprintf(data_buffer, sizeof(data_buffer),
-            "C1:%.3f C2:%.3f C3:%.3f C4:%.3f C5:%.3f C6:%.3f C7:%.3f C8:%.3f C9:%.3f C10:%.3f | I:%.3fA\r\n",
-            v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], current);
-        CDC_Transmit_FS((uint8_t*)data_buffer, len);
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
+        HAL_Delay(500);
+        continue;
     }
-
-    HAL_Delay(5); // Tiny delay to let USB flush previous print
 
     // --- 3. READ STM32 THERMISTORS & CONVERT TO TEMPERATURE ---
     float t_voltage[10];
@@ -345,15 +404,66 @@ int main(void)
         t_celsius[i] = voltage_to_temperature(t_voltage[i]);
     }
 
-    // Format all 10 Temperatures in Celsius
-    int len2 = snprintf(data_buffer, sizeof(data_buffer),
-        "T1:%.1f T2:%.1f T3:%.1f T4:%.1f T5:%.1f T6:%.1f T7:%.1f T8:%.1f T9:%.1f T10:%.1f °C\r\n\n",
+    // --- 4. FAN CONTROL (Auto or Manual) ---
+    uint8_t effective_duty;
+    if (fan_auto_mode) {
+        // Find MAX temperature across all 10 NTCs
+        float max_temp = t_celsius[0];
+        for (int i = 1; i < 10; i++) {
+            if (t_celsius[i] > max_temp) max_temp = t_celsius[i];
+        }
+
+        // Temperature -> Duty mapping:
+        //   <= 30C  -> 0% (fan off, cells are cool)
+        //   30-50C  -> linear ramp 20%-100%
+        //   >= 50C  -> 100% (full blast)
+        if (max_temp <= 30.0f) {
+            effective_duty = 0;
+        } else if (max_temp >= 50.0f) {
+            effective_duty = 100;
+        } else {
+            effective_duty = (uint8_t)(20 + (max_temp - 30.0f) * 80.0f / 20.0f);
+        }
+    } else {
+        // Manual mode: use duty set by dashboard
+        effective_duty = fan_manual_duty;
+    }
+    Fan_SetSpeed(effective_duty);
+
+    // Read real tach RPM; fall back to estimated RPM if tach times out
+    fan_rpm = Fan_GetRPM();
+    if (fan_rpm == 0 && effective_duty > 0) {
+        fan_rpm = (uint32_t)effective_duty * FAN_RPM_RATED / 100;
+    }
+
+    // --- 5. SEND HUMAN-READABLE OUTPUT ---
+    int len = snprintf(data_buffer, sizeof(data_buffer),
+        "Voltages ->  C1: %.3f,  C2: %.3f,  C3: %.3f,  C4: %.3f,  C5: %.3f,  C6: %.3f,  C7: %.3f,  C8: %.3f,  C9: %.3f,  C10: %.3f\r\n"
+        "Temperatures -> T1: %.1f,  T2: %.1f,  T3: %.1f,  T4: %.1f,  T5: %.1f,  T6: %.1f,  T7: %.1f,  T8: %.1f,  T9: %.1f,  T10: %.1f\r\n"
+        "Current ->  %.3f A\r\n"
+        "Fan ->  %lu RPM\r\n"
+        "fan_auto:%d fan_duty:%d\r\n\r\n",
+        v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9],
         t_celsius[0], t_celsius[1], t_celsius[2], t_celsius[3], t_celsius[4],
-        t_celsius[5], t_celsius[6], t_celsius[7], t_celsius[8], t_celsius[9]);
-    CDC_Transmit_FS((uint8_t*)data_buffer, len2);
+        t_celsius[5], t_celsius[6], t_celsius[7], t_celsius[8], t_celsius[9],
+        current,
+        fan_rpm,
+        fan_auto_mode, (int)effective_duty);
+    CDC_Transmit_FS((uint8_t*)data_buffer, len);
 
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
-    HAL_Delay(500);
+
+    // Wait ~500ms for next telemetry cycle, but check for USB commands every 10ms
+    {
+        uint32_t wait_start = HAL_GetTick();
+        while ((HAL_GetTick() - wait_start) < 500) {
+            if (cmd_ready_flag) {
+                Process_USB_Command((const char *)cmd_ready);
+                cmd_ready_flag = 0;
+            }
+            HAL_Delay(10);
+        }
+    }
 
     /* USER CODE END WHILE_LOOP_LOGIC */
     /* USER CODE END WHILE */
@@ -658,6 +768,127 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_IC_InitTypeDef sConfigIC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 47;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 65535;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_IC_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0x0F;
+  if (HAL_TIM_IC_ConfigChannel(&htim3, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
+  * @brief TIM17 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM17_Init(void)
+{
+
+  /* USER CODE BEGIN TIM17_Init 0 */
+
+  /* USER CODE END TIM17_Init 0 */
+
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM17_Init 1 */
+
+  /* USER CODE END TIM17_Init 1 */
+  htim17.Instance = TIM17;
+  htim17.Init.Prescaler = 47;
+  htim17.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim17.Init.Period = 999;
+  htim17.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim17.Init.RepetitionCounter = 0;
+  htim17.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim17) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim17) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim17, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakFilter = 0;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim17, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM17_Init 2 */
+
+  /* USER CODE END TIM17_Init 2 */
+  HAL_TIM_MspPostInit(&htim17);
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -667,12 +898,12 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
   __HAL_RCC_DMA2_CLK_ENABLE();
 
-  /* DMA interrupt init */
+  /* DMA interrupt init — lower priority than USB (which is 0,0) */
   /* DMA1_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
   /* DMA2_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Channel1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA2_Channel1_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(DMA2_Channel1_IRQn);
 
 }
@@ -719,6 +950,130 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+// --- USB COMMAND PROCESSING ---
+// Handles commands from the BMS Dashboard sent over USB CDC
+void Process_USB_Command(const char *cmd) {
+    // FAN:AUTO — switch to automatic temperature-based control
+    if (strcmp(cmd, "FAN:AUTO") == 0) {
+        fan_auto_mode = 1;
+        return;
+    }
+
+    // FAN:MANUAL — switch to manual dashboard control
+    if (strcmp(cmd, "FAN:MANUAL") == 0) {
+        fan_auto_mode = 0;
+        return;
+    }
+
+    // FAN:SET:XX — set manual duty cycle (0-100%)
+    if (strncmp(cmd, "FAN:SET:", 8) == 0) {
+        int duty = atoi(cmd + 8);
+        if (duty < 0) duty = 0;
+        if (duty > 100) duty = 100;
+        fan_manual_duty = (uint8_t)duty;
+        if (!fan_auto_mode) {
+            Fan_SetSpeed(fan_manual_duty);
+        }
+        return;
+    }
+}
+
+// --- FAN CONTROL FUNCTIONS ---
+
+// Set fan speed: 0-100 percent
+// At 100%: switch PB9 to GPIO output HIGH for solid ground path (clean tach signal)
+// At 0%:   switch PB9 to GPIO output LOW (fan off)
+// Otherwise: use TIM17 PWM
+void Fan_SetSpeed(uint8_t percent) {
+    if (percent > 100) percent = 100;
+    fan_duty = (uint16_t)((uint32_t)percent * FAN_PWM_MAX / 100);
+
+    if (percent == 100) {
+        // Bypass PWM — drive gate fully HIGH for clean ground path
+        GPIO_InitTypeDef gpio = {0};
+        gpio.Pin = FAN_EN_Pin;
+        gpio.Mode = GPIO_MODE_OUTPUT_PP;
+        gpio.Pull = GPIO_NOPULL;
+        gpio.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(FAN_EN_GPIO_Port, &gpio);
+        HAL_GPIO_WritePin(FAN_EN_GPIO_Port, FAN_EN_Pin, GPIO_PIN_SET);
+    } else if (percent == 0) {
+        // Drive gate fully LOW — fan off
+        GPIO_InitTypeDef gpio = {0};
+        gpio.Pin = FAN_EN_Pin;
+        gpio.Mode = GPIO_MODE_OUTPUT_PP;
+        gpio.Pull = GPIO_NOPULL;
+        gpio.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(FAN_EN_GPIO_Port, &gpio);
+        HAL_GPIO_WritePin(FAN_EN_GPIO_Port, FAN_EN_Pin, GPIO_PIN_RESET);
+    } else {
+        // Restore PWM alternate function for variable speed
+        GPIO_InitTypeDef gpio = {0};
+        gpio.Pin = FAN_EN_Pin;
+        gpio.Mode = GPIO_MODE_AF_PP;
+        gpio.Pull = GPIO_NOPULL;
+        gpio.Speed = GPIO_SPEED_FREQ_LOW;
+        gpio.Alternate = GPIO_AF1_TIM17;
+        HAL_GPIO_Init(FAN_EN_GPIO_Port, &gpio);
+        __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, fan_duty);
+    }
+}
+
+// Get current fan RPM with moving average (call periodically from main loop)
+uint32_t Fan_GetRPM(void) {
+    // Check for timeout (fan stopped or disconnected)
+    if ((HAL_GetTick() - fan_tach_last_tick) > FAN_RPM_TIMEOUT_MS) {
+        fan_rpm_filled = 0;
+        fan_rpm_idx = 0;
+        return 0;
+    }
+
+    if (fan_tach_period == 0) return 0;
+
+    // RPM = (60 * timer_freq) / (period_ticks * pulses_per_rev)
+    uint32_t raw_rpm = (60UL * FAN_TACH_TIMER_FREQ) / (fan_tach_period * FAN_PULSES_PER_REV);
+
+    // Reject noise spikes above max plausible RPM
+    if (raw_rpm > FAN_RPM_MAX) return 0;
+
+    // Store in moving average buffer
+    fan_rpm_buf[fan_rpm_idx] = raw_rpm;
+    fan_rpm_idx = (fan_rpm_idx + 1) % FAN_RPM_AVG_SAMPLES;
+    if (!fan_rpm_filled && fan_rpm_idx == 0) fan_rpm_filled = 1;
+
+    // Compute average over available samples
+    uint8_t count = fan_rpm_filled ? FAN_RPM_AVG_SAMPLES : fan_rpm_idx;
+    if (count == 0) return raw_rpm;
+
+    uint32_t sum = 0;
+    for (uint8_t i = 0; i < count; i++) {
+        sum += fan_rpm_buf[i];
+    }
+    return sum / count;
+}
+
+// HAL Timer overflow callback — counts overflows for low-RPM measurement
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM3) {
+        fan_tach_overflow_count++;
+    }
+}
+
+// HAL Input Capture callback — called by HAL from TIM3 ISR
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM3 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+        uint32_t capture = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+
+        // Calculate period including overflow counts for low-RPM accuracy
+        fan_tach_period = (fan_tach_overflow_count * 65536UL) + capture - fan_tach_capture_last;
+
+        fan_tach_overflow_count = 0;
+        fan_tach_capture_last = capture;
+        fan_tach_new_data = 1;
+        fan_tach_last_tick = HAL_GetTick();
+    }
+}
 
 /* USER CODE END 4 */
 
