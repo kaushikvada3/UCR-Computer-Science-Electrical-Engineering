@@ -1,0 +1,131 @@
+1
+1
+2
+2
+3
+3
+4
+4
+5
+5
+6
+6
+7
+7
+8
+8
+F
+F
+E
+E
+D
+D
+C
+C
+B
+B
+A
+A
+REVISION
+DESCRIPTION
+DATE
+APPROVED
+REV.
+SHT.
+DWG. NO.
+*
+REV. SHT.
+DWG. NO.
+*
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR 
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY 
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE 
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+Power
+B
+Top-Level.SchDoc
+*
+*
+TITLE
+SIZE
+DWG NO.
+FILE NAME
+SHEET
+OF
+REV
+SCALE:
+CAGE CODE
+PROJECT
+*
+*
+*
+*
+APPROVALS
+DATE
+ENG:
+DSN:
+*
+*
+CHK:
+REFERENCE DOCUMENTS
+BOM:
+ASSY DWG:
+FAB DWG:
+PCB DWG:
+*
+PROJECT REVISION:
+DESIGN ITEM:
+DOCUMENT REVISION:
+Version control disabled Version control disabled
+I_SET
+V_SHUNT_1
+V_SHUNT_2
+V_SHUNT_3
+V_SHUNT_4
+OFF
+L_RESET
+GATE_DISABLE
+U_Power
+Power.SchDoc
+USB-FS
+V_SHUNT_[1..4]
+SCL1
+SDA1
+OFF
+FAN-EN
+FAN_TACH
+ENC_A
+ENC_B
+ENC_SW
+L_RESET
+GATE_DISABLE
+U_STM32
+STM32.SchDoc
+USB-FS
+U_Connectors
+Connectors.SchDoc
+I_SET
+V_SHUNT_[1..4]
+V_SHUNT_1
+V_SHUNT_2
+V_SHUNT_3
+V_SHUNT_4
+SCL1
+SDA1
+U_ADC+DAC
+ADC+DAC.SchDoc
+U_Power-Tree
+Power-Tree.SchDoc
+FAN_TACH
+FAN-EN
+ENC_A
+ENC_B
+ENC_SW
+U_User-Input
+User-Input.SchDoc
+Note: Design/reminder ("TODO")
+Note: Design Note, General
+Note: Design Critical Parameter
+Note: Layout Reminder
+Note: Layout Necessary/Suggested
+Note: Layout Critical Parameter
