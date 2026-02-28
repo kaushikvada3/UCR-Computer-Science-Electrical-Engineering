@@ -15,6 +15,10 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
         "port": None,
         "baudrate": 115200,
     },
+    "eload": {
+        "port": None,  # Set to COM port when E-Load is connected
+        "baudrate": 115200,
+    },
     "updates": {
         "channel": "stable",
         "last_checked_utc": None,
@@ -85,6 +89,20 @@ class SettingsStore:
         except (TypeError, ValueError):
             return 115200
 
+    def eload_port(self) -> Optional[str]:
+        value = self._data.get("eload", {}).get("port")
+        if value is None:
+            return None  # E-Load disabled
+        text = str(value).strip()
+        return text if text else None
+
+    def eload_baudrate(self) -> int:
+        value = self._data.get("eload", {}).get("baudrate", 115200)
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 115200
+
     def update_channel(self) -> str:
         value = str(self._data.get("updates", {}).get("channel", "stable")).strip().lower()
         return value or "stable"
@@ -98,6 +116,17 @@ class SettingsStore:
         self._data.setdefault("serial", {})
         self._data["serial"]["port"] = normalized_port
         self._data["serial"]["baudrate"] = int(baudrate)
+        self.save()
+
+    def set_eload(self, port: Optional[str], baudrate: int) -> None:
+        normalized_port = None
+        if port is not None:
+            text = str(port).strip()
+            normalized_port = text if text else None
+
+        self._data.setdefault("eload", {})
+        self._data["eload"]["port"] = normalized_port
+        self._data["eload"]["baudrate"] = int(baudrate)
         self.save()
 
     def set_update_channel(self, channel: str) -> None:

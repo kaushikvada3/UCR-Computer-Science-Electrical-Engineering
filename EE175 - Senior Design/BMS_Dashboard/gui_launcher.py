@@ -425,6 +425,8 @@ class DashboardWindow(QMainWindow):
         self._staged_restart_prompted = False
         self._has_serial_data = False
         self._current_connected_port = ""
+        self.latest_bms_data = {}
+        self.latest_eload_data = {}
         self.toolbar = None
         self._normal_window_flags = self.windowFlags()
         self._startup_mode_active: bool = True
@@ -453,15 +455,32 @@ class DashboardWindow(QMainWindow):
         self.http_port = 8765
         self.start_http_server()
 
+        # BMS Serial Worker
         self.serial_worker = SerialWorker(port=serial_port, baudrate=baudrate)
         self.serial_thread = QThread()
         self.serial_worker.moveToThread(self.serial_thread)
         self.serial_thread.started.connect(self.serial_worker.start_monitoring)
-        self.serial_worker.data_received.connect(self.handle_data)
+        self.serial_worker.data_received.connect(self.handle_bms_data)
         self.serial_worker.connection_status.connect(self.handle_connection_status)
         self.serial_worker.data_activity.connect(self.handle_data_activity)
         self.serial_worker.connected_port_changed.connect(self.handle_connected_port_change)
         self.serial_thread.start()
+
+        # E-Load Serial Worker (optional)
+        eload_port = settings.eload_port()
+        self.eload_worker = None
+        self.eload_thread = None
+        if eload_port is not None:
+            self.eload_worker = SerialWorker(port=eload_port, baudrate=settings.eload_baudrate())
+            self.eload_thread = QThread()
+            self.eload_worker.moveToThread(self.eload_thread)
+            self.eload_thread.started.connect(self.eload_worker.start_monitoring)
+            self.eload_worker.data_received.connect(self.handle_eload_data)
+            self.eload_worker.connection_status.connect(self.handle_eload_connection_status)
+            self.eload_thread.start()
+            print("[E-Load] E-Load serial worker started on", eload_port)
+        else:
+            print("[E-Load] E-Load disabled (no port configured)")
 
         self.bridge = Bridge(self.serial_worker)
         self.channel = QWebChannel()
@@ -489,8 +508,26 @@ class DashboardWindow(QMainWindow):
         if self.updater and auto_update_check and self.is_packaged:
             QTimer.singleShot(2500, lambda: self.check_for_updates_async(manual=False))
 
-    def handle_data(self, data: dict):
-        json_str = json.dumps(data)
+    def handle_bms_data(self, data: dict):
+        """Handle BMS serial data"""
+        self.latest_bms_data = data
+        self.merge_and_send_data()
+
+    def handle_eload_data(self, data: dict):
+        """Handle E-Load serial data"""
+        self.latest_eload_data = data
+        self.merge_and_send_data()
+
+    def merge_and_send_data(self):
+        """Merge BMS and E-Load data and send to frontend"""
+        merged = self.latest_bms_data.copy()
+
+        # Add E-Load data if available
+        if self.latest_eload_data:
+            merged['eload'] = self.latest_eload_data.get('eload', {})
+
+        # Send to frontend
+        json_str = json.dumps(merged)
         self.view.page().runJavaScript(
             f"if(window.updateDashboard) window.updateDashboard({json_str});"
         )
@@ -513,6 +550,11 @@ class DashboardWindow(QMainWindow):
                 self.serial_worker.send_command(str(cmd))
         except Exception as e:
             print(f"[CMD-POLL] Error: {e}", flush=True)
+
+    def handle_eload_connection_status(self, connected: bool):
+        """Handle E-Load connection status changes"""
+        status_text = "Connected to E-Load" if connected else "E-Load Disconnected"
+        print(f"[E-Load] {status_text}")
 
     def handle_connection_status(self, is_connected: bool):
         self._set_frontend_connection_state(is_connected)
