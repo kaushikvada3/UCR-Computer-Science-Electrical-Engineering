@@ -34,6 +34,18 @@
 #define VC1_HI_BYTE       0x0C
 #define CC_HI_BYTE        0x32  // Current measurement high byte
 
+// BQ76930 SYS_CTRL2 bit masks
+#define SYS_CTRL2_CC_EN   0x40   // Bit 6: Coulomb counter enable
+#define SYS_CTRL2_DSG_ON  0x02   // Bit 1: Discharge FET driver enable
+#define SYS_CTRL2_CHG_ON  0x01   // Bit 0: Charge FET driver enable
+
+// BQ76930 protection register addresses
+#define PROTECT1          0x06
+#define PROTECT2          0x07
+#define PROTECT3          0x08
+#define OV_TRIP           0x09
+#define UV_TRIP           0x0A
+
 // Current Shunt Parameters
 #define SHUNT_RESISTOR    0.020f  // 20mOhm shunt resistor
 #define BQ_CURRENT_LSB    0.000422f  // (8.44µV / 0.020Ω) = 0.422mA per LSB
@@ -205,10 +217,19 @@ void BQ_ReadRegs(uint8_t reg, uint8_t *data, uint16_t count) {
     if (bms_addr == 0) return;
 
     if (use_crc) {
+        // Pack [reg][CRC(addr_W, reg)] into a 16-bit memory address so
+        // HAL_I2C_Mem_Read sends both bytes before the RESTART condition.
+        // Wire format: [START][addr_W][reg][CRC][RESTART][addr_R][d1][c1][d2][c2]...[STOP]
+        uint8_t crc_input[2] = {bms_addr, reg};
+        uint8_t crc = CRC8(crc_input, 2);
+        uint16_t mem_addr = ((uint16_t)reg << 8) | crc;
+
         uint8_t rx_buffer[128];
-        HAL_I2C_Mem_Read(&hi2c1, bms_addr, reg, I2C_MEMADD_SIZE_8BIT, rx_buffer, count * 2, 100);
-        for(int i=0; i<count; i++) {
-            data[i] = rx_buffer[i*2];
+        HAL_I2C_Mem_Read(&hi2c1, bms_addr, mem_addr, I2C_MEMADD_SIZE_16BIT,
+                         rx_buffer, count * 2, 100);
+
+        for(int i = 0; i < count; i++) {
+            data[i] = rx_buffer[i * 2];  // Data bytes at even indices, CRC at odd
         }
     } else {
         HAL_I2C_Mem_Read(&hi2c1, bms_addr, reg, I2C_MEMADD_SIZE_8BIT, data, count, 100);
@@ -235,9 +256,48 @@ float BQ_ReadCurrent(void) {
 
 void BQ_Init(void) {
     if (bms_addr == 0) return;
-    BQ_WriteReg(SYS_STAT, 0xFF);
+
+    // Clear faults with read-back verification.
+    // The BQ769x0 is battery-powered so faults persist across STM32 resets.
+    uint8_t stat = 0;
+    for (int attempt = 0; attempt < 10; attempt++) {
+        BQ_WriteReg(SYS_STAT, 0xFF);
+        HAL_Delay(50);
+        BQ_ReadRegs(SYS_STAT, &stat, 1);
+        if ((stat & 0x1F) == 0) break;  // Fault bits [4:0] all cleared
+    }
+
+    // --- Configure protection thresholds BEFORE enabling FETs ---
+    // 10S Li-ion pack, 20mOhm shunt, <1A max discharge
+    //
+    // PROTECT1: RSNS=0, SCD_DELAY=400us, SCD_THRESH=100mV (5A)
+    //   Bits: [RSNS=0][00][SCD_DLY=11][SCD_THR=111] = 0x1F
+    BQ_WriteReg(PROTECT1, 0x1F);
+    HAL_Delay(10);
+
+    // PROTECT2: OCD_DELAY=1280ms, OCD_THRESH=50mV (2.5A)
+    //   Bits: [0][OCD_DLY=111][OCD_THR=1111] = 0x7F
+    BQ_WriteReg(PROTECT2, 0x7F);
+    HAL_Delay(10);
+
+    // PROTECT3: OV_DELAY=8s, UV_DELAY=16s (max delays for noise immunity)
+    //   Bits: [00][OV_DLY=11][UV_DLY=11][00] = 0x3C
+    BQ_WriteReg(PROTECT3, 0x3C);
+    HAL_Delay(10);
+
+    // OV_TRIP: ~4.30V per cell (with typical GAIN=382uV/LSB)
+    BQ_WriteReg(OV_TRIP, 0xB0);
+    HAL_Delay(10);
+
+    // UV_TRIP: ~2.40V per cell (safe cutoff, well below your 3.0V operating point)
+    BQ_WriteReg(UV_TRIP, 0x62);
+    HAL_Delay(10);
+
+    // Enable ADC and discharge FET
     BQ_WriteReg(SYS_CTRL1, 0x10);
-    BQ_WriteReg(SYS_CTRL2, 0x40);
+    HAL_Delay(10);
+    BQ_WriteReg(SYS_CTRL2, SYS_CTRL2_CC_EN | SYS_CTRL2_DSG_ON);
+    HAL_Delay(10);
 }
 
 // --- SCANNER ---
@@ -254,7 +314,7 @@ void Discover_BMS(void) {
     res = HAL_I2C_IsDeviceReady(&hi2c1, 0x18 << 1, 2, 10);
     if (res == HAL_OK) {
         bms_addr = 0x18 << 1;
-        use_crc = 0;
+        use_crc = 1;  // Address 0x18 always requires CRC on BQ769x0
         return;
     }
     bms_addr = 0;
@@ -367,8 +427,15 @@ int main(void)
         v[i] = adc * 382.0f / 1000000.0f;
     }
 
-    // --- 2. READ CURRENT FROM BQ76930 ---
+    // --- 2. READ CURRENT AND STATUS FROM BQ76930 ---
     float current = BQ_ReadCurrent();
+
+    // Read SYS_STAT then immediately clear latched bits so next read shows only NEW faults
+    uint8_t sys_stat = 0;
+    BQ_ReadRegs(SYS_STAT, &sys_stat, 1);
+    if (sys_stat & 0x3F) {  // Any fault/status bits set (not CC_READY or DEVICE_XREADY)
+        BQ_WriteReg(SYS_STAT, sys_stat & 0x3F);  // Clear only the bits that were set
+    }
 
     if (v[0] < 0.1f) {
         if (use_crc == 0) {
@@ -376,8 +443,18 @@ int main(void)
             BQ_Init();
         } else {
              int len = snprintf(data_buffer, sizeof(data_buffer),
-                 "ADDR: 0x%02X (CRC ON) | V=0.000 (Check Voltages)\r\n", bms_addr);
+                 "ADDR: 0x%02X (CRC ON) | V=0.000 | SYS_STAT=0x%02X [%s%s%s%s%s]\r\n",
+                 bms_addr, sys_stat,
+                 (sys_stat & 0x10) ? "UV " : "",
+                 (sys_stat & 0x08) ? "OV " : "",
+                 (sys_stat & 0x04) ? "SCD " : "",
+                 (sys_stat & 0x02) ? "OCD " : "",
+                 (sys_stat & 0x01) ? "XREADY " : "");
              CDC_Transmit_FS((uint8_t*)data_buffer, len);
+
+             // Clear faults and re-enable discharge
+             BQ_WriteReg(SYS_STAT, 0xFF);
+             BQ_WriteReg(SYS_CTRL2, SYS_CTRL2_CC_EN | SYS_CTRL2_DSG_ON);
         }
         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
         HAL_Delay(500);
@@ -441,12 +518,22 @@ int main(void)
         "Voltages ->  C1: %.3f,  C2: %.3f,  C3: %.3f,  C4: %.3f,  C5: %.3f,  C6: %.3f,  C7: %.3f,  C8: %.3f,  C9: %.3f,  C10: %.3f\r\n"
         "Temperatures -> T1: %.1f,  T2: %.1f,  T3: %.1f,  T4: %.1f,  T5: %.1f,  T6: %.1f,  T7: %.1f,  T8: %.1f,  T9: %.1f,  T10: %.1f\r\n"
         "Current ->  %.3f A\r\n"
+        "SYS_STAT -> 0x%02X [%s%s%s%s%s%s%s%s]\r\n"
         "Fan ->  %lu RPM\r\n"
         "fan_auto:%d fan_duty:%d\r\n\r\n",
         v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9],
         t_celsius[0], t_celsius[1], t_celsius[2], t_celsius[3], t_celsius[4],
         t_celsius[5], t_celsius[6], t_celsius[7], t_celsius[8], t_celsius[9],
         current,
+        sys_stat,
+        (sys_stat & 0x80) ? "CC_READY " : "",
+        (sys_stat & 0x40) ? "DEVICE_XREADY " : "",
+        (sys_stat & 0x20) ? "OVRD_ALERT " : "",
+        (sys_stat & 0x10) ? "UV " : "",
+        (sys_stat & 0x08) ? "OV " : "",
+        (sys_stat & 0x04) ? "SCD " : "",
+        (sys_stat & 0x02) ? "OCD " : "",
+        (sys_stat & 0x01) ? "XREADY " : "",
         fan_rpm,
         fan_auto_mode, (int)effective_duty);
     CDC_Transmit_FS((uint8_t*)data_buffer, len);
@@ -975,6 +1062,13 @@ void Process_USB_Command(const char *cmd) {
         if (!fan_auto_mode) {
             Fan_SetSpeed(fan_manual_duty);
         }
+        return;
+    }
+
+    // BMS:RESET — clear all faults and re-enable discharge
+    if (strcmp(cmd, "BMS:RESET") == 0) {
+        BQ_WriteReg(SYS_STAT, 0xFF);  // Clear all fault flags
+        BQ_WriteReg(SYS_CTRL2, SYS_CTRL2_CC_EN | SYS_CTRL2_DSG_ON);  // Re-enable discharge
         return;
     }
 }
