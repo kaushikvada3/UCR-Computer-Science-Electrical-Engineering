@@ -277,6 +277,10 @@ class SerialWorker(QObject):
         if not line:
             return self._finalize_pending_frame(force=False)
 
+        # Check if this is E-Load format
+        if 'DAC_set' in line and 'VSENSE' in line:
+            return self._parse_eload_string_format(line)
+
         json_frame = self._try_parse_json_payload(line)
         if json_frame:
             if "i" in json_frame:
@@ -618,6 +622,42 @@ class SerialWorker(QObject):
             raw["ntc_c"] = ntc_c
 
         return raw if raw else None
+
+    def _parse_eload_string_format(self, line: str) -> Optional[dict]:
+        """
+        Parse E-Load format: DAC_set=1750mV DAC_rb=1750mV | VSENSE=266mV | S1=215mV S2=0mV S3=143mV S4=194mV
+
+        Returns normalized dict with eload data structure.
+        """
+        import re
+
+        # Extract all key=value pairs
+        pattern = r'(\w+)=(\d+)mV'
+        matches = re.findall(pattern, line)
+
+        if not matches:
+            return None
+
+        # Convert to dict and convert mV to V
+        raw = {}
+        for key, value_mv in matches:
+            raw[key.lower()] = float(value_mv) / 1000.0  # mV to V
+
+        # Map to normalized eload structure
+        eload_data = {
+            'eload': {
+                'v_set': raw.get('dac_set', 0.0),       # DAC setpoint
+                'v_set_rb': raw.get('dac_rb', 0.0),     # DAC readback
+                'v': raw.get('vsense', 0.0),            # Measured voltage
+                's1': raw.get('s1', 0.0),               # Sense channel 1
+                's2': raw.get('s2', 0.0),               # Sense channel 2
+                's3': raw.get('s3', 0.0),               # Sense channel 3
+                's4': raw.get('s4', 0.0),               # Sense channel 4
+                'enabled': raw.get('vsense', 0.0) > 0.01  # Enabled if sensing voltage
+            }
+        }
+
+        return eload_data
 
     @staticmethod
     def _coerce_numeric(value: Any) -> Optional[float]:

@@ -24,226 +24,368 @@
 <body class="is-booting">
   <div id="boot-loader" role="status" aria-live="polite" aria-label="Loading BMS Dashboard">
     <div id="boot-loader-content">
-      <p class="boot-loader__label">BMS Dashboard</p>
-      <p id="boot-stage" class="boot-loader__stage">Initializing dashboard...</p>
+      <img src="assets/branding/bms-logo.png" alt="BMS Logo" class="boot-loader__logo" />
+      <p id="boot-stage" class="boot-loader__stage">Initializing Dashboard</p>
+
+      <div class="boot-loader__meta">
+        <span id="boot-detail" class="boot-loader__detail">Loading assets...</span>
+        <span id="boot-percent" class="boot-loader__percent">0%</span>
+      </div>
       <div class="boot-loader__bar" aria-hidden="true">
         <div id="boot-progress-fill" class="boot-loader__fill"></div>
-      </div>
-      <div class="boot-loader__meta">
-        <span id="boot-percent" class="boot-loader__percent">0%</span>
-        <span id="boot-detail" class="boot-loader__detail">Waiting to start...</span>
       </div>
     </div>
   </div>
   <div id="chrome-mask" aria-hidden="true">
     <div class="chrome-mask__bar"></div>
   </div>
-  <canvas id="scene"></canvas>
 
-  <div class="hud">
-    <header class="hud__header">
-      <div>
-        <p class="eyebrow">UCR EV Lab</p>
-        <h1>BMS Command Surface</h1>
+  <!-- ═══════════════ Page-level Tab Bar ═══════════════ -->
+  <nav class="page-tabs" id="page-tabs" aria-label="Dashboard sections">
+    <button class="page-tab active" data-page="bms" id="tab-bms">
+      <span class="page-tab__icon">⚡</span>
+      <span class="page-tab__label">BMS</span>
+    </button>
+    <button class="page-tab" data-page="eload" id="tab-eload">
+      <span class="page-tab__icon">🔌</span>
+      <span class="page-tab__label">E-Load</span>
+    </button>
+    <div class="page-tab__indicator" id="tab-indicator"></div>
+  </nav>
+
+  <!-- ═══════════════ BMS Page ═══════════════ -->
+  <div class="page page--bms active" id="page-bms">
+    <canvas id="scene"></canvas>
+
+    <div class="hud">
+      <header class="hud__header">
+        <div>
+          <p class="eyebrow">UCR EV Lab</p>
+          <h1>BMS Command Surface</h1>
+        </div>
+      </header>
+
+      <!-- Left Column: Cell Grid + Metrics -->
+      <div class="left-column">
+        <section class="hud__section cell-grid glass-panel">
+          <!-- Filled dynamically -->
+        </section>
+
+        <section class="hud__section metrics glass-panel">
+          <div class="metric-card">
+            <p class="metric-card__label">Pack Voltage</p>
+            <p class="metric-card__value" data-pack-voltage>-- V</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-card__label">Pack Current</p>
+            <p class="metric-card__value" data-pack-current>-- A</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-card__label">Peak Temperature</p>
+            <p class="metric-card__value" data-pack-temp>-- &deg;C</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-card__label">Fan 1 Speed</p>
+            <p class="metric-card__value" data-fan-speed-1>-- RPM</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-card__label">Fan 2 Speed</p>
+            <p class="metric-card__value" data-fan-speed-2>-- RPM</p>
+          </div>
+          <div class="metric-card metric-card--simulate">
+            <div class="metric-card__row">
+              <p class="metric-card__label">Simulate Data</p>
+              <div class="toggle-switch">
+                <input type="checkbox" id="simulate-data-toggle" />
+                <label for="simulate-data-toggle" aria-label="Toggle simulated telemetry"></label>
+              </div>
+            </div>
+            <p class="metric-card__hint" id="simulate-data-mode">Actual Testing Mode</p>
+          </div>
+        </section>
       </div>
-    </header>
 
-    <!-- Left Column: Cell Grid + Metrics -->
-    <div class="left-column">
-      <section class="hud__section cell-grid glass-panel">
-        <!-- Filled dynamically -->
-      </section>
+      <!-- Right Column: Fan Control only (E-Load moved to its own page) -->
+      <div class="right-column">
 
-      <section class="hud__section metrics glass-panel">
-        <div class="metric-card">
-          <p class="metric-card__label">Pack Voltage</p>
-          <p class="metric-card__value" data-pack-voltage>-- V</p>
-        </div>
-        <div class="metric-card">
-          <p class="metric-card__label">Pack Current</p>
-          <p class="metric-card__value" data-pack-current>-- A</p>
-        </div>
-        <div class="metric-card">
-          <p class="metric-card__label">Peak Temperature</p>
-          <p class="metric-card__value" data-pack-temp>-- &deg;C</p>
-        </div>
-        <div class="metric-card">
-          <p class="metric-card__label">Fan 1 Speed</p>
-          <p class="metric-card__value" data-fan-speed-1>-- RPM</p>
-        </div>
-        <div class="metric-card">
-          <p class="metric-card__label">Fan 2 Speed</p>
-          <p class="metric-card__value" data-fan-speed-2>-- RPM</p>
-        </div>
-        <div class="metric-card metric-card--simulate">
-          <div class="metric-card__row">
-            <p class="metric-card__label">Simulate Data</p>
-            <div class="toggle-switch">
-              <input type="checkbox" id="simulate-data-toggle" />
-              <label for="simulate-data-toggle" aria-label="Toggle simulated telemetry"></label>
+        <!-- Fan Control -->
+        <section class="hud__section glass-panel">
+          <div class="timeline__header">
+            <p class="eyebrow">Fan Cooling</p>
+            <div class="mode-selector small">
+              <button class="mode-btn active" id="fan-auto-btn">Auto</button>
+              <button class="mode-btn" id="fan-manual-btn">Manual</button>
             </div>
           </div>
-          <p class="metric-card__hint" id="simulate-data-mode">Actual Testing Mode</p>
-        </div>
-      </section>
+          <div class="control-group disabled" id="fan-manual-controls">
+            <p class="metric-card__label">PWM Duty Cycle</p>
+            <div class="input-row">
+              <div class="glass-slider" data-glass-slider>
+                <input type="range" min="0" max="100" step="5" value="0" id="fan-slider" class="glass-slider__input">
+                <div class="glass-slider__track">
+                  <div class="glass-slider__progress"></div>
+                </div>
+                <div class="glass-slider__thumb">
+                  <div class="glass-slider__thumb-filter"></div>
+                  <div class="glass-slider__thumb-overlay"></div>
+                  <div class="glass-slider__thumb-specular"></div>
+                </div>
+              </div>
+              <span class="value-display" id="fan-value">0%</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+      <div class="status">
+        <span class="status__dot status__dot--waiting" id="data-pulse"></span>
+        <span class="status__label" data-thermal-trend>Waiting for Data</span>
+      </div>
     </div>
 
-    <!-- Right Column: Telemetry + E-Load + Fan -->
-    <div class="right-column">
-
-      <!-- 1. Live Telemetry Grid -->
-      <section class="hud__section glass-panel">
-        <div class="timeline__header">
-          <p class="eyebrow">ELoad Telemetry</p>
+    <aside class="detail-panel glass-panel" data-detail-panel>
+      <div class="detail-panel__header">
+        <div>
+          <p class="eyebrow detail-panel__eyebrow">Cell Focus</p>
+          <h2 data-cell-title>Cell 1</h2>
         </div>
-        <div class="telemetry-grid">
-          <div class="stat-box">
-            <span class="stat-label">Input Voltage</span>
-            <span class="stat-value" id="telem-voltage">-- V</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-label">Actual Current</span>
-            <span class="stat-value" id="telem-current">-- A</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-label">Dissipation</span>
-            <span class="stat-value" id="telem-power">-- W</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-label">Fan RPM</span>
-            <span class="stat-value" id="telem-rpm">--</span>
-          </div>
+        <button class="detail-panel__close" data-close-panel>Close</button>
+      </div>
+      <div class="detail-panel__body">
+        <div class="detail-stat">
+          <p class="detail-stat__label">Voltage</p>
+          <p class="detail-stat__value" data-cell-voltage>4.10 V</p>
         </div>
-      </section>
-
-      <!-- 2. E-Load Control -->
-      <section class="hud__section eload glass-panel">
-        <div class="timeline__header">
-          <p class="eyebrow">E-Load Control</p>
-          <div class="toggle-switch">
-            <input type="checkbox" id="eload-toggle" />
-            <label for="eload-toggle"></label>
-          </div>
+        <div class="detail-stat">
+          <p class="detail-stat__label">Temperature</p>
+          <p class="detail-stat__value" data-cell-temperature>32.5 &deg;C</p>
         </div>
-
-        <div class="control-group">
-          <p class="metric-card__label">Target Voltage (V_SET)</p>
-          <div class="input-row">
-            <div class="glass-slider" data-glass-slider>
-              <input type="range" min="0" max="40" step="0.01" value="0" id="eload-voltage-slider" class="glass-slider__input">
-              <div class="glass-slider__track">
-                <div class="glass-slider__progress"></div>
-              </div>
-              <div class="glass-slider__thumb">
-                <div class="glass-slider__thumb-filter"></div>
-                <div class="glass-slider__thumb-overlay"></div>
-                <div class="glass-slider__thumb-specular"></div>
-              </div>
-            </div>
-            <input type="number" min="0" max="40" step="0.01" value="0.00" id="eload-voltage-input" class="numeric-input">
-            <span class="unit">V</span>
+        <div class="detail-stat">
+          <p class="detail-stat__label">Current</p>
+          <p class="detail-stat__value" data-cell-current>-- A</p>
+        </div>
+        <div class="detail-stat">
+          <p class="detail-stat__label">Delta</p>
+          <p class="detail-stat__value" data-cell-delta>+8 mV</p>
+        </div>
+        <div class="detail-graph">
+          <div class="detail-graph__header">
+            <p class="detail-stat__label">Recent Voltage</p>
+            <p class="detail-stat__value detail-graph__latest" data-cell-trend-latest>-- V</p>
+          </div>
+          <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none" data-cell-trend>
+            <path class="detail-graph__area" data-cell-trend-area></path>
+            <path class="detail-graph__line" data-cell-trend-line></path>
+          </svg>
+          <div class="detail-graph__range">
+            <span data-cell-trend-min>-- V</span>
+            <span data-cell-trend-max>-- V</span>
           </div>
         </div>
-
-        <div class="control-group">
-          <p class="metric-card__label">Target Current (I_SET)</p>
-          <div class="input-row">
-            <div class="glass-slider" data-glass-slider>
-              <input type="range" min="0" max="20" step="0.01" value="0" id="eload-current-slider" class="glass-slider__input">
-              <div class="glass-slider__track">
-                <div class="glass-slider__progress"></div>
-              </div>
-              <div class="glass-slider__thumb">
-                <div class="glass-slider__thumb-filter"></div>
-                <div class="glass-slider__thumb-overlay"></div>
-                <div class="glass-slider__thumb-specular"></div>
-              </div>
-            </div>
-            <input type="number" min="0" max="20" step="0.01" value="0.00" id="eload-current-input" class="numeric-input">
-            <span class="unit">A</span>
-          </div>
+        <div class="detail-panel__note">
+          Live trace updates while telemetry streams.
         </div>
-      </section>
-
-      <!-- 3. Fan Control -->
-      <section class="hud__section glass-panel">
-        <div class="timeline__header">
-          <p class="eyebrow">Fan Cooling</p>
-          <div class="mode-selector small">
-            <button class="mode-btn active" id="fan-auto-btn">Auto</button>
-            <button class="mode-btn" id="fan-manual-btn">Manual</button>
-          </div>
-        </div>
-        <div class="control-group disabled" id="fan-manual-controls">
-          <p class="metric-card__label">PWM Duty Cycle</p>
-          <div class="input-row">
-            <div class="glass-slider" data-glass-slider>
-              <input type="range" min="0" max="100" step="5" value="0" id="fan-slider" class="glass-slider__input">
-              <div class="glass-slider__track">
-                <div class="glass-slider__progress"></div>
-              </div>
-              <div class="glass-slider__thumb">
-                <div class="glass-slider__thumb-filter"></div>
-                <div class="glass-slider__thumb-overlay"></div>
-                <div class="glass-slider__thumb-specular"></div>
-              </div>
-            </div>
-            <span class="value-display" id="fan-value">0%</span>
-          </div>
-        </div>
-      </section>
-
-    </div>
-    <div class="status">
-      <span class="status__dot status__dot--waiting" id="data-pulse"></span>
-      <span class="status__label" data-thermal-trend>Waiting for Data</span>
-    </div>
+      </div>
+    </aside>
   </div>
 
-  <aside class="detail-panel glass-panel" data-detail-panel>
-    <div class="detail-panel__header">
-      <div>
-        <p class="eyebrow detail-panel__eyebrow">Cell Focus</p>
-        <h2 data-cell-title>Cell 1</h2>
-      </div>
-      <button class="detail-panel__close" data-close-panel>Close</button>
-    </div>
-    <div class="detail-panel__body">
-      <div class="detail-stat">
-        <p class="detail-stat__label">Voltage</p>
-        <p class="detail-stat__value" data-cell-voltage>4.10 V</p>
-      </div>
-      <div class="detail-stat">
-        <p class="detail-stat__label">Temperature</p>
-        <p class="detail-stat__value" data-cell-temperature>32.5 &deg;C</p>
-      </div>
-      <div class="detail-stat">
-        <p class="detail-stat__label">Current</p>
-        <p class="detail-stat__value" data-cell-current>-- A</p>
-      </div>
-      <div class="detail-stat">
-        <p class="detail-stat__label">Delta</p>
-        <p class="detail-stat__value" data-cell-delta>+8 mV</p>
-      </div>
-      <div class="detail-graph">
-        <div class="detail-graph__header">
-          <p class="detail-stat__label">Recent Voltage</p>
-          <p class="detail-stat__value detail-graph__latest" data-cell-trend-latest>-- V</p>
+  <!-- ═══════════════ E-Load Page ═══════════════ -->
+  <div class="page page--eload" id="page-eload">
+    <canvas id="eload-scene"></canvas>
+
+    <div class="hud eload-hud">
+      <header class="hud__header">
+        <div>
+          <p class="eyebrow">UCR EV Lab</p>
+          <h1>E-Load Command Surface</h1>
         </div>
-        <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none" data-cell-trend>
-          <path class="detail-graph__area" data-cell-trend-area></path>
-          <path class="detail-graph__line" data-cell-trend-line></path>
-        </svg>
-        <div class="detail-graph__range">
-          <span data-cell-trend-min>-- V</span>
-          <span data-cell-trend-max>-- V</span>
-        </div>
+      </header>
+
+      <!-- Left Column: E-Load Telemetry Metrics -->
+      <div class="left-column">
+        <section class="hud__section glass-panel">
+          <div class="timeline__header">
+            <p class="eyebrow">ELoad Telemetry</p>
+          </div>
+          <div class="telemetry-grid">
+            <div class="stat-box">
+              <span class="stat-label">VSENSE</span>
+              <span class="stat-value" id="telem-voltage">-- mV</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">S1</span>
+              <span class="stat-value" id="telem-s1">-- mV</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">S2</span>
+              <span class="stat-value" id="telem-s2">-- mV</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">S3</span>
+              <span class="stat-value" id="telem-s3">-- mV</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">S4</span>
+              <span class="stat-value" id="telem-s4">-- mV</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Current (calc)</span>
+              <span class="stat-value" id="telem-current">-- A</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- E-Load Power Summary -->
+        <section class="hud__section metrics glass-panel">
+          <div class="metric-card">
+            <p class="metric-card__label">Output Voltage</p>
+            <p class="metric-card__value" id="eload-actual-voltage">-- V</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-card__label">Output Current</p>
+            <p class="metric-card__value" id="eload-actual-current">-- A</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-card__label">Power Dissipation</p>
+            <p class="metric-card__value" id="eload-power">-- W</p>
+          </div>
+          <div class="metric-card metric-card--simulate">
+            <div class="metric-card__row">
+              <p class="metric-card__label">Simulate Data</p>
+              <div class="toggle-switch">
+                <input type="checkbox" id="eload-simulate-toggle" />
+                <label for="eload-simulate-toggle" aria-label="Toggle E-Load simulated telemetry"></label>
+              </div>
+            </div>
+            <p class="metric-card__hint" id="eload-simulate-mode">Actual Testing Mode</p>
+          </div>
+        </section>
       </div>
-      <div class="detail-panel__note">
-        Live trace updates while telemetry streams.
+
+      <!-- Right Column: E-Load Controls -->
+      <div class="right-column">
+
+        <!-- E-Load Control -->
+        <section class="hud__section eload glass-panel">
+          <div class="timeline__header">
+            <p class="eyebrow">E-Load Control</p>
+            <div class="toggle-switch">
+              <input type="checkbox" id="eload-toggle" />
+              <label for="eload-toggle"></label>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="metric-card__label">Target Voltage (V_SET)</p>
+            <div class="input-row">
+              <div class="glass-slider" data-glass-slider>
+                <input type="range" min="0" max="40" step="0.01" value="0" id="eload-voltage-slider"
+                  class="glass-slider__input">
+                <div class="glass-slider__track">
+                  <div class="glass-slider__progress"></div>
+                </div>
+                <div class="glass-slider__thumb">
+                  <div class="glass-slider__thumb-filter"></div>
+                  <div class="glass-slider__thumb-overlay"></div>
+                  <div class="glass-slider__thumb-specular"></div>
+                </div>
+              </div>
+              <input type="number" min="0" max="40" step="0.01" value="0.00" id="eload-voltage-input"
+                class="numeric-input">
+              <span class="unit">V</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="metric-card__label">Target Current (I_SET)</p>
+            <div class="input-row">
+              <div class="glass-slider" data-glass-slider>
+                <input type="range" min="0" max="20" step="0.01" value="0" id="eload-current-slider"
+                  class="glass-slider__input">
+                <div class="glass-slider__track">
+                  <div class="glass-slider__progress"></div>
+                </div>
+                <div class="glass-slider__thumb">
+                  <div class="glass-slider__thumb-filter"></div>
+                  <div class="glass-slider__thumb-overlay"></div>
+                  <div class="glass-slider__thumb-specular"></div>
+                </div>
+              </div>
+              <input type="number" min="0" max="20" step="0.01" value="0.00" id="eload-current-input"
+                class="numeric-input">
+              <span class="unit">A</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Fan Visualization Control -->
+        <section class="hud__section glass-panel eload-viz-panel">
+          <div class="timeline__header">
+            <p class="eyebrow">Fan Visualization</p>
+            <div class="toggle-switch">
+              <input type="checkbox" id="eload-fan-toggle" checked />
+              <label for="eload-fan-toggle" aria-label="Toggle fan blade spin"></label>
+            </div>
+          </div>
+          <div class="control-group" id="eload-fan-speed-controls">
+            <p class="metric-card__label">Spin Speed</p>
+            <div class="input-row">
+              <div class="glass-slider" data-glass-slider>
+                <input type="range" min="0" max="100" step="1" value="50" id="eload-fan-speed-slider"
+                  class="glass-slider__input">
+                <div class="glass-slider__track">
+                  <div class="glass-slider__progress"></div>
+                </div>
+                <div class="glass-slider__thumb">
+                  <div class="glass-slider__thumb-filter"></div>
+                  <div class="glass-slider__thumb-overlay"></div>
+                  <div class="glass-slider__thumb-specular"></div>
+                </div>
+              </div>
+              <span class="value-display" id="eload-fan-speed-value">50%</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Heat Visualization Control -->
+        <section class="hud__section glass-panel eload-viz-panel">
+          <div class="timeline__header">
+            <p class="eyebrow">Heat Visualization</p>
+            <div class="toggle-switch">
+              <input type="checkbox" id="eload-heat-toggle" checked />
+              <label for="eload-heat-toggle" aria-label="Toggle heatsink heat glow"></label>
+            </div>
+          </div>
+          <div class="control-group" id="eload-heat-intensity-controls">
+            <p class="metric-card__label">Heat Intensity</p>
+            <div class="input-row">
+              <div class="glass-slider" data-glass-slider>
+                <input type="range" min="0" max="100" step="1" value="50" id="eload-heat-intensity-slider"
+                  class="glass-slider__input">
+                <div class="glass-slider__track">
+                  <div class="glass-slider__progress"></div>
+                </div>
+                <div class="glass-slider__thumb">
+                  <div class="glass-slider__thumb-filter"></div>
+                  <div class="glass-slider__thumb-overlay"></div>
+                  <div class="glass-slider__thumb-specular"></div>
+                </div>
+              </div>
+              <span class="value-display" id="eload-heat-intensity-value">50%</span>
+            </div>
+          </div>
+        </section>
+
       </div>
+
+      <div class="status">
+        <span class="status__dot status__dot--waiting" id="eload-data-pulse"></span>
+        <span class="status__label" id="eload-status-label">E-Load Standby</span>
+      </div>
+
     </div>
-  </aside>
+
+  </div>
 
   <svg width="0" height="0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
     xmlns:xlink="http://www.w3.org/1999/xlink">

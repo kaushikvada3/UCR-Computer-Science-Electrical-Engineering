@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const { gsap } = window;
 
@@ -27,6 +28,18 @@ const FAN_TARGET_COUNT = 2;
 const SHELL_TARGET_MAX = 8;
 const BOARD_PLANE_MARGIN_RATIO = 0.03;
 const BOARD_PLANE_MARGIN_MIN = 0.02;
+
+// --- E-Load Configuration ---
+const ELOAD_MODEL_PATH = "E-Load.glb";
+const ELOAD_POSITION_OFFSET = new THREE.Vector3(25, 0, 0);  // Side-by-side
+const ELOAD_SCALE = 1.0;  // Adjust after visual inspection
+const ELOAD_LID_NAME_PATTERN = /lid|top|cover|cap/i;
+const ELOAD_SHELL_NAME_PATTERN = /shell|case|housing|enclosure|body|chassis/i;
+const ELOAD_FAN_BLADE_NAME_PATTERN = /fan[\s_-]*blade|blade|impeller|rotor|fan_blade/i;
+const ELOAD_HEATSINK_NAME_PATTERN = /heatsink|heat[\s_-]*sink|fin|radiator|mosfet|fet|transistor|to[\s_-]*220|to[\s_-]*247|power[\s_-]*stage/i;
+const ELOAD_FET_NAME_PATTERN = /mosfet|fet|transistor|to[\s_-]*220|to[\s_-]*247|power[\s_-]*stage/i;
+const ELOAD_FAN_SPIN_BASE = 2.0;
+const ELOAD_FAN_SPIN_MAX = 28.0;
 
 const BOOT_STAGE_WEIGHTS = {
   bootstrap: 0.10,
@@ -490,8 +503,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-const DEFAULT_CAMERA_POSITION = new THREE.Vector3(15, 12, 20);
-const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(12, 10, 20);  // BMS-only view
+const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);  // Centered on BMS model
 camera.position.copy(DEFAULT_CAMERA_POSITION);
 camera.up.set(0, 1, 0);
 
@@ -501,6 +514,79 @@ controls.dampingFactor = 0.05;
 controls.enablePan = false;
 controls.maxPolarAngle = Math.PI / 2.1;
 controls.target.copy(DEFAULT_CAMERA_TARGET);
+
+// --- E-Load Scene Setup (LAZY — initialized on first tab switch) ---
+const eloadCanvas = document.getElementById("eload-scene");
+let eloadRenderer = null;
+let eloadScene = null;
+let eloadCamera = null;
+let eloadControls = null;
+let activePageId = "bms";
+let eloadSceneInitialized = false;
+
+function initEloadScene() {
+  if (eloadSceneInitialized || !eloadCanvas) return;
+  eloadSceneInitialized = true;
+
+  eloadRenderer = new THREE.WebGLRenderer({
+    canvas: eloadCanvas,
+    antialias: true,
+    alpha: true,
+    powerPreference: "high-performance",
+  });
+  eloadRenderer.shadowMap.enabled = false;
+  eloadRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  eloadRenderer.setSize(window.innerWidth, window.innerHeight);
+  eloadRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  eloadRenderer.toneMappingExposure = 1.2;
+
+  eloadScene = new THREE.Scene();
+
+  // Set up environment map for reflections on the scene itself
+  eloadEnvMap = buildStudioEnvMap();
+  eloadScene.environment = eloadEnvMap;
+
+  eloadCamera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    50000
+  );
+  eloadCamera.position.set(12, 10, 20);
+  eloadCamera.up.set(0, 1, 0);
+
+  eloadControls = new OrbitControls(eloadCamera, eloadCanvas);
+  eloadControls.enableDamping = true;
+  eloadControls.dampingFactor = 0.05;
+  eloadControls.enablePan = false;
+  eloadControls.maxPolarAngle = Math.PI / 2.1;
+  eloadControls.maxDistance = 20000;
+  eloadControls.target.set(0, 0, 0);
+
+  // E-Load scene lighting (matching BMS aesthetics)
+  const eloadAmbient = new THREE.AmbientLight(0xffffff, 0.4);
+  eloadScene.add(eloadAmbient);
+
+  const eloadDirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  eloadDirLight.position.set(10, 20, 10);
+  eloadScene.add(eloadDirLight);
+
+  const eloadFillLight = new THREE.DirectionalLight(0xbadfff, 0.8);
+  eloadFillLight.position.set(-10, 10, -10);
+  eloadScene.add(eloadFillLight);
+
+  // Load E-Load model now
+  loadEloadModel()
+    .then((eloadModel) => {
+      if (eloadModel) return initializeEloadModel(eloadModel);
+    })
+    .catch((error) => {
+      console.warn('[BMS] E-Load initialization failed:', error);
+    });
+
+  console.log('[BMS] E-Load scene initialized (lazy)');
+}
+
 setBootStageProgress("bootstrap", 0.45);
 setBootDetail("Configuring scene...");
 
@@ -527,6 +613,38 @@ const meshInfos = [];
 const selectedCellUuidSet = new Set();
 let highlightedCellId = null;
 let loadedModel = null;
+let loadedEloadModel = null;
+const eloadShellMeshes = [];
+const eloadLidMeshes = [];
+const eloadFanBladeMeshes = [];   // { mesh, spinNode, axis }
+const eloadHeatsinkMeshes = [];   // meshes for heat visualization
+const eloadThermalEntries = [];   // { mesh, originalMat } for material swapping
+let eloadThermalShaderMat = null; // shared ShaderMaterial for thermal viz
+let eloadFetWorldPositions = [];  // Vector3[] — world-space centers of FET heat sources
+let eloadFetHeatLevels = [0.5, 0.5, 0.5, 0.5]; // per-FET heat (0-1), telemetry-driven
+let eloadThermalHeatRadius = 1.0; // world-space radius for heat falloff
+let eloadFanSpinEnabled = true;
+let eloadFanSpinSpeed = 0.5;      // 0..1 normalized
+let eloadHeatVizEnabled = true;
+let eloadHeatIntensity = 0.5;     // 0..1 normalized
+let eloadEnvMap = null;
+let eloadHeatClock = 0;           // accumulator for heat animation
+
+// --- E-Load reveal transition state ---
+const ELOAD_REVEAL_MS = 2200;     // duration of the smooth reveal
+let eloadRevealProgress = 0;      // 0 = solid/default, 1 = revealed/transparent
+let eloadRevealFrom = 0;
+let eloadRevealTo = 0;
+let eloadRevealStartMs = 0;
+let eloadRevealActive = false;
+let eloadHasRevealed = false;     // tracks if we've ever triggered a reveal
+// Camera poses (set after model loads)
+let eloadCameraDefaultPos = null; // hero exterior view
+let eloadCameraDefaultTarget = null;
+let eloadCameraRevealPos = null;  // reveal interior view
+let eloadCameraRevealTarget = null;
+let eloadCameraFromPos = null;    // transition "from" snapshot
+let eloadCameraFromTarget = null;
 let isBackendConnected = false;
 let fanSpinRpm = 0;
 let connectionVisualProgress = 0;
@@ -1636,6 +1754,8 @@ function createObjectSpinEntry(node, forcedAxisLabel = null, fanId = null) {
 
 function applyShellTransparency(connectedBlend) {
   const clampedBlend = THREE.MathUtils.clamp(connectedBlend, 0, 1);
+
+  // Apply to BMS shells
   shellMeshes.forEach((entry) => {
     toMaterialList(entry.mesh).forEach((material) => {
       if (!material || typeof material.opacity !== "number") return;
@@ -1657,6 +1777,9 @@ function applyShellTransparency(connectedBlend) {
       material.opacity = targetOpacity;
     });
   });
+
+  // E-Load shell/lid transparency is now handled by the independent
+  // eload reveal transition system (applyEloadRevealTransparency).
 }
 
 function collectFanCandidate(mesh, nodeName, modelSize) {
@@ -2192,6 +2315,576 @@ async function initializeLoadedModel(object) {
 
   setBootDetail("3D model ready.");
   markBootModelReady();
+}
+
+async function loadEloadModel() {
+  const gltfLoader = new GLTFLoader();
+
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(
+      ELOAD_MODEL_PATH,
+      (gltf) => {
+        const object = gltf.scene;
+
+        // Wrap in a container group for proper centering
+        const container = new THREE.Group();
+        container.add(object);
+
+        // Disable shadows for performance
+        object.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = false;
+            child.receiveShadow = false;
+          }
+        });
+
+        // Center the container based on bounds
+        container.updateMatrixWorld(true);
+        const bounds = new THREE.Box3().setFromObject(container);
+        const center = bounds.getCenter(new THREE.Vector3());
+        container.position.sub(center);
+
+        // Add to the E-Load scene (not the BMS scene)
+        eloadScene.add(container);
+        loadedEloadModel = container;
+        window.loadedEloadModel = container;  // Expose for debugging
+
+        // Position camera to frame the model
+        const size = bounds.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = eloadCamera.fov * (Math.PI / 180);
+        const cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 2.0;
+
+        // Default "hero" pose — low-angle exterior shot showing the solid model
+        eloadCameraDefaultPos = new THREE.Vector3(cameraZ * 0.8, cameraZ * 0.25, cameraZ * 0.9);
+        eloadCameraDefaultTarget = new THREE.Vector3(0, 0, 0);
+
+        // Reveal "x-ray" pose — exact position from camera debug overlay
+        eloadCameraRevealPos = new THREE.Vector3(0.322, 0.142, -0.261);
+        eloadCameraRevealTarget = new THREE.Vector3(0.000, 0.006, 0.000);
+
+        // Start at hero pose
+        eloadCamera.position.copy(eloadCameraDefaultPos);
+        eloadControls.maxDistance = cameraZ * 5;
+        eloadControls.target.copy(eloadCameraDefaultTarget);
+        eloadControls.update();
+
+        console.log('[BMS] E-Load GLB model loaded, size:', size.x.toFixed(1), size.y.toFixed(1), size.z.toFixed(1));
+        resolve(object);
+      },
+      (xhr) => {
+        if (xhr.total > 0) {
+          const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
+          console.log(`[E-Load] ${percent}% loaded`);
+        }
+      },
+      (error) => {
+        console.warn('[BMS] E-Load GLB model failed to load:', error);
+        resolve(null);  // Graceful degradation
+      }
+    );
+  });
+}
+
+async function initializeEloadModel(model) {
+  if (!model) return;
+
+  console.log('[BMS] Initializing E-Load model...');
+
+  // Ensure environment map exists for reflections
+  if (!eloadEnvMap) eloadEnvMap = buildStudioEnvMap();
+
+  // Identify lid, shell, fan blade, and heatsink components
+  model.traverse((child) => {
+    if (!child?.isMesh) return;
+
+    const name = (child.name || '').toLowerCase();
+    const parentName = (child.parent?.name || '').toLowerCase();
+    const combinedName = `${name} ${parentName}`;
+
+    // Identify top lid for transparency
+    if (ELOAD_LID_NAME_PATTERN.test(combinedName)) {
+      eloadLidMeshes.push(child);
+      console.log(`[BMS] E-Load lid identified: ${child.name}`);
+    }
+
+    // Identify shell/enclosure
+    if (ELOAD_SHELL_NAME_PATTERN.test(combinedName)) {
+      eloadShellMeshes.push(child);
+      registerShellMaterialState(child);
+    }
+
+    // Identify fan blades - collect candidates for pivot setup below
+    if (ELOAD_FAN_BLADE_NAME_PATTERN.test(name) || ELOAD_FAN_BLADE_NAME_PATTERN.test(parentName)) {
+      const alreadyRegistered = eloadFanBladeMeshes.some(e => e.mesh === child);
+      if (!alreadyRegistered) {
+        eloadFanBladeMeshes.push({
+          mesh: child,
+          spinNode: null,  // Will be set up with pivot below
+          axis: new THREE.Vector3(0, 1, 0),
+        });
+        console.log(`[BMS] E-Load fan blade candidate: ${child.name} (parent: ${child.parent?.name})`);
+      }
+    }
+
+    // Identify heatsink
+    if (ELOAD_HEATSINK_NAME_PATTERN.test(name) || ELOAD_HEATSINK_NAME_PATTERN.test(parentName)) {
+      eloadHeatsinkMeshes.push(child);
+      console.log(`[BMS] E-Load heatsink identified: ${child.name}`);
+    }
+
+    // Apply reflective material to ALL meshes
+    applyReflectiveMaterial(child);
+  });
+
+  // Center each fan blade's geometry so it rotates around its own visual center.
+  // No hierarchy changes — just shift the vertex buffer and compensate mesh.position.
+  eloadFanBladeMeshes.forEach((entry) => {
+    const mesh = entry.mesh;
+    if (!mesh?.geometry) return;
+
+    const geo = mesh.geometry;
+    geo.computeBoundingBox();
+    const geoCenter = geo.boundingBox.getCenter(new THREE.Vector3());
+    const geoSize = geo.boundingBox.getSize(new THREE.Vector3());
+
+    // Skip if already centered (or negligible offset)
+    if (geoCenter.length() < 0.001) {
+      entry.spinNode = mesh;
+    } else {
+      // Shift all vertices so the geometry center is at the mesh's local origin
+      geo.translate(-geoCenter.x, -geoCenter.y, -geoCenter.z);
+
+      // Compensate mesh position so the visual result stays the same.
+      // geoCenter is in mesh-local space (pre-rotation/scale), so transform it
+      // through the mesh's own rotation & scale to get the parent-space offset.
+      const offset = geoCenter.clone();
+      offset.multiply(mesh.scale);
+      offset.applyQuaternion(mesh.quaternion);
+      mesh.position.add(offset);
+
+      entry.spinNode = mesh;
+    }
+
+    // Auto-detect spin axis from geometry bounds (thinnest dim = rotation axis)
+    if (geoSize.x <= geoSize.y && geoSize.x <= geoSize.z) {
+      entry.axis = new THREE.Vector3(1, 0, 0);
+    } else if (geoSize.z <= geoSize.x && geoSize.z <= geoSize.y) {
+      entry.axis = new THREE.Vector3(0, 0, 1);
+    } else {
+      entry.axis = new THREE.Vector3(0, 1, 0);
+    }
+
+    console.log(`[BMS] E-Load fan blade centered: ${mesh.name}, axis: [${entry.axis.x},${entry.axis.y},${entry.axis.z}], offset: [${geoCenter.x.toFixed(2)},${geoCenter.y.toFixed(2)},${geoCenter.z.toFixed(2)}]`);
+  });
+
+  // Set up thermal infrared camera visualization for heatsink / FET area
+  setupThermalVisualization();
+
+  // Store lid base opacity but keep fully solid initially (reveal transition will fade)
+  eloadLidMeshes.forEach((mesh) => {
+    toMaterialList(mesh).forEach((material) => {
+      if (!material) return;
+      material.userData.bmsEloadLidBaseOpacity = material.opacity ?? 1;
+      // Start solid — the reveal transition will smoothly fade lid + shell later
+    });
+  });
+
+  // Store shell base opacity (they also start solid)
+  eloadShellMeshes.forEach((mesh) => {
+    toMaterialList(mesh).forEach((material) => {
+      if (!material) return;
+      if (material.userData.bmsShellBaseOpacity === undefined) {
+        material.userData.bmsShellBaseOpacity = material.opacity ?? 1;
+      }
+    });
+  });
+
+  console.log(`[BMS] E-Load initialized: ${eloadLidMeshes.length} lid, ${eloadFanBladeMeshes.length} fan blades, ${eloadHeatsinkMeshes.length} heatsink parts`);
+
+  // Dump all mesh components for inspection
+  const allParts = [];
+  model.traverse((child) => {
+    if (child.isMesh) {
+      const matName = Array.isArray(child.material)
+        ? child.material.map(m => m?.name || '(unnamed)').join(', ')
+        : (child.material?.name || '(unnamed)');
+      allParts.push({
+        name: child.name || '(unnamed)',
+        parent: child.parent?.name || '(root)',
+        material: matName,
+        vertices: child.geometry?.attributes?.position?.count || 0,
+      });
+    }
+  });
+  console.log(`[E-Load] All ${allParts.length} mesh components:`);
+  console.table(allParts);
+}
+
+// --- E-Load Reflective Material ---
+function buildStudioEnvMap() {
+  // Create a simple gradient cube map for reflections
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Create a gradient that simulates a studio environment
+  const gradient = ctx.createLinearGradient(0, 0, 0, size);
+  gradient.addColorStop(0, '#667799');    // cool sky top
+  gradient.addColorStop(0.3, '#8899aa');  // lighter mid
+  gradient.addColorStop(0.5, '#aabbcc');  // horizon
+  gradient.addColorStop(0.7, '#556677');  // floor reflection
+  gradient.addColorStop(1, '#334455');    // dark bottom
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  // Add subtle bright spots for specular highlights
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.beginPath();
+  ctx.arc(size * 0.3, size * 0.25, size * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(size * 0.7, size * 0.35, size * 0.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  return texture;
+}
+
+function applyReflectiveMaterial(mesh) {
+  if (!mesh?.isMesh || !eloadEnvMap) return;
+
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  materials.forEach((mat) => {
+    if (!mat) return;
+    // Store originals
+    mat.userData._origMetalness = mat.metalness;
+    mat.userData._origRoughness = mat.roughness;
+
+    // Make it reflective
+    mat.envMap = eloadEnvMap;
+    mat.envMapIntensity = 1.5;
+    mat.metalness = Math.max(mat.metalness ?? 0, 0.6);
+    mat.roughness = Math.min(mat.roughness ?? 1, 0.35);
+    mat.needsUpdate = true;
+  });
+}
+
+// --- E-Load Heat Visualization (Thermal Infrared Camera) ---
+
+// GLSL vertex shader — transforms to world space for FET distance calculation
+const THERMAL_VERT = `
+varying vec3 vWorldPos;
+varying vec3 vWorldNormal;
+
+void main() {
+  vec4 worldPos = modelMatrix * vec4(position, 1.0);
+  vWorldPos = worldPos.xyz;
+  vWorldNormal = normalize(mat3(modelMatrix) * normal);
+  gl_Position = projectionMatrix * viewMatrix * worldPos;
+}
+`;
+
+// GLSL fragment shader — infrared thermal camera driven by 4 FET heat sources
+const THERMAL_FRAG = `
+precision highp float;
+
+uniform float uTime;
+uniform float uIntensity;
+uniform vec3  uFetPos[4];
+uniform float uFetHeat[4];
+uniform float uHeatRadius;
+
+varying vec3 vWorldPos;
+varying vec3 vWorldNormal;
+
+/* ---- value noise (hash-based 3D) ---- */
+float hash(vec3 p) {
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.x + p.y) * p.z);
+}
+
+float noise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(hash(i),                hash(i + vec3(1,0,0)), f.x),
+        mix(hash(i + vec3(0,1,0)),  hash(i + vec3(1,1,0)), f.x), f.y),
+    mix(mix(hash(i + vec3(0,0,1)),  hash(i + vec3(1,0,1)), f.x),
+        mix(hash(i + vec3(0,1,1)),  hash(i + vec3(1,1,1)), f.x), f.y),
+    f.z);
+}
+
+float fbm(vec3 p) {
+  float v = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++) {
+    v += a * noise(p);
+    p = p * 2.0 + 0.5;
+    a *= 0.5;
+  }
+  return v;
+}
+
+/* ---- thermal color ramp: dark-blue -> blue -> cyan -> green -> yellow -> orange -> red ---- */
+vec3 thermalColor(float t) {
+  t = clamp(t, 0.0, 1.0);
+  if (t < 0.15) return mix(vec3(0.0, 0.0, 0.10), vec3(0.0, 0.0, 0.55), t / 0.15);
+  if (t < 0.30) return mix(vec3(0.0, 0.0, 0.55), vec3(0.0, 0.45, 0.65), (t - 0.15) / 0.15);
+  if (t < 0.45) return mix(vec3(0.0, 0.45, 0.65), vec3(0.0, 0.78, 0.22), (t - 0.30) / 0.15);
+  if (t < 0.60) return mix(vec3(0.0, 0.78, 0.22), vec3(0.85, 0.85, 0.0), (t - 0.45) / 0.15);
+  if (t < 0.78) return mix(vec3(0.85, 0.85, 0.0), vec3(1.0, 0.45, 0.0), (t - 0.60) / 0.18);
+  return mix(vec3(1.0, 0.45, 0.0), vec3(0.95, 0.05, 0.0), (t - 0.78) / 0.22);
+}
+
+void main() {
+  float temperature = 0.0;
+
+  // Accumulate heat from each FET source with radial falloff
+  for (int i = 0; i < 4; i++) {
+    float dist = distance(vWorldPos, uFetPos[i]);
+    float falloff = 1.0 - smoothstep(0.0, uHeatRadius, dist);
+    falloff = falloff * falloff;  // concentrate heat near source
+    temperature += uFetHeat[i] * falloff;
+  }
+
+  // Organic noise variation for natural heat pattern
+  vec3 nCoord = vWorldPos * 3.5 + vec3(uTime * 0.12, uTime * 0.08, uTime * 0.1);
+  float n = fbm(nCoord);
+  temperature += (n - 0.4) * 0.10 * uIntensity;
+
+  // Slow breathing pulse
+  float pulse = 0.5 + 0.5 * sin(uTime * 1.2);
+  temperature *= 0.92 + 0.08 * pulse;
+
+  // Apply global intensity
+  temperature *= uIntensity * 1.5;
+
+  // Ambient minimum so cool areas stay dark-blue (not black)
+  temperature = max(temperature, 0.04);
+
+  vec3 color = thermalColor(temperature);
+  gl_FragColor = vec4(color, 1.0);
+}
+`;
+
+/**
+ * Sets up the thermal infrared visualization system.
+ * Identifies FET heat sources among heatsink meshes, computes world positions,
+ * creates a shared ShaderMaterial, and registers meshes for material swapping.
+ */
+function setupThermalVisualization() {
+  if (eloadHeatsinkMeshes.length === 0) return;
+
+  // Ensure world matrices are current before reading positions
+  if (loadedEloadModel) loadedEloadModel.updateMatrixWorld(true);
+
+  // Identify FET meshes among heatsink meshes — these are the heat sources
+  const fetMeshes = eloadHeatsinkMeshes.filter(
+    (m) => ELOAD_FET_NAME_PATTERN.test(m.name)
+  );
+
+  // Compute world-space centers for each FET
+  eloadFetWorldPositions = [];
+  fetMeshes.forEach((m) => {
+    m.geometry.computeBoundingBox();
+    const center = new THREE.Vector3();
+    m.geometry.boundingBox.getCenter(center);
+    m.localToWorld(center);
+    eloadFetWorldPositions.push(center);
+    console.log(
+      `[BMS] FET heat source: ${m.name} at (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`
+    );
+  });
+
+  // Fallback — if no FET meshes found, use centers of first heatsink meshes
+  if (eloadFetWorldPositions.length === 0) {
+    console.warn("[BMS] No FET meshes found by name; using heatsink centers as heat sources");
+    eloadHeatsinkMeshes.slice(0, 4).forEach((m) => {
+      m.geometry.computeBoundingBox();
+      const c = new THREE.Vector3();
+      m.geometry.boundingBox.getCenter(c);
+      m.localToWorld(c);
+      eloadFetWorldPositions.push(c);
+    });
+  }
+
+  // Pad to exactly 4 (unused slots have heat = 0 so they contribute nothing)
+  while (eloadFetWorldPositions.length < 4) {
+    eloadFetWorldPositions.push(
+      eloadFetWorldPositions.length > 0
+        ? eloadFetWorldPositions[eloadFetWorldPositions.length - 1].clone()
+        : new THREE.Vector3()
+    );
+  }
+  eloadFetWorldPositions = eloadFetWorldPositions.slice(0, 4);
+
+  // Initialize per-FET heat levels (slider default until telemetry arrives)
+  eloadFetHeatLevels = new Array(4).fill(0);
+  for (let i = 0; i < Math.min(fetMeshes.length, 4); i++) eloadFetHeatLevels[i] = 0.5;
+
+  // Compute heat radius from model extents
+  if (loadedEloadModel) {
+    const modelBox = new THREE.Box3().setFromObject(loadedEloadModel);
+    const sz = modelBox.getSize(new THREE.Vector3());
+    eloadThermalHeatRadius = Math.max(sz.x, sz.y, sz.z) * 0.35;
+  }
+
+  // Create shared thermal ShaderMaterial
+  eloadThermalShaderMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime:       { value: 0.0 },
+      uIntensity:  { value: eloadHeatIntensity },
+      uFetPos:     { value: eloadFetWorldPositions },
+      uFetHeat:    { value: eloadFetHeatLevels },
+      uHeatRadius: { value: eloadThermalHeatRadius },
+    },
+    vertexShader: THERMAL_VERT,
+    fragmentShader: THERMAL_FRAG,
+    side: THREE.DoubleSide,
+  });
+
+  // Register all heatsink meshes — store original material for toggling
+  eloadHeatsinkMeshes.forEach((mesh) => {
+    const origMat = Array.isArray(mesh.material) ? [...mesh.material] : mesh.material;
+    eloadThermalEntries.push({ mesh, originalMat: origMat });
+    if (eloadHeatVizEnabled) {
+      mesh.material = eloadThermalShaderMat;
+    }
+    console.log(`[BMS] Thermal viz registered: ${mesh.name}`);
+  });
+
+  console.log(
+    `[BMS] Thermal visualization ready — ${fetMeshes.length} FET sources, ` +
+    `${eloadHeatsinkMeshes.length} thermal meshes, radius: ${eloadThermalHeatRadius.toFixed(2)}`
+  );
+}
+
+function updateEloadHeatVisualization(delta) {
+  if (!eloadThermalShaderMat || !eloadHeatVizEnabled) return;
+
+  eloadHeatClock += delta;
+  eloadThermalShaderMat.uniforms.uTime.value = eloadHeatClock;
+  eloadThermalShaderMat.uniforms.uIntensity.value = eloadHeatIntensity;
+
+  // Per-FET heat levels are updated live by updateEloadTelemetry()
+  for (let i = 0; i < 4; i++) {
+    eloadThermalShaderMat.uniforms.uFetHeat.value[i] = eloadFetHeatLevels[i];
+  }
+}
+
+// --- E-Load Reveal Transition (solid → transparent + camera orbit) ---
+
+function startEloadReveal(reveal) {
+  const target = reveal ? 1 : 0;
+  // Skip if already there
+  if (
+    !eloadRevealActive &&
+    Math.abs(eloadRevealProgress - target) < 1e-4 &&
+    Math.abs(eloadRevealTo - target) < 1e-4
+  ) {
+    return;
+  }
+
+  eloadRevealFrom = eloadRevealProgress;
+  eloadRevealTo = target;
+  eloadRevealStartMs = performance.now();
+  eloadRevealActive = true;
+
+  // Snapshot current camera position as "from" for smooth interpolation
+  if (eloadCamera) {
+    eloadCameraFromPos = eloadCamera.position.clone();
+    eloadCameraFromTarget = eloadControls ? eloadControls.target.clone() : new THREE.Vector3();
+  }
+
+  console.log(`[BMS] E-Load reveal transition: ${eloadRevealFrom.toFixed(2)} → ${target}`);
+}
+
+function updateEloadRevealTransition(nowMs) {
+  if (!eloadRevealActive) return;
+
+  const elapsed = Math.max(0, nowMs - eloadRevealStartMs);
+  const t = Math.min(1, elapsed / ELOAD_REVEAL_MS);
+  const eased = easeInOutCubic(t);
+
+  eloadRevealProgress = THREE.MathUtils.lerp(eloadRevealFrom, eloadRevealTo, eased);
+
+  if (t >= 1) {
+    eloadRevealProgress = eloadRevealTo;
+    eloadRevealActive = false;
+  }
+
+  // Camera uses eased (0→1) so it always goes snapshot → destination
+  applyEloadRevealCamera(eased);
+  // Transparency uses absolute progress (0 = solid, 1 = transparent)
+  applyEloadRevealTransparency(eloadRevealProgress);
+}
+
+function applyEloadRevealCamera(animT) {
+  if (!eloadCamera || !eloadControls) return;
+  if (!eloadCameraDefaultPos || !eloadCameraRevealPos) return;
+
+  const b = THREE.MathUtils.clamp(animT, 0, 1);
+
+  // Snapshot of where the camera was when the transition started
+  const fromPos = eloadCameraFromPos || eloadCameraDefaultPos;
+  const fromTarget = eloadCameraFromTarget || eloadCameraDefaultTarget;
+
+  // Destination depends on direction
+  const destPos = eloadRevealTo >= 0.5 ? eloadCameraRevealPos : eloadCameraDefaultPos;
+  const destTarget = eloadRevealTo >= 0.5 ? eloadCameraRevealTarget : eloadCameraDefaultTarget;
+
+  // b goes 0→1: snapshot → destination (works for both directions)
+  eloadCamera.position.copy(fromPos).lerp(destPos, b);
+  eloadControls.target.copy(fromTarget).lerp(destTarget, b);
+}
+
+function applyEloadRevealTransparency(blend) {
+  const b = THREE.MathUtils.clamp(blend, 0, 1);
+
+  // Shell: solid at b=0 → semi-transparent at b=1
+  eloadShellMeshes.forEach((mesh) => {
+    toMaterialList(mesh).forEach((material) => {
+      if (!material) return;
+      const baseOpacity = material.userData.bmsShellBaseOpacity ?? 1;
+      const targetOpacity = THREE.MathUtils.lerp(baseOpacity, 0.18, b);
+      material.transparent = targetOpacity < 0.99;
+      material.depthWrite = targetOpacity >= 0.99;
+      material.opacity = targetOpacity;
+      material.needsUpdate = true;
+    });
+  });
+
+  // Lid: solid at b=0 → very transparent at b=1
+  eloadLidMeshes.forEach((mesh) => {
+    toMaterialList(mesh).forEach((material) => {
+      if (!material) return;
+      const baseOpacity = material.userData.bmsEloadLidBaseOpacity ?? 1;
+      const targetOpacity = THREE.MathUtils.lerp(baseOpacity, 0.15, b);
+      material.transparent = targetOpacity < 0.99;
+      material.depthWrite = targetOpacity >= 0.99;
+      material.opacity = targetOpacity;
+      material.needsUpdate = true;
+    });
+  });
+}
+
+// --- E-Load Fan Animation ---
+function updateEloadFanSpin(delta) {
+  if (!eloadFanSpinEnabled || eloadFanBladeMeshes.length === 0) return;
+
+  const spinSpeed = THREE.MathUtils.lerp(ELOAD_FAN_SPIN_BASE, ELOAD_FAN_SPIN_MAX, eloadFanSpinSpeed);
+  const rotationDelta = delta * spinSpeed;
+
+  eloadFanBladeMeshes.forEach((entry, idx) => {
+    if (!entry.spinNode) return;
+    const direction = idx % 2 === 0 ? 1 : -1;
+    entry.spinNode.rotateOnAxis(entry.axis, direction * rotationDelta);
+  });
 }
 
 function handleModelLoadFailure(error) {
@@ -2868,6 +3561,13 @@ function setConnectionStatus(connected, source = "backend") {
         entry.rpm = 0;
       }
     });
+    // Reverse E-Load reveal when backend disconnects (unless simulation is active).
+    // eloadHasRevealed check first — it short-circuits safely before eloadSimulationEnabled
+    // which may not yet be initialized during early setConnectionStatus(false) calls.
+    if (eloadHasRevealed && !eloadSimulationEnabled) {
+      eloadHasRevealed = false;
+      startEloadReveal(false);
+    }
   }
 }
 
@@ -3235,16 +3935,26 @@ const clock = new THREE.Clock();
 
 function tick() {
   const delta = clock.getDelta();
-  updateViewResetTransition(performance.now());
-  controls.update();
 
-  // Gentle rotation of the whole model (disabled by default)
-  if (AUTO_ROTATE_MODEL && loadedModel) {
-    loadedModel.rotation.y += delta * 0.1; // Slow rotation
+  if (activePageId === "bms") {
+    updateViewResetTransition(performance.now());
+    controls.update();
+
+    // Gentle rotation of the whole model (disabled by default)
+    if (AUTO_ROTATE_MODEL && loadedModel) {
+      loadedModel.rotation.y += delta * 0.1;
+    }
+
+    animateCells(delta);
+    renderer.render(scene, camera);
+  } else if (activePageId === "eload" && eloadRenderer && eloadScene && eloadCamera) {
+    updateEloadRevealTransition(performance.now());
+    if (eloadControls) eloadControls.update();
+    updateEloadFanSpin(delta);
+    updateEloadHeatVisualization(delta);
+    eloadRenderer.render(eloadScene, eloadCamera);
   }
 
-  animateCells(delta);
-  renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
 
@@ -3353,6 +4063,10 @@ const telemVoltage = document.getElementById("telem-voltage");
 const telemCurrent = document.getElementById("telem-current");
 const telemPower = document.getElementById("telem-power");
 const telemRPM = document.getElementById("telem-rpm");
+const telemS1 = document.getElementById("telem-s1");
+const telemS2 = document.getElementById("telem-s2");
+const telemS3 = document.getElementById("telem-s3");
+const telemS4 = document.getElementById("telem-s4");
 
 // Fan Elements
 const fanAutoBtn = document.getElementById("fan-auto-btn");
@@ -3370,6 +4084,56 @@ eloadToggle.addEventListener("change", (e) => {
   const cmd = e.target.checked ? "ELOAD:ON" : "ELOAD:OFF";
   sendBackendCommand(cmd);
 });
+
+// -- E-Load Fan Visualization Controls --
+const eloadFanToggle = document.getElementById("eload-fan-toggle");
+const eloadFanSpeedSlider = document.getElementById("eload-fan-speed-slider");
+const eloadFanSpeedValue = document.getElementById("eload-fan-speed-value");
+const eloadFanSpeedControls = document.getElementById("eload-fan-speed-controls");
+
+if (eloadFanToggle) {
+  eloadFanToggle.addEventListener("change", (e) => {
+    eloadFanSpinEnabled = e.target.checked;
+    if (eloadFanSpeedControls) {
+      eloadFanSpeedControls.classList.toggle("disabled", !eloadFanSpinEnabled);
+    }
+  });
+}
+
+if (eloadFanSpeedSlider) {
+  eloadFanSpeedSlider.addEventListener("input", (e) => {
+    const val = parseFloat(e.target.value);
+    eloadFanSpinSpeed = val / 100;
+    if (eloadFanSpeedValue) eloadFanSpeedValue.textContent = `${Math.round(val)}%`;
+  });
+}
+
+// -- E-Load Heat Visualization Controls --
+const eloadHeatToggle = document.getElementById("eload-heat-toggle");
+const eloadHeatIntensitySlider = document.getElementById("eload-heat-intensity-slider");
+const eloadHeatIntensityValue = document.getElementById("eload-heat-intensity-value");
+const eloadHeatIntensityControls = document.getElementById("eload-heat-intensity-controls");
+
+if (eloadHeatToggle) {
+  eloadHeatToggle.addEventListener("change", (e) => {
+    eloadHeatVizEnabled = e.target.checked;
+    if (eloadHeatIntensityControls) {
+      eloadHeatIntensityControls.classList.toggle("disabled", !eloadHeatVizEnabled);
+    }
+    // Swap materials: thermal shader <-> original reflective
+    eloadThermalEntries.forEach(({ mesh, originalMat }) => {
+      mesh.material = eloadHeatVizEnabled ? eloadThermalShaderMat : originalMat;
+    });
+  });
+}
+
+if (eloadHeatIntensitySlider) {
+  eloadHeatIntensitySlider.addEventListener("input", (e) => {
+    const val = parseFloat(e.target.value);
+    eloadHeatIntensity = val / 100;
+    if (eloadHeatIntensityValue) eloadHeatIntensityValue.textContent = `${Math.round(val)}%`;
+  });
+}
 
 // --- Glass Slider UI Sync ---
 function updateSliderUI(input) {
@@ -3577,23 +4341,62 @@ function normalizeCells(cells) {
 }
 
 function updateEloadTelemetry(eload) {
-  telemVoltage.textContent = isFiniteNumber(eload?.voltage) ? `${eload.voltage.toFixed(2)} V` : "-- V";
-  telemCurrent.textContent = isFiniteNumber(eload?.actual_current) ? `${eload.actual_current.toFixed(2)} A` : "-- A";
-  telemPower.textContent = isFiniteNumber(eload?.power) ? `${eload.power.toFixed(1)} W` : "-- W";
-  const fanRpm = isFiniteNumber(currentState.fan1?.rpm) ? Number(currentState.fan1.rpm) : 0;
-  telemRPM.textContent = fanRpm > 0 ? `${Math.round(fanRpm)} RPM` : "--";
+  // Display VSENSE in mV
+  if (telemVoltage && isFiniteNumber(eload?.v)) {
+    telemVoltage.textContent = `${(eload.v * 1000).toFixed(0)} mV`;
+  } else if (telemVoltage) {
+    telemVoltage.textContent = "-- mV";
+  }
 
+  // Display S1-S4 sense channels in mV
+  if (telemS1 && isFiniteNumber(eload?.s1)) {
+    telemS1.textContent = `${(eload.s1 * 1000).toFixed(0)} mV`;
+  } else if (telemS1) {
+    telemS1.textContent = "-- mV";
+  }
+
+  if (telemS2 && isFiniteNumber(eload?.s2)) {
+    telemS2.textContent = `${(eload.s2 * 1000).toFixed(0)} mV`;
+  } else if (telemS2) {
+    telemS2.textContent = "-- mV";
+  }
+
+  if (telemS3 && isFiniteNumber(eload?.s3)) {
+    telemS3.textContent = `${(eload.s3 * 1000).toFixed(0)} mV`;
+  } else if (telemS3) {
+    telemS3.textContent = "-- mV";
+  }
+
+  if (telemS4 && isFiniteNumber(eload?.s4)) {
+    telemS4.textContent = `${(eload.s4 * 1000).toFixed(0)} mV`;
+  } else if (telemS4) {
+    telemS4.textContent = "-- mV";
+  }
+
+  // Calculate current from sense resistors
+  // Formula: I = (S3 - S4) / R_sense (adjust based on actual circuit)
+  const R_SENSE = 0.1;  // 0.1 ohm sense resistor (adjust to actual value)
+  if (telemCurrent && isFiniteNumber(eload?.s3) && isFiniteNumber(eload?.s4)) {
+    const voltage_diff = eload.s3 - eload.s4;
+    const current = voltage_diff / R_SENSE;
+    telemCurrent.textContent = `${current.toFixed(2)} A`;
+  } else if (telemCurrent) {
+    telemCurrent.textContent = "-- A";
+  }
+
+  // Update enabled toggle
   if (typeof eload?.enabled === "boolean") {
     eloadToggle.checked = eload.enabled;
   }
 
+  // Update setpoint controls if available
   const activeElement = document.activeElement;
   if (
     activeElement !== eloadVoltageInput &&
     activeElement !== eloadVoltageSlider &&
-    isFiniteNumber(eload?.target_voltage)
+    isFiniteNumber(eload?.v_set)
   ) {
-    syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, eload.target_voltage);
+    syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, eload.v_set);
   }
   if (
     activeElement !== eloadCurrentInput &&
@@ -3601,6 +4404,46 @@ function updateEloadTelemetry(eload) {
     isFiniteNumber(eload?.target_current)
   ) {
     syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, eload.target_current);
+  }
+
+  // Update power summary elements on E-Load page
+  const eloadActualVoltageEl = document.getElementById("eload-actual-voltage");
+  const eloadActualCurrentEl = document.getElementById("eload-actual-current");
+  const eloadPowerEl = document.getElementById("eload-power");
+
+  if (eloadActualVoltageEl) {
+    eloadActualVoltageEl.textContent = isFiniteNumber(eload?.v) ? `${eload.v.toFixed(2)} V` : "-- V";
+  }
+  if (eloadActualCurrentEl) {
+    const R_SENSE_POWER = 0.1;
+    if (isFiniteNumber(eload?.s3) && isFiniteNumber(eload?.s4)) {
+      const currentCalc = (eload.s3 - eload.s4) / R_SENSE_POWER;
+      eloadActualCurrentEl.textContent = `${currentCalc.toFixed(3)} A`;
+    } else if (isFiniteNumber(eload?.actual_current)) {
+      eloadActualCurrentEl.textContent = `${eload.actual_current.toFixed(3)} A`;
+    } else {
+      eloadActualCurrentEl.textContent = "-- A";
+    }
+  }
+  if (eloadPowerEl) {
+    if (isFiniteNumber(eload?.power)) {
+      eloadPowerEl.textContent = `${eload.power.toFixed(2)} W`;
+    } else if (isFiniteNumber(eload?.v) && isFiniteNumber(eload?.actual_current)) {
+      eloadPowerEl.textContent = `${(eload.v * eload.actual_current).toFixed(2)} W`;
+    } else {
+      eloadPowerEl.textContent = "-- W";
+    }
+  }
+
+  // Drive thermal visualization from telemetry power data.
+  // Total power / 4 FETs → normalized heat per FET (25W per FET = full red).
+  if (isFiniteNumber(eload?.power) && eload.power > 0) {
+    const perFet = Math.min(eload.power / 4 / 25, 1.0);
+    eloadFetHeatLevels = [perFet, perFet, perFet, perFet];
+  } else if (isFiniteNumber(eload?.actual_current) && eload.actual_current > 0) {
+    // Fallback: derive heat from I² (20 A = max)
+    const heat = Math.min((eload.actual_current * eload.actual_current) / 400, 1.0);
+    eloadFetHeatLevels = [heat, heat, heat, heat];
   }
 }
 
@@ -3699,6 +4542,12 @@ function flushDashboardData() {
       actual_current: isFiniteNumber(data.eload.actual_current) ? Number(data.eload.actual_current) : null,
       power: isFiniteNumber(data.eload.power) ? Number(data.eload.power) : null,
     };
+
+    // Trigger E-Load reveal on first real telemetry (or when connected)
+    if (!eloadHasRevealed && !eloadSimulationEnabled) {
+      eloadHasRevealed = true;
+      startEloadReveal(true);
+    }
   }
 
   updateHud(currentState);
@@ -3757,6 +4606,13 @@ function mockStream() {
       voltage: mockVoltage,
       actual_current: mockActualCurrent,
       power: Number((mockVoltage * mockActualCurrent).toFixed(2)),
+      // Sense channel data for E-Load telemetry
+      v: mockVoltage,
+      s1: Number((mockVoltage * 0.25 + Math.random() * 0.05).toFixed(4)),
+      s2: Number((mockVoltage * 0.50 + Math.random() * 0.05).toFixed(4)),
+      s3: Number((mockActualCurrent * 0.1 + 0.002 + Math.random() * 0.001).toFixed(5)),
+      s4: Number((0.002 + Math.random() * 0.001).toFixed(5)),
+      v_set: parseFloat(eloadVoltageInput.value) || 0,
     },
   });
 }
@@ -3838,6 +4694,15 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+  // Also resize E-Load renderer
+  if (eloadRenderer && eloadCamera) {
+    eloadCamera.aspect = width / height;
+    eloadCamera.updateProjectionMatrix();
+    eloadRenderer.setSize(width, height);
+    eloadRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  }
+
   sliderInputs.forEach((input) => updateSliderUI(input));
   if (detailPanel.classList.contains("is-visible")) {
     positionDetailPanel();
@@ -3871,4 +4736,135 @@ window.__bmsGetSimulationState = () => Boolean(simulationEnabled);
 
 setSimulationMode(false);
 console.log("[BMS] Simulation toggle initialized in Actual Testing Mode.");
+
+// --- Tab Navigation Logic ---
+function switchPage(pageId) {
+  if (activePageId === pageId) return;
+  activePageId = pageId;
+
+  // Lazy-init E-Load scene on first switch
+  if (pageId === "eload") initEloadScene();
+
+  // Toggle page containers
+  document.querySelectorAll(".page").forEach((page) => {
+    page.classList.toggle("active", page.id === `page-${pageId}`);
+  });
+
+  // Toggle tab active states
+  document.querySelectorAll(".page-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.page === pageId);
+  });
+
+  // Animate tab indicator
+  const activeTab = document.querySelector(`.page-tab[data-page="${pageId}"]`);
+  const indicator = document.getElementById("tab-indicator");
+  if (activeTab && indicator) {
+    indicator.style.left = `${activeTab.offsetLeft}px`;
+    indicator.style.width = `${activeTab.offsetWidth}px`;
+  }
+
+  console.log(`[BMS] Switched to ${pageId} page`);
+}
+
+// Initialize tab indicator position
+requestAnimationFrame(() => {
+  const bmsTab = document.getElementById("tab-bms");
+  const indicator = document.getElementById("tab-indicator");
+  if (bmsTab && indicator) {
+    indicator.style.left = `${bmsTab.offsetLeft}px`;
+    indicator.style.width = `${bmsTab.offsetWidth}px`;
+  }
+});
+
+// Tab click handlers
+document.querySelectorAll(".page-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    const pageId = tab.dataset.page;
+    if (pageId) switchPage(pageId);
+  });
+});
+
+window.__bmsSwitchPage = switchPage;
+
+// --- E-Load Simulation Mode ---
+const eloadSimulateToggle = document.getElementById("eload-simulate-toggle");
+const eloadSimulateModeEl = document.getElementById("eload-simulate-mode");
+const eloadStatusDot = document.getElementById("eload-data-pulse");
+const eloadStatusLabel = document.getElementById("eload-status-label");
+let eloadSimulationEnabled = false;
+let eloadSimulationIntervalId = null;
+
+function mockEloadStream() {
+  const targetV = parseFloat(eloadVoltageInput.value) || 12;
+  const targetI = parseFloat(eloadCurrentInput.value) || 1;
+  const mockV = Number((targetV + (Math.random() - 0.5) * 0.4).toFixed(3));
+  const mockI = Number((targetI + (Math.random() - 0.5) * 0.1).toFixed(3));
+  const s3val = Number((Math.abs(mockI) * 0.1 + 0.002 + Math.random() * 0.001).toFixed(5));
+  const s4val = Number((0.002 + Math.random() * 0.001).toFixed(5));
+
+  const eloadData = {
+    enabled: eloadToggle.checked,
+    v: mockV,
+    s1: Number((mockV * 0.25 + Math.random() * 0.05).toFixed(4)),
+    s2: Number((mockV * 0.50 + Math.random() * 0.05).toFixed(4)),
+    s3: s3val,
+    s4: s4val,
+    v_set: parseFloat(eloadVoltageInput.value) || 0,
+    target_current: parseFloat(eloadCurrentInput.value) || 0,
+    voltage: mockV,
+    actual_current: Math.abs(mockI),
+    power: Number((mockV * Math.abs(mockI)).toFixed(2)),
+  };
+
+  updateEloadTelemetry(eloadData);
+}
+
+function setEloadSimulationMode(enabled) {
+  eloadSimulationEnabled = Boolean(enabled);
+
+  if (eloadSimulateToggle) eloadSimulateToggle.checked = eloadSimulationEnabled;
+  if (eloadSimulateModeEl) {
+    eloadSimulateModeEl.textContent = eloadSimulationEnabled ? "Simulation Mode" : "Actual Testing Mode";
+  }
+
+  const simCard = document.querySelector("#page-eload .metric-card--simulate");
+  if (simCard) simCard.classList.toggle("is-simulating", eloadSimulationEnabled);
+
+  // Update E-Load status indicator
+  if (eloadStatusDot) {
+    eloadStatusDot.className = eloadSimulationEnabled
+      ? "status__dot status__dot--simulation"
+      : "status__dot status__dot--waiting";
+  }
+  if (eloadStatusLabel) {
+    eloadStatusLabel.textContent = eloadSimulationEnabled ? "Simulation Mode" : "E-Load Standby";
+  }
+
+  if (eloadSimulationEnabled) {
+    mockEloadStream();
+    if (!eloadSimulationIntervalId) {
+      eloadSimulationIntervalId = window.setInterval(mockEloadStream, 1500);
+    }
+    // Trigger smooth reveal transition (solid → transparent + camera orbit)
+    startEloadReveal(true);
+  } else {
+    if (eloadSimulationIntervalId) {
+      window.clearInterval(eloadSimulationIntervalId);
+      eloadSimulationIntervalId = null;
+    }
+    // Reset telemetry display
+    updateEloadTelemetry({});
+    // Reverse reveal — return to solid exterior view
+    startEloadReveal(false);
+  }
+}
+
+if (eloadSimulateToggle) {
+  eloadSimulateToggle.addEventListener("change", (event) => {
+    setEloadSimulationMode(Boolean(event.target.checked));
+  });
+}
+
+window.__bmsSetEloadSimulation = (enabled) => setEloadSimulationMode(Boolean(enabled));
+
 markBootUiReady();
