@@ -609,6 +609,8 @@ setBootDetail("Preparing interface...");
 const cellMeshes = []; // Will store references to cell meshes
 const shellMeshes = [];
 const fanMeshes = [];
+const boardMeshes = [];       // PCB / mainboard meshes
+const connectorMeshes = [];   // ports, connectors, terminals, headers, pins, wires
 const meshInfos = [];
 const selectedCellUuidSet = new Set();
 let highlightedCellId = null;
@@ -618,6 +620,8 @@ const eloadShellMeshes = [];
 const eloadLidMeshes = [];
 const eloadFanBladeMeshes = [];   // { mesh, spinNode, axis }
 const eloadHeatsinkMeshes = [];   // meshes for heat visualization
+const eloadBoardMeshes = [];      // PCB / mainboard meshes
+const eloadConnectorMeshes = [];  // ports, connectors, terminals, headers
 const eloadThermalEntries = [];   // { mesh, originalMat } for material swapping
 let eloadThermalShaderMat = null; // shared ShaderMaterial for thermal viz
 let eloadFetWorldPositions = [];  // Vector3[] â€” world-space centers of FET heat sources
@@ -1938,6 +1942,8 @@ async function initializeLoadedModel(object) {
   cellMeshes.length = 0;
   shellMeshes.length = 0;
   fanMeshes.length = 0;
+  boardMeshes.length = 0;
+  connectorMeshes.length = 0;
 
   const fastNamedCellObjects = FAST_MODEL_INIT
     ? selectStrictNamedCellObjects(object, modelSize, { y: null, margin: 0, pcbInfos: [] })
@@ -2200,6 +2206,32 @@ async function initializeLoadedModel(object) {
   setModelProcessProgress(MODEL_PROCESS_SEGMENTS.fans.start, MODEL_PROCESS_SEGMENTS.fans.span, 1);
   await waitForNextFrame();
 
+  // Board / connector mesh identification
+  setBootDetail("Identifying ports and connectors...");
+  const classifiedUuids = new Set();
+  cellMeshes.forEach(e => classifiedUuids.add(e.mesh?.uuid));
+  shellMeshes.forEach(e => classifiedUuids.add(e.mesh?.uuid));
+  fanMeshes.forEach(e => {
+    if (e.mesh?.uuid) classifiedUuids.add(e.mesh.uuid);
+    if (e.spinNode) e.spinNode.traverse(c => { if (c.isMesh) classifiedUuids.add(c.uuid); });
+  });
+
+  object.traverse((child) => {
+    if (!child?.isMesh) return;
+    if (classifiedUuids.has(child.uuid)) return;
+    const name = (child.name || '').toLowerCase();
+    const parentName = (child.parent?.name || '').toLowerCase();
+    const combined = `${name} ${parentName}`;
+    if (PCB_NAME_PATTERN.test(combined)) {
+      boardMeshes.push(child);
+      classifiedUuids.add(child.uuid);
+    } else if (HARDWARE_NAME_PATTERN.test(combined)) {
+      connectorMeshes.push(child);
+      classifiedUuids.add(child.uuid);
+    }
+  });
+  console.log(`[BMS] Board meshes: ${boardMeshes.length}, Connector meshes: ${connectorMeshes.length}`);
+
   // Final model state + camera fit.
   setBootDetail("Finalizing 3D scene...");
   lastModelSelectionDebug = {
@@ -2431,6 +2463,21 @@ async function initializeEloadModel(model) {
     if (ELOAD_HEATSINK_NAME_PATTERN.test(name) || ELOAD_HEATSINK_NAME_PATTERN.test(parentName)) {
       eloadHeatsinkMeshes.push(child);
       console.log(`[BMS] E-Load heatsink identified: ${child.name}`);
+    }
+
+    // Identify board / PCB
+    if (PCB_NAME_PATTERN.test(combinedName)) {
+      if (!eloadBoardMeshes.includes(child)) {
+        eloadBoardMeshes.push(child);
+        console.log(`[BMS] E-Load board identified: ${child.name}`);
+      }
+    }
+
+    // Identify connectors / ports / terminals
+    if (HARDWARE_NAME_PATTERN.test(combinedName)) {
+      if (!eloadConnectorMeshes.includes(child)) {
+        eloadConnectorMeshes.push(child);
+      }
     }
 
     // Apply reflective material to ALL meshes
@@ -2737,10 +2784,10 @@ function setupThermalVisualization() {
   // Create shared thermal ShaderMaterial
   eloadThermalShaderMat = new THREE.ShaderMaterial({
     uniforms: {
-      uTime:       { value: 0.0 },
-      uIntensity:  { value: eloadHeatIntensity },
-      uFetPos:     { value: eloadFetWorldPositions },
-      uFetHeat:    { value: eloadFetHeatLevels },
+      uTime: { value: 0.0 },
+      uIntensity: { value: eloadHeatIntensity },
+      uFetPos: { value: eloadFetWorldPositions },
+      uFetHeat: { value: eloadFetHeatLevels },
       uHeatRadius: { value: eloadThermalHeatRadius },
     },
     vertexShader: THERMAL_VERT,
@@ -3181,63 +3228,488 @@ window._bmsSetConnectedPose = window.__bmsSetConnectedPose;
 window._bmsNudgeConnectedPose = window.__bmsNudgeConnectedPose;
 window._bmsPreviewConnectedPose = window.__bmsPreviewConnectedPose;
 
-// --- Interaction (Raycaster) ---
+// --- Interaction (Raycaster + Click-to-Select Popup) ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+const eloadRaycaster = new THREE.Raycaster();
+const eloadMouse = new THREE.Vector2();
 
-window.addEventListener('click', onMouseClick, false);
+const partPopupEl = document.getElementById("hover-tooltip");
+const partPopupTitle = partPopupEl?.querySelector(".hover-tooltip__title");
+const partPopupBody = partPopupEl?.querySelector(".hover-tooltip__body");
 
-function onMouseClick(event) {
-  if (event.target instanceof Element) {
-    const target = event.target;
-    if (target.closest(".hud") || target.closest("[data-detail-panel]")) {
-      return;
+let selectedPart = null;           // { type, id?, fanId?, meshes: Mesh[], anchorMesh: Mesh }
+let selectedPartKey = null;        // string key for toggle-off detection
+let partPopupVisible = false;
+let partPopupDataKey = null;       // cache key to avoid redundant DOM writes
+const HIGHLIGHT_COLOR = 0x0a84ff;
+const HIGHLIGHT_INTENSITY = 0.5;
+
+// --- Mesh identification ---
+
+// Walk up the scene graph from a mesh to see if any ancestor is a classified object.
+function findAncestorFanEntry(obj) {
+  let node = obj?.parent;
+  while (node && node !== scene) {
+    const entry = fanMeshes.find(e => e.spinNode === node || e.mesh === node);
+    if (entry) return entry;
+    node = node.parent;
+  }
+  return null;
+}
+
+function findAncestorEloadFan(obj) {
+  let node = obj?.parent;
+  while (node && node !== eloadScene) {
+    const entry = eloadFanBladeMeshes.find(e => e.spinNode === node || e.mesh === node);
+    if (entry) return entry;
+    node = node.parent;
+  }
+  return null;
+}
+
+function identifyBmsClickTarget(intersects) {
+  for (const hit of intersects) {
+    const obj = hit.object;
+
+    // 1. Direct cell match?
+    const cellEntry = cellMeshes.find(e => e.mesh === obj);
+    if (cellEntry) return { type: "bms-cell", id: cellEntry.id, meshes: [cellEntry.mesh], anchorMesh: cellEntry.mesh };
+
+    // 2. Direct or descendant fan match?
+    let fanEntry = fanMeshes.find(e => {
+      if (!e?.mesh) return false;
+      if (e.mesh === obj) return true;
+      if (e.spinNode) {
+        let match = false;
+        e.spinNode.traverse(c => { if (c === obj) match = true; });
+        return match;
+      }
+      return false;
+    });
+    // 2b. Ancestor walk: the clicked mesh may be a child of a fan assembly
+    if (!fanEntry) fanEntry = findAncestorFanEntry(obj);
+    if (fanEntry) {
+      const allFanMeshes = [];
+      if (fanEntry.spinNode) fanEntry.spinNode.traverse(c => { if (c.isMesh) allFanMeshes.push(c); });
+      else if (fanEntry.mesh) allFanMeshes.push(fanEntry.mesh);
+      return { type: "bms-fan", fanId: fanEntry.fanId || 1, meshes: allFanMeshes, anchorMesh: fanEntry.mesh };
+    }
+
+    // 3. Board / PCB
+    if (boardMeshes.includes(obj)) {
+      return { type: "bms-board", meshes: [obj], anchorMesh: obj };
+    }
+
+    // 4. Connector / port / terminal
+    if (connectorMeshes.includes(obj)) {
+      return { type: "bms-connector", meshes: [obj], anchorMesh: obj };
+    }
+
+    // 5. Shell match â€” highlight only the clicked shell piece, not all shells
+    const shellEntry = shellMeshes.find(e => e.mesh === obj);
+    if (shellEntry) {
+      return { type: "bms-shell", meshes: [obj], anchorMesh: obj };
     }
   }
+  return null;
+}
 
-  // Calculate mouse position in normalized device coordinates
-  const { width, height } = getViewportSize();
-  mouse.x = (event.clientX / width) * 2 - 1;
-  mouse.y = -(event.clientY / height) * 2 + 1;
+function identifyEloadClickTarget(intersects) {
+  for (const hit of intersects) {
+    const obj = hit.object;
 
-  raycaster.setFromCamera(mouse, camera);
-
-  // Intersect against the loaded model
-  if (loadedModel) {
-    const intersects = raycaster.intersectObjects(loadedModel.children, true);
-
-    if (intersects.length > 0) {
-      const hitObject = intersects[0].object;
-      // Find if this object corresponds to a known cell
-      const cellEntry = cellMeshes.find(entry => entry.mesh === hitObject);
-
-      if (cellEntry) {
-        console.log("Clicked cell ID:", cellEntry.id);
-
-        const isCurrentlySelected = highlightedCellId === cellEntry.id && detailPanel.classList.contains("is-visible");
-
-        if (isCurrentlySelected) {
-          // Toggle off
-          cancelScheduledDetailRefresh();
-          detailPendingForceGraph = false;
-          detailPanel.classList.remove("is-visible");
-          highlightCell(null);
-        } else {
-          // Show detail
-          showDetail(cellEntry.id);
-          highlightCell(cellEntry.id);
-        }
-      } else {
-        // Clicked something else (frame, etc)
-        cancelScheduledDetailRefresh();
-        detailPendingForceGraph = false;
-        highlightCell(null);
-        document.querySelector("[data-detail-panel]").classList.remove("is-visible");
-      }
+    // 1. Direct heatsink match
+    if (eloadHeatsinkMeshes.includes(obj)) {
+      return { type: "eload-heatsink", meshes: [obj], anchorMesh: obj };
     }
+
+    // 2. Direct fan blade match
+    const fanBlade = eloadFanBladeMeshes.find(e => e.mesh === obj);
+    if (fanBlade) {
+      return { type: "eload-fan", meshes: [fanBlade.mesh], anchorMesh: fanBlade.mesh };
+    }
+    // 2b. Ancestor walk for fan children
+    const ancestorFan = findAncestorEloadFan(obj);
+    if (ancestorFan) {
+      return { type: "eload-fan", meshes: [ancestorFan.mesh], anchorMesh: ancestorFan.mesh };
+    }
+
+    // 3. Board / PCB
+    if (eloadBoardMeshes.includes(obj)) {
+      return { type: "eload-board", meshes: [obj], anchorMesh: obj };
+    }
+
+    // 4. Connector / port / terminal
+    if (eloadConnectorMeshes.includes(obj)) {
+      return { type: "eload-connector", meshes: [obj], anchorMesh: obj };
+    }
+
+    // 5. Lid â€” individual piece
+    if (eloadLidMeshes.includes(obj)) {
+      return { type: "eload-lid", meshes: [obj], anchorMesh: obj };
+    }
+
+    // 6. Shell â€” individual piece
+    if (eloadShellMeshes.includes(obj)) {
+      return { type: "eload-shell", meshes: [obj], anchorMesh: obj };
+    }
+  }
+  return null;
+}
+
+function partKey(target) {
+  if (!target) return null;
+  if (target.type === "bms-cell") return `bms-cell-${target.id}`;
+  if (target.type === "bms-fan") return `bms-fan-${target.fanId}`;
+  // For board/connector, use the mesh uuid so each piece is independently toggleable
+  if (target.type === "bms-board" || target.type === "bms-connector" ||
+    target.type === "eload-board" || target.type === "eload-connector") {
+    return `${target.type}-${target.anchorMesh?.uuid || ''}`;
+  }
+  return target.type;
+}
+
+// --- Highlight / Unhighlight ---
+function applyHighlight(meshes) {
+  meshes.forEach(mesh => {
+    if (!mesh?.isMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mats.forEach(mat => {
+      if (!mat) return;
+      // Save original emissive state
+      if (mat.userData._origEmissiveHex === undefined && mat.emissive) {
+        mat.userData._origEmissiveHex = mat.emissive.getHex();
+        mat.userData._origEmissiveIntensity = mat.emissiveIntensity;
+      }
+      if (mat.emissive) {
+        mat.emissive.setHex(HIGHLIGHT_COLOR);
+        mat.emissiveIntensity = HIGHLIGHT_INTENSITY;
+      }
+    });
+  });
+}
+
+function removeHighlight(meshes) {
+  meshes.forEach(mesh => {
+    if (!mesh?.isMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mats.forEach(mat => {
+      if (!mat || !mat.emissive) return;
+      if (mat.userData._origEmissiveHex !== undefined) {
+        mat.emissive.setHex(mat.userData._origEmissiveHex);
+        mat.emissiveIntensity = mat.userData._origEmissiveIntensity || 0;
+        delete mat.userData._origEmissiveHex;
+        delete mat.userData._origEmissiveIntensity;
+      } else {
+        mat.emissive.setHex(0x000000);
+        mat.emissiveIntensity = 0;
+      }
+    });
+  });
+}
+
+// --- Popup content ---
+function buildPartPopupContent(target) {
+  if (!target) return null;
+  switch (target.type) {
+    case "bms-cell": {
+      const cell = currentState?.cells?.find(c => c.id === target.id);
+      const validCells = (currentState?.cells || []).filter(c => isFiniteNumber(c?.voltage));
+      const avgV = validCells.length ? validCells.reduce((s, c) => s + c.voltage, 0) / validCells.length : null;
+      const delta = cell && isFiniteNumber(cell.voltage) && avgV !== null
+        ? ((cell.voltage - avgV) * 1000).toFixed(1) : null;
+      return {
+        title: `Cell ${String(target.id).padStart(2, "0")}`,
+        rows: [
+          { label: "Voltage", value: cell && isFiniteNumber(cell.voltage) ? `${cell.voltage.toFixed(3)} V` : "-- V" },
+          { label: "Temperature", value: cell && isFiniteNumber(cell.temperature) ? `${cell.temperature.toFixed(1)} \u00B0C` : "-- \u00B0C" },
+          { label: "\u0394 Avg", value: delta !== null ? `${(delta > 0 ? "+" : "") + delta} mV` : "-- mV" },
+        ],
+      };
+    }
+    case "bms-fan": {
+      const fanData = target.fanId === 2 ? currentState?.fan2 : currentState?.fan1;
+      const rpm = parseRpmValue(fanData?.rpm) ?? 0;
+      const fc = currentState?.fan_control || {};
+      return {
+        title: `Fan ${target.fanId}`,
+        rows: [
+          { label: "Speed", value: rpm > 0 ? `${Math.round(rpm).toLocaleString()} RPM` : "-- RPM" },
+          { label: "Mode", value: fc.auto ? "Auto" : "Manual" },
+          { label: "Duty", value: isFiniteNumber(fc.duty) ? `${fc.duty}%` : "-- %" },
+        ],
+      };
+    }
+    case "bms-shell": {
+      const validCells = (currentState?.cells || []).filter(c => isFiniteNumber(c?.voltage));
+      const totalV = validCells.reduce((s, c) => s + c.voltage, 0);
+      const packI = currentState?.pack_current;
+      return {
+        title: "Battery Pack",
+        rows: [
+          { label: "Pack Voltage", value: validCells.length ? `${totalV.toFixed(2)} V` : "-- V" },
+          { label: "Pack Current", value: isFiniteNumber(packI) ? `${packI.toFixed(3)} A` : "-- A" },
+          { label: "Active Cells", value: `${validCells.length} / ${CELL_COUNT}` },
+        ],
+      };
+    }
+    case "eload-heatsink": {
+      const eload = currentState?.eload || {};
+      const avgHeat = eloadFetHeatLevels.reduce((a, b) => a + b, 0) / eloadFetHeatLevels.length;
+      return {
+        title: "Heatsink / FETs",
+        rows: [
+          { label: "Power", value: isFiniteNumber(eload.power) ? `${eload.power.toFixed(2)} W` : "-- W" },
+          { label: "Heat Level", value: `${(avgHeat * 100).toFixed(0)}%` },
+          { label: "FET Count", value: `${eloadFetWorldPositions.length}` },
+        ],
+      };
+    }
+    case "eload-fan": {
+      return {
+        title: "Cooling Fan",
+        rows: [
+          { label: "Spin", value: eloadFanSpinEnabled ? "Active" : "Off" },
+          { label: "Speed", value: `${Math.round(eloadFanSpinSpeed * 100)}%` },
+        ],
+      };
+    }
+    case "eload-shell":
+    case "eload-lid": {
+      const eload = currentState?.eload || {};
+      const R_SENSE = 0.1;
+      let curVal = null;
+      if (isFiniteNumber(eload.s3) && isFiniteNumber(eload.s4)) {
+        curVal = (eload.s3 - eload.s4) / R_SENSE;
+      } else if (isFiniteNumber(eload.actual_current)) {
+        curVal = eload.actual_current;
+      }
+      return {
+        title: target.type === "eload-lid" ? "E-Load Lid" : "E-Load Enclosure",
+        rows: [
+          { label: "Voltage", value: isFiniteNumber(eload.v) ? `${eload.v.toFixed(2)} V` : "-- V" },
+          { label: "Current", value: curVal !== null ? `${curVal.toFixed(3)} A` : "-- A" },
+          { label: "Power", value: isFiniteNumber(eload.power) ? `${eload.power.toFixed(2)} W` : "-- W" },
+        ],
+      };
+    }
+    case "bms-board": {
+      const validCells = (currentState?.cells || []).filter(c => isFiniteNumber(c?.voltage));
+      const totalV = validCells.reduce((s, c) => s + c.voltage, 0);
+      return {
+        title: "BMS Controller Board",
+        rows: [
+          { label: "Pack Voltage", value: validCells.length ? `${totalV.toFixed(2)} V` : "-- V" },
+          { label: "Active Cells", value: `${validCells.length} / ${CELL_COUNT}` },
+          { label: "Status", value: backendConnectionState ? "Online" : "Offline" },
+        ],
+      };
+    }
+    case "bms-connector": {
+      const meshName = target.anchorMesh?.name || target.anchorMesh?.parent?.name || "Component";
+      // Clean up the mesh name for display
+      const displayName = meshName.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim() || "Connector";
+      return {
+        title: displayName,
+        rows: [
+          { label: "Type", value: "Port / Connector" },
+          { label: "Link", value: backendConnectionState ? "Active" : "Idle" },
+        ],
+      };
+    }
+    case "eload-board": {
+      const eload = currentState?.eload || {};
+      return {
+        title: "E-Load Controller",
+        rows: [
+          { label: "Voltage", value: isFiniteNumber(eload.v) ? `${eload.v.toFixed(2)} V` : "-- V" },
+          { label: "Power", value: isFiniteNumber(eload.power) ? `${eload.power.toFixed(2)} W` : "-- W" },
+          { label: "Status", value: eload.enabled ? "Active" : "Standby" },
+        ],
+      };
+    }
+    case "eload-connector": {
+      const meshName = target.anchorMesh?.name || target.anchorMesh?.parent?.name || "Component";
+      const displayName = meshName.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim() || "Connector";
+      const eload = currentState?.eload || {};
+      return {
+        title: displayName,
+        rows: [
+          { label: "Type", value: "Port / Terminal" },
+          { label: "E-Load", value: eload.enabled ? "Enabled" : "Disabled" },
+        ],
+      };
+    }
+    default: return null;
   }
 }
 
+// --- Popup show / hide / position ---
+function showPartPopup(content) {
+  if (!content || !partPopupEl) return;
+  partPopupDataKey = null; // force first write
+  updatePartPopupContent(content);
+  partPopupVisible = true;
+  partPopupEl.classList.add("is-visible");
+}
+
+function updatePartPopupContent(content) {
+  if (!content || !partPopupEl) return;
+  const cacheKey = content.title + content.rows.map(r => r.value).join("|");
+  if (cacheKey === partPopupDataKey) return;
+  partPopupDataKey = cacheKey;
+  partPopupTitle.textContent = content.title;
+  partPopupBody.innerHTML = content.rows.map(r =>
+    `<div class="hover-tooltip__row"><span class="hover-tooltip__label">${r.label}</span><span class="hover-tooltip__value">${r.value}</span></div>`
+  ).join("");
+}
+
+function hidePartPopup() {
+  if (partPopupVisible) {
+    partPopupVisible = false;
+    partPopupDataKey = null;
+    partPopupEl.classList.remove("is-visible");
+  }
+}
+
+function positionPopupAtMesh(mesh, cam, rendererDom) {
+  if (!partPopupEl || !mesh || !cam || !rendererDom) return;
+  // Get mesh world center
+  const box = new THREE.Box3().setFromObject(mesh);
+  const center = box.getCenter(new THREE.Vector3());
+  // Project to screen
+  const projected = center.clone().project(cam);
+  const rect = rendererDom.getBoundingClientRect();
+  const sx = (projected.x * 0.5 + 0.5) * rect.width + rect.left;
+  const sy = (-projected.y * 0.5 + 0.5) * rect.height + rect.top;
+  // Offset to the right and slightly above
+  const vp = getViewportSize();
+  const popRect = partPopupEl.getBoundingClientRect();
+  const tw = popRect.width || 180;
+  const th = popRect.height || 80;
+  let left = sx + 20;
+  let top = sy - th / 2;
+  if (left + tw > vp.width - 8) left = sx - tw - 20;
+  if (top + th > vp.height - 8) top = vp.height - th - 8;
+  if (top < 8) top = 8;
+  left = Math.max(8, left);
+  partPopupEl.style.left = `${left}px`;
+  partPopupEl.style.top = `${top}px`;
+}
+
+// --- Selection logic ---
+function selectPart(target) {
+  // Unhighlight previous selection
+  deselectPart();
+
+  if (!target) return;
+  selectedPart = target;
+  selectedPartKey = partKey(target);
+
+  // Highlight meshes
+  applyHighlight(target.meshes);
+
+  // BMS cells also get the existing scale animation
+  if (target.type === "bms-cell") {
+    highlightCell(target.id);
+  }
+
+  // Show popup
+  const content = buildPartPopupContent(target);
+  showPartPopup(content);
+}
+
+function deselectPart() {
+  if (selectedPart) {
+    removeHighlight(selectedPart.meshes);
+    // Reset BMS cell highlight if it was a cell
+    if (selectedPart.type === "bms-cell") {
+      highlightCell(null);
+    }
+    selectedPart = null;
+    selectedPartKey = null;
+  }
+  hidePartPopup();
+  // Also close BMS detail panel if open
+  const dp = document.querySelector("[data-detail-panel]");
+  if (dp && dp.classList.contains("is-visible")) {
+    cancelScheduledDetailRefresh();
+    detailPendingForceGraph = false;
+    dp.classList.remove("is-visible");
+  }
+}
+
+// Per-frame: update popup position + live data
+function updatePartPopupFrame() {
+  if (!partPopupVisible || !selectedPart) return;
+  // Position the popup at the anchor mesh
+  if (activePageId === "bms") {
+    positionPopupAtMesh(selectedPart.anchorMesh, camera, renderer.domElement);
+  } else if (activePageId === "eload") {
+    positionPopupAtMesh(selectedPart.anchorMesh, eloadCamera, eloadRenderer?.domElement);
+  }
+}
+
+function refreshPartPopupData() {
+  if (!partPopupVisible || !selectedPart) return;
+  const content = buildPartPopupContent(selectedPart);
+  updatePartPopupContent(content);
+}
+
+// --- Click handler (both pages) ---
+window.addEventListener('click', onModelClick, false);
+
+function onModelClick(event) {
+  if (event.target instanceof Element) {
+    const t = event.target;
+    if (t.closest(".hud") || t.closest("[data-detail-panel]") || t.closest(".hover-tooltip")) return;
+  }
+
+  const { width, height } = getViewportSize();
+
+  if (activePageId === "bms" && loadedModel) {
+    mouse.x = (event.clientX / width) * 2 - 1;
+    mouse.y = -(event.clientY / height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(loadedModel.children, true);
+    const target = identifyBmsClickTarget(intersects);
+    const key = partKey(target);
+
+    if (!target) {
+      deselectPart();
+      return;
+    }
+    // Toggle off if clicking the same part
+    if (key === selectedPartKey) {
+      deselectPart();
+      return;
+    }
+    selectPart(target);
+    // BMS cells also show the detail panel sidebar
+    if (target.type === "bms-cell") {
+      showDetail(target.id);
+    }
+
+  } else if (activePageId === "eload" && loadedEloadModel && eloadCamera) {
+    eloadMouse.x = (event.clientX / width) * 2 - 1;
+    eloadMouse.y = -(event.clientY / height) * 2 + 1;
+    eloadRaycaster.setFromCamera(eloadMouse, eloadCamera);
+    const intersects = eloadRaycaster.intersectObjects(loadedEloadModel.children, true);
+    const target = identifyEloadClickTarget(intersects);
+    const key = partKey(target);
+
+    if (!target) {
+      deselectPart();
+      return;
+    }
+    if (key === selectedPartKey) {
+      deselectPart();
+      return;
+    }
+    selectPart(target);
+  }
+}
 
 // --- UI & Data Logic ---
 const packVoltageEl = document.querySelector("[data-pack-voltage]");
@@ -3860,6 +4332,7 @@ function updateHud(data) {
   if (detailPanel.classList.contains("is-visible") && Number.isInteger(highlightedCellId)) {
     scheduleDetailRefresh(false);
   }
+  refreshPartPopupData();
 }
 
 function colorForVoltage(voltage) {
@@ -3947,12 +4420,16 @@ function tick() {
 
     animateCells(delta);
     renderer.render(scene, camera);
+    updatePartPopupFrame();
+    refreshPartPopupData();
   } else if (activePageId === "eload" && eloadRenderer && eloadScene && eloadCamera) {
     updateEloadRevealTransition(performance.now());
     if (eloadControls) eloadControls.update();
     updateEloadFanSpin(delta);
     updateEloadHeatVisualization(delta);
     eloadRenderer.render(eloadScene, eloadCamera);
+    updatePartPopupFrame();
+    refreshPartPopupData();
   }
 
   requestAnimationFrame(tick);
@@ -4445,6 +4922,7 @@ function updateEloadTelemetry(eload) {
     const heat = Math.min((eload.actual_current * eload.actual_current) / 400, 1.0);
     eloadFetHeatLevels = [heat, heat, heat, heat];
   }
+  refreshPartPopupData();
 }
 
 function clearMeshTargets() {
@@ -4740,6 +5218,7 @@ console.log("[BMS] Simulation toggle initialized in Actual Testing Mode.");
 // --- Tab Navigation Logic ---
 function switchPage(pageId) {
   if (activePageId === pageId) return;
+  deselectPart();
   activePageId = pageId;
 
   // Lazy-init E-Load scene on first switch
@@ -4868,3 +5347,315 @@ if (eloadSimulateToggle) {
 window.__bmsSetEloadSimulation = (enabled) => setEloadSimulationMode(Boolean(enabled));
 
 markBootUiReady();
+
+// --------------- Serial Port Manager (Web Serial API) ---------------
+(function initSerialManager() {
+  const WEB_SERIAL_SUPPORTED = Boolean(navigator?.serial);
+
+  // --- Terminal DOM ---
+  const terminalEl = document.getElementById('serial-terminal');
+  const terminalLog = document.getElementById('terminal-log');
+  const terminalInput = document.getElementById('terminal-input');
+  const terminalSend = document.getElementById('terminal-send');
+  const terminalClear = document.getElementById('terminal-clear');
+  const terminalClose = document.getElementById('terminal-close');
+  const terminalPortBadge = document.getElementById('terminal-port-badge');
+
+  const MAX_LOG_LINES = 800;
+  let terminalLineCount = 0;
+  let activeTerminalChannel = null; // 'bms' | 'eload'
+
+  function termLog(text, cls = 'term-line--rx') {
+    if (!terminalLog) return;
+    const span = document.createElement('span');
+    span.className = 'term-line ' + cls;
+    span.textContent = text;
+    terminalLog.appendChild(span);
+    terminalLineCount++;
+    if (terminalLineCount > MAX_LOG_LINES) {
+      const excess = terminalLineCount - MAX_LOG_LINES;
+      for (let i = 0; i < excess; i++) {
+        if (terminalLog.firstChild) terminalLog.removeChild(terminalLog.firstChild);
+      }
+      terminalLineCount = MAX_LOG_LINES;
+    }
+    terminalLog.scrollTop = terminalLog.scrollHeight;
+  }
+
+  function toggleTerminal(show) {
+    if (!terminalEl) return;
+    if (show === undefined) show = !terminalEl.classList.contains('is-open');
+    terminalEl.classList.toggle('is-open', show);
+    terminalEl.setAttribute('aria-hidden', String(!show));
+    if (show) terminalInput?.focus();
+  }
+
+  // Close / Clear terminal
+  terminalClose?.addEventListener('click', () => toggleTerminal(false));
+  terminalClear?.addEventListener('click', () => {
+    if (terminalLog) { terminalLog.innerHTML = ''; terminalLineCount = 0; }
+  });
+
+  // --- Per-channel serial state ---
+  class SerialChannel {
+    constructor(prefix) {
+      this.prefix = prefix;
+      this.port = null;
+      this.reader = null;
+      this.writer = null;
+      this.readLoopActive = false;
+      this.connected = false;
+      this.portName = '';
+      // DOM elements
+      this.portSelect = document.getElementById(prefix + '-port-select');
+      this.baudSelect = document.getElementById(prefix + '-baud-select');
+      this.connectBtn = document.getElementById(prefix + '-serial-connect');
+      this.refreshBtn = document.getElementById(prefix + '-serial-refresh');
+      this.termToggle = document.getElementById(prefix + '-terminal-toggle');
+      this.dotEl = document.getElementById(prefix + '-serial-dot');
+      this.statusLabel = document.getElementById(prefix + '-serial-status');
+      this._bindUI();
+    }
+
+    _bindUI() {
+      this.connectBtn?.addEventListener('click', () => this._handleConnectClick());
+      this.refreshBtn?.addEventListener('click', () => this._scanPorts());
+      this.termToggle?.addEventListener('click', () => {
+        activeTerminalChannel = this.prefix;
+        terminalPortBadge && (terminalPortBadge.textContent = this.portName || '--');
+        toggleTerminal(true);
+      });
+      // Initial scan if supported
+      if (WEB_SERIAL_SUPPORTED) this._scanPorts();
+    }
+
+    async _scanPorts() {
+      if (!WEB_SERIAL_SUPPORTED || !this.portSelect) return;
+      try {
+        const ports = await navigator.serial.getPorts();
+        this.portSelect.innerHTML = '';
+        if (ports.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Request port...';
+          this.portSelect.appendChild(opt);
+        } else {
+          ports.forEach((p, i) => {
+            const info = p.getInfo();
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = info.usbVendorId
+              ? 'USB (' + (info.usbVendorId.toString(16)) + ':' + (info.usbProductId?.toString(16) || '?') + ')'
+              : 'Port ' + (i + 1);
+            opt.dataset.portIndex = i;
+            this.portSelect.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        console.warn('[Serial] scan failed:', err);
+      }
+    }
+
+    async _handleConnectClick() {
+      if (this.connected) {
+        await this.disconnect();
+      } else {
+        await this.connect();
+      }
+    }
+
+    async connect() {
+      if (!WEB_SERIAL_SUPPORTED) {
+        termLog('[System] Web Serial API not supported in this browser.', 'term-line--system');
+        this._updateUI(false, 'Not supported');
+        return;
+      }
+      try {
+        const baudRate = parseInt(this.baudSelect?.value || '115200', 10);
+        let port;
+        // Check if user has approved ports
+        const knownPorts = await navigator.serial.getPorts();
+        const selectedIdx = parseInt(this.portSelect?.value || '', 10);
+        if (!isNaN(selectedIdx) && knownPorts[selectedIdx]) {
+          port = knownPorts[selectedIdx];
+        } else {
+          // Request new port from user (browser security prompt)
+          port = await navigator.serial.requestPort();
+        }
+        await port.open({ baudRate });
+        this.port = port;
+        this.connected = true;
+        const info = port.getInfo();
+        this.portName = info.usbVendorId
+          ? 'USB:' + info.usbVendorId.toString(16).toUpperCase()
+          : 'COM';
+        this._updateUI(true, 'Connected (' + this.portName + ')');
+        termLog('[System] Connected to ' + this.portName + ' @ ' + baudRate + ' baud', 'term-line--system');
+        if (activeTerminalChannel === this.prefix && terminalPortBadge) {
+          terminalPortBadge.textContent = this.portName;
+        }
+        // Start read loop
+        this._startReading();
+        // Rescan ports list
+        await this._scanPorts();
+      } catch (err) {
+        console.error('[Serial] connect error:', err);
+        termLog('[System] Connection failed: ' + err.message, 'term-line--system');
+        this._updateUI(false, 'Connection failed');
+      }
+    }
+
+    async disconnect() {
+      this.readLoopActive = false;
+      try {
+        if (this.reader) { await this.reader.cancel(); this.reader = null; }
+        if (this.writer) { this.writer.releaseLock(); this.writer = null; }
+        if (this.port) { await this.port.close(); this.port = null; }
+      } catch (err) {
+        console.warn('[Serial] disconnect error:', err);
+      }
+      this.connected = false;
+      this.portName = '';
+      this._updateUI(false, 'Disconnected');
+      termLog('[System] Disconnected', 'term-line--system');
+      if (activeTerminalChannel === this.prefix && terminalPortBadge) {
+        terminalPortBadge.textContent = '--';
+      }
+    }
+
+    async _startReading() {
+      if (!this.port?.readable) return;
+      this.readLoopActive = true;
+      const decoder = new TextDecoderStream();
+      const readableStreamClosed = this.port.readable.pipeTo(decoder.writable);
+      this.reader = decoder.readable.getReader();
+      let lineBuffer = '';
+      try {
+        while (this.readLoopActive) {
+          const { value, done } = await this.reader.read();
+          if (done) break;
+          if (!value) continue;
+          lineBuffer += value;
+          const lines = lineBuffer.split('\n');
+          lineBuffer = lines.pop() || '';
+          for (const line of lines) {
+            const trimmed = line.replace(/\r$/, '');
+            if (!trimmed) continue;
+            // Log to terminal
+            if (activeTerminalChannel === this.prefix) {
+              termLog(trimmed, 'term-line--rx');
+            }
+            // Try to parse and feed into dashboard
+            this._processLine(trimmed);
+          }
+        }
+      } catch (err) {
+        if (this.readLoopActive) {
+          console.error('[Serial] read error:', err);
+          termLog('[System] Read error: ' + err.message, 'term-line--system');
+        }
+      } finally {
+        try { this.reader?.releaseLock(); } catch (_) {}
+        try { await readableStreamClosed; } catch (_) {}
+        this.reader = null;
+      }
+    }
+
+    _processLine(line) {
+      // Try JSON parse first
+      try {
+        const idx = line.indexOf('{');
+        if (idx >= 0) {
+          const jsonStr = line.substring(idx);
+          const data = JSON.parse(jsonStr);
+          if (data && typeof data === 'object') {
+            if (this.prefix === 'bms') {
+              window.updateDashboard?.(data);
+            } else if (this.prefix === 'eload') {
+              // Feed eload data through the dashboard merge path
+              if (data.eload || data.v !== undefined || data.vsense !== undefined) {
+                const eloadPayload = data.eload || data;
+                window.updateDashboard?.({ eload: eloadPayload });
+              }
+            }
+          }
+        }
+      } catch (_) {
+        // Not JSON — ignore for data feed, it's still shown in terminal
+      }
+    }
+
+    async sendCommand(cmd) {
+      if (!this.port?.writable) {
+        termLog('[System] Not connected — cannot send', 'term-line--system');
+        return;
+      }
+      try {
+        const encoder = new TextEncoder();
+        const writer = this.port.writable.getWriter();
+        await writer.write(encoder.encode(cmd + '\n'));
+        writer.releaseLock();
+        termLog(cmd, 'term-line--tx');
+      } catch (err) {
+        console.error('[Serial] send error:', err);
+        termLog('[System] Send failed: ' + err.message, 'term-line--system');
+      }
+    }
+
+    _updateUI(connected, label) {
+      this.connectBtn && (this.connectBtn.textContent = connected ? 'Disconnect' : 'Connect');
+      this.connectBtn?.classList.toggle('is-connected', connected);
+      this.dotEl?.classList.toggle('is-connected', connected);
+      this.statusLabel && (this.statusLabel.textContent = label || (connected ? 'Connected' : 'Disconnected'));
+    }
+  }
+
+  // --- Create channel instances ---
+  const bmsSerial = new SerialChannel('bms');
+  const eloadSerial = new SerialChannel('eload');
+
+  // --- Terminal input send ---
+  function sendTerminalCommand() {
+    const cmd = terminalInput?.value?.trim();
+    if (!cmd) return;
+    const channel = activeTerminalChannel === 'eload' ? eloadSerial : bmsSerial;
+    channel.sendCommand(cmd);
+    terminalInput.value = '';
+  }
+
+  terminalSend?.addEventListener('click', sendTerminalCommand);
+  terminalInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); sendTerminalCommand(); }
+  });
+
+  // --- Fallback for non-Web-Serial environments ---
+  if (!WEB_SERIAL_SUPPORTED) {
+    document.querySelectorAll('.serial-config__select, .serial-config__btn--connect').forEach(el => {
+      el.title = 'Web Serial API not available — use Chrome or Edge';
+    });
+    // Check if running inside PyQt (backendLink available)
+    const checkBackend = () => {
+      if (typeof backendLink !== 'undefined' && backendLink) {
+        document.querySelectorAll('.serial-config').forEach(el => {
+          const badge = el.querySelector('.serial-config__status-label');
+          if (badge) badge.textContent = 'Managed by backend';
+          const dot = el.querySelector('.serial-config__dot');
+          if (dot) dot.classList.add('is-connected');
+        });
+      }
+    };
+    setTimeout(checkBackend, 2000);
+  }
+
+  // Boot message
+  if (!WEB_SERIAL_SUPPORTED) {
+    console.log('[Serial] Web Serial API not available. Use Chrome/Edge for direct COM port access.');
+  } else {
+    console.log('[Serial] Web Serial API available — serial ports can be configured from the GUI.');
+  }
+
+  // Expose for external use
+  window.__bmsSerialBms = bmsSerial;
+  window.__bmsSerialEload = eloadSerial;
+  window.__bmsToggleTerminal = toggleTerminal;
+})();

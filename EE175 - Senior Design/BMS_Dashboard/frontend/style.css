@@ -142,7 +142,7 @@ body:not(.is-booting):not(.is-revealing) .page-tabs {
   z-index: 0;
   box-shadow: 0 2px 12px rgba(10, 132, 255, 0.45);
   transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
@@ -295,12 +295,10 @@ body:not(.is-booting):not(.is-revealing) .page-tabs {
   opacity: 1;
   transform: translateY(0);
   background:
-    linear-gradient(
-      180deg,
+    linear-gradient(180deg,
       rgba(6, 8, 12, 0.92) 0%,
       rgba(6, 8, 12, 0.62) 54%,
-      rgba(6, 8, 12, 0.0) 100%
-    );
+      rgba(6, 8, 12, 0.0) 100%);
   transition: opacity 0.36s ease, transform 0.36s ease;
 }
 
@@ -1147,7 +1145,8 @@ body.compact-layout .detail-panel.is-visible {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
     padding: 1rem;
-    overflow-y: auto; /* Allow scrolling if vertical space is tight */
+    overflow-y: auto;
+    /* Allow scrolling if vertical space is tight */
   }
 
   .hud__header {
@@ -1223,12 +1222,12 @@ body.compact-layout .detail-panel.is-visible {
   transition: transform 0.2s ease;
 }
 
-.toggle-switch input:checked + label {
+.toggle-switch input:checked+label {
   background: rgba(10, 132, 255, 0.35);
   border-color: rgba(10, 132, 255, 0.75);
 }
 
-.toggle-switch input:checked + label::after {
+.toggle-switch input:checked+label::after {
   transform: translateX(20px);
 }
 
@@ -1372,4 +1371,407 @@ body.compact-layout .detail-panel.is-visible {
   position: fixed;
   bottom: 8px;
   right: 16px;
+}
+
+/* ═══════════════ 3D Part Info Popup ═══════════════ */
+.hover-tooltip {
+  position: fixed;
+  z-index: 2500;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(12, 16, 24, 0.82);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(10, 132, 255, 0.25);
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 0 16px rgba(10, 132, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  max-width: 260px;
+  min-width: 170px;
+  font-family: var(--font-family);
+  transform: translateY(8px) scale(0.94);
+  overflow: hidden;
+}
+
+/* Shimmer sweep — matches glass-panel::before */
+.hover-tooltip::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 100%);
+  transform: skewX(-25deg);
+  pointer-events: none;
+}
+
+.hover-tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+/* Sweep the shimmer on appear */
+.hover-tooltip.is-visible::before {
+  left: 150%;
+  transition: left 0.8s ease 0.1s;
+}
+
+.hover-tooltip__title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0a84ff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(10, 132, 255, 0.2);
+}
+
+.hover-tooltip__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hover-tooltip__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.hover-tooltip__label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.hover-tooltip__value {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-feature-settings: "tnum";
+  text-align: right;
+  white-space: nowrap;
+}
+/* Serial Configuration Panel */
+.serial-config__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.serial-config__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.serial-config__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 36px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.serial-config__select {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 28px 6px 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.5)' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.serial-config__select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.serial-config__select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.2);
+}
+
+.serial-config__select option {
+  background: #1a1d24;
+  color: #fff;
+}
+
+.serial-config__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.serial-config__btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.serial-config__btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.serial-config__btn--connect {
+  background: rgba(10, 132, 255, 0.15);
+  border-color: rgba(10, 132, 255, 0.3);
+  color: #5ac8fa;
+}
+
+.serial-config__btn--connect:hover {
+  background: rgba(10, 132, 255, 0.25);
+  border-color: rgba(10, 132, 255, 0.5);
+  box-shadow: 0 0 12px rgba(10, 132, 255, 0.15);
+}
+
+.serial-config__btn--connect.is-connected {
+  background: rgba(255, 69, 58, 0.15);
+  border-color: rgba(255, 69, 58, 0.3);
+  color: #ff6961;
+}
+
+.serial-config__btn--connect.is-connected:hover {
+  background: rgba(255, 69, 58, 0.25);
+  border-color: rgba(255, 69, 58, 0.5);
+}
+
+.serial-config__btn--terminal {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  font-size: 0.7rem;
+}
+
+.serial-config__refresh {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.serial-config__refresh:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.serial-config__refresh:active {
+  transform: rotate(180deg);
+}
+
+.serial-config__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.serial-config__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning-color);
+  box-shadow: 0 0 6px var(--warning-color);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.serial-config__dot.is-connected {
+  background: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+}
+
+.serial-config__status-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Serial Terminal */
+.serial-terminal {
+  position: fixed;
+  bottom: 0;
+  right: 16px;
+  width: min(520px, calc(100vw - 32px));
+  height: 340px;
+  z-index: 3500;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 10, 16, 0.88);
+  backdrop-filter: blur(28px) saturate(1.3);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(10, 132, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-family: var(--font-family);
+  transform: translateY(100%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0.25s ease;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.serial-terminal.is-open {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.serial-terminal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  flex-shrink: 0;
+}
+
+.serial-terminal__title-row { display: flex; align-items: center; gap: 8px; }
+.serial-terminal__icon { font-size: 0.95rem; }
+.serial-terminal__title { font-size: 0.8rem; font-weight: 700; color: var(--text-primary); margin: 0; letter-spacing: 0.02em; }
+
+.serial-terminal__port-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  background: rgba(10, 132, 255, 0.12);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.serial-terminal__header-actions { display: flex; gap: 4px; }
+
+.serial-terminal__btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 3px 8px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.serial-terminal__btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.serial-terminal__btn--close:hover {
+  color: #ff6961;
+  border-color: rgba(255, 69, 58, 0.3);
+  background: rgba(255, 69, 58, 0.1);
+}
+
+.serial-terminal__log {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 14px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: rgba(72, 219, 120, 0.92);
+  white-space: pre-wrap;
+  word-break: break-all;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 3px);
+}
+
+.serial-terminal__log::-webkit-scrollbar { width: 5px; }
+.serial-terminal__log::-webkit-scrollbar-track { background: transparent; }
+.serial-terminal__log::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+.serial-terminal__log .term-line { display: block; }
+.serial-terminal__log .term-line--tx { color: rgba(90, 200, 250, 0.9); }
+.serial-terminal__log .term-line--system { color: rgba(255, 160, 30, 0.85); font-style: italic; }
+
+.serial-terminal__input-row {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.serial-terminal__input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.75rem;
+  padding: 10px 14px;
+  outline: none;
+  transition: background 0.2s ease;
+}
+
+.serial-terminal__input::placeholder { color: rgba(255, 255, 255, 0.25); }
+.serial-terminal__input:focus { background: rgba(255, 255, 255, 0.07); }
+
+.serial-terminal__send {
+  background: rgba(10, 132, 255, 0.15);
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: #5ac8fa;
+  font-family: var(--font-family);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
+
+.serial-terminal__send:hover {
+  background: rgba(10, 132, 255, 0.25);
+  color: #fff;
 }

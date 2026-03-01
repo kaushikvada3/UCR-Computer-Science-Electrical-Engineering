@@ -136,6 +136,44 @@
           </div>
         </section>
 
+        <!-- Serial Configuration -->
+        <section class="hud__section glass-panel serial-config" id="bms-serial-config">
+          <div class="timeline__header">
+            <p class="eyebrow">Serial Port</p>
+            <button class="serial-config__refresh" id="bms-serial-refresh" title="Scan ports">⟳</button>
+          </div>
+          <div class="serial-config__body">
+            <div class="serial-config__row">
+              <label class="serial-config__label" for="bms-port-select">Port</label>
+              <select class="serial-config__select" id="bms-port-select">
+                <option value="" selected>No ports found</option>
+              </select>
+            </div>
+            <div class="serial-config__row">
+              <label class="serial-config__label" for="bms-baud-select">Baud</label>
+              <select class="serial-config__select" id="bms-baud-select">
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="115200" selected>115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+              </select>
+            </div>
+            <div class="serial-config__actions">
+              <button class="serial-config__btn serial-config__btn--connect" id="bms-serial-connect">Connect</button>
+              <button class="serial-config__btn serial-config__btn--terminal" id="bms-terminal-toggle"
+                title="Open serial terminal">🖥 Terminal</button>
+            </div>
+            <div class="serial-config__status">
+              <span class="serial-config__dot" id="bms-serial-dot"></span>
+              <span class="serial-config__status-label" id="bms-serial-status">Disconnected</span>
+            </div>
+          </div>
+        </section>
+
       </div>
       <div class="status">
         <span class="status__dot status__dot--waiting" id="data-pulse"></span>
@@ -375,6 +413,43 @@
             </div>
           </div>
         </section>
+        <!-- Serial Configuration -->
+        <section class="hud__section glass-panel serial-config" id="eload-serial-config">
+          <div class="timeline__header">
+            <p class="eyebrow">Serial Port</p>
+            <button class="serial-config__refresh" id="eload-serial-refresh" title="Scan ports">⟳</button>
+          </div>
+          <div class="serial-config__body">
+            <div class="serial-config__row">
+              <label class="serial-config__label" for="eload-port-select">Port</label>
+              <select class="serial-config__select" id="eload-port-select">
+                <option value="" selected>No ports found</option>
+              </select>
+            </div>
+            <div class="serial-config__row">
+              <label class="serial-config__label" for="eload-baud-select">Baud</label>
+              <select class="serial-config__select" id="eload-baud-select">
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="115200" selected>115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+              </select>
+            </div>
+            <div class="serial-config__actions">
+              <button class="serial-config__btn serial-config__btn--connect" id="eload-serial-connect">Connect</button>
+              <button class="serial-config__btn serial-config__btn--terminal" id="eload-terminal-toggle"
+                title="Open serial terminal">🖥 Terminal</button>
+            </div>
+            <div class="serial-config__status">
+              <span class="serial-config__dot" id="eload-serial-dot"></span>
+              <span class="serial-config__status-label" id="eload-serial-status">Disconnected</span>
+            </div>
+          </div>
+        </section>
 
       </div>
 
@@ -385,6 +460,33 @@
 
     </div>
 
+  </div>
+
+  <!-- ═══════════════ Serial Terminal (shared, collapsible) ═══════════════ -->
+  <aside class="serial-terminal" id="serial-terminal" aria-hidden="true">
+    <div class="serial-terminal__header">
+      <div class="serial-terminal__title-row">
+        <span class="serial-terminal__icon">🖥</span>
+        <h3 class="serial-terminal__title">Serial Terminal</h3>
+        <span class="serial-terminal__port-badge" id="terminal-port-badge">--</span>
+      </div>
+      <div class="serial-terminal__header-actions">
+        <button class="serial-terminal__btn" id="terminal-clear" title="Clear">⌫</button>
+        <button class="serial-terminal__btn serial-terminal__btn--close" id="terminal-close" title="Close">✕</button>
+      </div>
+    </div>
+    <div class="serial-terminal__log" id="terminal-log" aria-live="polite"></div>
+    <div class="serial-terminal__input-row">
+      <input type="text" class="serial-terminal__input" id="terminal-input" placeholder="Type command..."
+        autocomplete="off" spellcheck="false" />
+      <button class="serial-terminal__send" id="terminal-send">Send</button>
+    </div>
+  </aside>
+
+  <!-- ═══════════════ 3D Hover Tooltip ═══════════════ -->
+  <div id="hover-tooltip" class="hover-tooltip" aria-hidden="true">
+    <p class="hover-tooltip__title"></p>
+    <div class="hover-tooltip__body"></div>
   </div>
 
   <svg width="0" height="0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
