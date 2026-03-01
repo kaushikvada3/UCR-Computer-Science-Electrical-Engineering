@@ -463,6 +463,7 @@ class DashboardWindow(QMainWindow):
         self.serial_worker.data_received.connect(self.handle_bms_data)
         self.serial_worker.connection_status.connect(self.handle_connection_status)
         self.serial_worker.data_activity.connect(self.handle_data_activity)
+        self.serial_worker.raw_line_received.connect(self.handle_raw_serial_line)
         self.serial_worker.connected_port_changed.connect(self.handle_connected_port_change)
         self.serial_thread.start()
 
@@ -569,10 +570,22 @@ class DashboardWindow(QMainWindow):
         self._has_serial_data = True
         self._refresh_status_bar()
 
+    def handle_raw_serial_line(self, line: str):
+        """Forward raw serial lines to the frontend terminal."""
+        escaped = json.dumps(line)
+        self.view.page().runJavaScript(
+            f"if(window.__bmsTerminalAppend) window.__bmsTerminalAppend({escaped});"
+        )
+
     def handle_connected_port_change(self, connected_port: str):
         self._current_connected_port = connected_port or ""
         if not self._startup_transition_done:
             self._send_startup_connection_target()
+        # Forward port name to frontend serial config panel
+        port_js = json.dumps(connected_port or "")
+        self.view.page().runJavaScript(
+            f"if(window.__bmsSyncSerialConfigPanel) window.__bmsSyncSerialConfigPanel(!!{port_js}, {port_js});"
+        )
         self._refresh_status_bar()
 
     def _set_frontend_connection_state(self, connected: bool):
@@ -749,6 +762,11 @@ class DashboardWindow(QMainWindow):
         self._send_startup_connection_target(force=True)
         current_connected = self.serial_worker.get_connected_port() is not None
         self._set_frontend_connection_state(current_connected)
+        # Re-send port name now that JS is ready
+        port_js = json.dumps(self._current_connected_port or "")
+        self.view.page().runJavaScript(
+            f"if(window.__bmsSyncSerialConfigPanel) window.__bmsSyncSerialConfigPanel({str(current_connected).lower()}, {port_js});"
+        )
         self._show_pending_update_result()
 
         if self.is_packaged:

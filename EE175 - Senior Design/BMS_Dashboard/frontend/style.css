@@ -1562,14 +1562,14 @@ body.compact-layout .detail-panel.is-visible {
 }
 
 .serial-config__btn--connect.is-connected {
-  background: rgba(255, 69, 58, 0.15);
-  border-color: rgba(255, 69, 58, 0.3);
-  color: #ff6961;
+  background: rgba(48, 209, 88, 0.15);
+  border-color: rgba(48, 209, 88, 0.3);
+  color: #30d158;
 }
 
 .serial-config__btn--connect.is-connected:hover {
-  background: rgba(255, 69, 58, 0.25);
-  border-color: rgba(255, 69, 58, 0.5);
+  background: rgba(48, 209, 88, 0.25);
+  border-color: rgba(48, 209, 88, 0.5);
 }
 
 .serial-config__btn--terminal {

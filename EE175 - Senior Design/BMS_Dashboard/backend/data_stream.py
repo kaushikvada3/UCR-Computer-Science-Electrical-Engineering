@@ -55,8 +55,16 @@ FAN_STATUS_LINE_RE = re.compile(
     r'\bfan_auto\s*:\s*(\d+)\s+fan_duty\s*:\s*(\d+)\b',
     re.IGNORECASE,
 )
+SYS_STAT_RE = re.compile(
+    r'\bSYS_STAT\s*:\s*(\d+)',
+    re.IGNORECASE,
+)
+LOAD_PRESENT_RE = re.compile(
+    r'\bLoad\s*Present\s*:\s*(\d+)',
+    re.IGNORECASE,
+)
 NON_VOLTAGE_HINT_RE = re.compile(
-    r'\b(?:ntc|status|bms|rpm|fan|eload|current|temp|fault|ctrl)\b',
+    r'\b(?:ntc|status|bms|rpm|fan|eload|current|temp|fault|ctrl|sys_stat|load)\b',
     re.IGNORECASE,
 )
 EXCLUDED_SERIAL_PORTS = {"COM3"}
@@ -66,6 +74,7 @@ class SerialWorker(QObject):
     data_received = pyqtSignal(dict)  # Signal to emit parsed JSON/Dict data
     connection_status = pyqtSignal(bool)  # Signal to emit connection status
     data_activity = pyqtSignal()  # Signal to indicate any non-empty line was received
+    raw_line_received = pyqtSignal(str)  # Emits each raw serial line for terminal display
     connected_port_changed = pyqtSignal(str)  # Emits current connected port or "" when disconnected
     
     def __init__(self, port=None, baudrate=115200):
@@ -108,6 +117,7 @@ class SerialWorker(QObject):
 
                     if stripped:
                         self.data_activity.emit()
+                        self.raw_line_received.emit(stripped)
 
                     parsed = self._parse_structured_serial_line(stripped)
                     if parsed:
@@ -308,6 +318,23 @@ class SerialWorker(QObject):
             self._pending_frame["fan_ctrl"] = existing_fan
             self._pending_started_at = now
 
+        # Parse SYS_STAT and Load Present
+        sys_stat = self._extract_sys_stat(line)
+        load_present = self._extract_load_present(line)
+
+        if sys_stat is not None or load_present is not None:
+            self._ensure_pending_frame()
+            if sys_stat is not None:
+                self._pending_frame["sys_stat"] = sys_stat
+                self._pending_started_at = now
+            if load_present is not None:
+                self._pending_frame["load_present"] = load_present
+                self._pending_started_at = now
+            # SYS_STAT line is typically the last in a cycle; finalize now
+            if "v" in self._pending_frame:
+                return self._consume_pending_frame()
+            return None
+
         if indexed_cells or indexed_temps:
             self._ensure_pending_frame(expect_ntc=bool(indexed_cells))
             if indexed_cells:
@@ -318,13 +345,15 @@ class SerialWorker(QObject):
                 self._pending_started_at = now
             if current is not None:
                 self._pending_frame["i"] = self._last_pack_current
-            return self._finalize_pending_frame(force=False)
+            # Don't finalize yet — wait for fan/SYS_STAT lines that follow
+            return None
 
         if current is not None:
             if self._pending_frame:
                 self._pending_frame["i"] = self._last_pack_current
                 self._pending_started_at = now
-                return self._finalize_pending_frame(force=False)
+                # Don't finalize yet — wait for fan/SYS_STAT lines that follow
+                return None
             return {"i": self._last_pack_current}
 
         if FRAME_HEADER_RE.search(line):
@@ -391,6 +420,8 @@ class SerialWorker(QObject):
             or FAN_INLINE_CTRL_RE.search(line)
             or FAN_RPM_LINE_RE.search(line)
             or FAN_STATUS_LINE_RE.search(line)
+            or SYS_STAT_RE.search(line)
+            or LOAD_PRESENT_RE.search(line)
         )
 
     def _reset_pending_frame(self, expect_ntc: bool = False):
@@ -464,6 +495,12 @@ class SerialWorker(QObject):
             raw_out["fan_ctrl"] = self._pending_frame["fan_ctrl"]
         elif self._last_fan_ctrl:
             raw_out["fan_ctrl"] = dict(self._last_fan_ctrl)
+
+        # Propagate SYS_STAT and Load Present
+        if "sys_stat" in self._pending_frame:
+            raw_out["sys_stat"] = self._pending_frame["sys_stat"]
+        if "load_present" in self._pending_frame:
+            raw_out["load_present"] = self._pending_frame["load_present"]
 
         self._saw_structured_frame = True
         self._reset_pending_frame()
@@ -794,6 +831,26 @@ class SerialWorker(QObject):
 
         return None
 
+    def _extract_sys_stat(self, line: str) -> Optional[int]:
+        """Extract SYS_STAT register value from lines like 'SYS_STAT:83'."""
+        match = SYS_STAT_RE.search(line)
+        if not match:
+            return None
+        try:
+            return int(match.group(1))
+        except (TypeError, ValueError):
+            return None
+
+    def _extract_load_present(self, line: str) -> Optional[int]:
+        """Extract Load Present flag from lines like 'Load Present:0'."""
+        match = LOAD_PRESENT_RE.search(line)
+        if not match:
+            return None
+        try:
+            return int(match.group(1))
+        except (TypeError, ValueError):
+            return None
+
     def _extract_indexed_series(self, line: str, regex: re.Pattern, limit: int = 10) -> List[float]:
         """Extract indexed values like C1: 3.54 ... and return ordered values by index."""
         values_by_index = {}
@@ -977,6 +1034,12 @@ class SerialWorker(QObject):
                     "auto": bool(fan_ctrl.get("auto", True)),
                     "duty": int(fan_ctrl.get("duty", 0))
                 }
+
+            # Pass through BMS protection/status registers
+            if "sys_stat" in raw:
+                result["sys_stat"] = int(raw["sys_stat"])
+            if "load_present" in raw:
+                result["load_present"] = int(raw["load_present"])
 
             return result
         except Exception as e:

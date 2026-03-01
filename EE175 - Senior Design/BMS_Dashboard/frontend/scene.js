@@ -3423,7 +3423,7 @@ function buildPartPopupContent(target) {
         title: `Cell ${String(target.id).padStart(2, "0")}`,
         rows: [
           { label: "Voltage", value: cell && isFiniteNumber(cell.voltage) ? `${cell.voltage.toFixed(3)} V` : "-- V" },
-          { label: "Temperature", value: cell && isFiniteNumber(cell.temperature) ? `${cell.temperature.toFixed(1)} \u00B0C` : "-- \u00B0C" },
+          { label: "Temperature", value: cell && isFiniteNumber(cell.temperature) && cell.temperature > -200 ? `${cell.temperature.toFixed(1)} \u00B0C` : "N/A" },
           { label: "\u0394 Avg", value: delta !== null ? `${(delta > 0 ? "+" : "") + delta} mV` : "-- mV" },
         ],
       };
@@ -3717,6 +3717,8 @@ const packCurrentEl = document.querySelector("[data-pack-current]");
 const packTempEl = document.querySelector("[data-pack-temp]");
 const fanSpeed1El = document.querySelector("[data-fan-speed-1]");
 const fanSpeed2El = document.querySelector("[data-fan-speed-2]");
+const sysStatEl = document.querySelector("[data-sys-stat]");
+const loadPresentEl = document.querySelector("[data-load-present]");
 const thermalTrendEl = document.querySelector("[data-thermal-trend]");
 const cellGridEl = document.querySelector(".cell-grid");
 const detailPanel = document.querySelector("[data-detail-panel]");
@@ -3791,6 +3793,8 @@ function createBlankState() {
       actual_current: null,
       power: null,
     },
+    sys_stat: null,
+    load_present: null,
   };
 }
 
@@ -3849,10 +3853,10 @@ function renderDetail(cellId, options = {}) {
   if (cell && isFiniteNumber(cell.voltage)) {
     detailVoltage.textContent = `${cell.voltage.toFixed(3)} V`;
     detailDelta.textContent = `${((cell.voltage - 3.8) * 1000).toFixed(0)} mV`;
-    if (isFiniteNumber(cell.temperature)) {
+    if (isFiniteNumber(cell.temperature) && cell.temperature > -200) {
       detailTemp.textContent = `${cell.temperature.toFixed(1)} \u00B0C`;
     } else {
-      detailTemp.textContent = "-- \u00B0C";
+      detailTemp.textContent = "N/A";
     }
   } else {
     detailVoltage.textContent = "-- V";
@@ -4012,6 +4016,10 @@ function setConnectionStatus(connected, source = "backend") {
   }
 
   isBackendConnected = nextConnected;
+  // Sync the serial config panel with backend connection state
+  if (typeof window.__bmsSyncSerialConfigPanel === "function") {
+    window.__bmsSyncSerialConfigPanel(isBackendConnected);
+  }
   startConnectionTransition(isBackendConnected);
   if (isBackendConnected) {
     cancelViewResetTransition();
@@ -4102,7 +4110,7 @@ function simulationFanDutyFromCells(cells) {
   }
   const hottest = (Array.isArray(cells) ? cells : [])
     .map((cell) => cell?.temperature)
-    .filter((temp) => isFiniteNumber(temp))
+    .filter((temp) => isFiniteNumber(temp) && temp > -200)
     .reduce((acc, temp) => Math.max(acc, temp), -Infinity);
   return Number.isFinite(hottest) ? fanDutyFromAutoTemperature(hottest) : 20;
 }
@@ -4246,9 +4254,10 @@ window.setConnectionStatusInstant = function (connected) {
 function updateHud(data) {
   const cells = Array.isArray(data.cells) ? data.cells : [];
   const validVoltageCells = cells.filter((cell) => isFiniteNumber(cell?.voltage));
+  // Treat -273.0Â°C (absolute zero) as "no sensor connected" sentinel
   const validTemps = cells
     .map((cell) => cell?.temperature)
-    .filter((temp) => isFiniteNumber(temp));
+    .filter((temp) => isFiniteNumber(temp) && temp > -200);
   const packCurrent = isFiniteNumber(data.pack_current) ? data.pack_current : null;
 
   const packVoltage = validVoltageCells.reduce((acc, cell) => acc + cell.voltage, 0);
@@ -4256,29 +4265,40 @@ function updateHud(data) {
   if (packCurrentEl) {
     packCurrentEl.textContent = packCurrent !== null ? `${packCurrent.toFixed(3)} A` : "-- A";
   }
-  packTempEl.textContent = validTemps.length ? `${Math.max(...validTemps).toFixed(1)} \u00B0C` : "-- \u00B0C";
+  packTempEl.textContent = validTemps.length ? `${Math.max(...validTemps).toFixed(1)} \u00B0C` : "N/A";
 
   const fan1TelemetryRpm = parseRpmValue(data.fan1?.rpm)
     ?? parseRpmValue(data.fan1_rpm)
     ?? parseRpmValue(data.fan?.rpm)
     ?? parseRpmValue(currentState.fan1?.rpm)
-    ?? 0;
+    ?? null;
   const fan2TelemetryRpm = parseRpmValue(data.fan2?.rpm)
     ?? parseRpmValue(data.fan2_rpm)
     ?? parseRpmValue(data.fan?.rpm2)
     ?? parseRpmValue(currentState.fan2?.rpm)
-    ?? 0;
-  const fan1Rpm = fan1TelemetryRpm > 0 ? fan1TelemetryRpm : fan2TelemetryRpm;
+    ?? null;
+  const fan1Rpm = (fan1TelemetryRpm != null && fan1TelemetryRpm > 0)
+    ? fan1TelemetryRpm
+    : (fan2TelemetryRpm != null ? fan2TelemetryRpm : (fan1TelemetryRpm ?? 0));
   fanSpinRpm = Math.max(fan1Rpm, 0);
   fanMeshes.forEach((entry) => {
     if (!entry) return;
     entry.rpm = fanSpinRpm;
   });
-  fanSpeed1El.textContent = fan1Rpm > 0 ? `${Math.round(fan1Rpm).toLocaleString()} RPM` : "-- RPM";
+  // Show actual RPM (including 0) when we have telemetry; "-- RPM" only when no data
+  const hasFanData = fan1TelemetryRpm != null || fan2TelemetryRpm != null;
+  fanSpeed1El.textContent = hasFanData ? `${Math.round(fan1Rpm).toLocaleString()} RPM` : "-- RPM";
   fanSpeed2El.textContent = "-- RPM";
 
+  // Update SYS_STAT and Load Present
+  if (sysStatEl) {
+    sysStatEl.textContent = isFiniteNumber(data.sys_stat) ? `0x${data.sys_stat.toString(16).toUpperCase().padStart(2, "0")} (${data.sys_stat})` : "--";
+  }
+  if (loadPresentEl) {
+    loadPresentEl.textContent = isFiniteNumber(data.load_present) ? (data.load_present ? "Yes" : "No") : "--";
+  }
+
   // Trigger data pulse with speed based on data rate
-  // Use average fan speed as a proxy for data transmission rate
   if (fan1Rpm > 0) {
     triggerDataPulse(fan1Rpm);
   }
@@ -5007,6 +5027,12 @@ function flushDashboardData() {
     fanValue.textContent = `${Math.round(duty)}%`;
     updateSliderUI(fanSlider);
   }
+  if (isFiniteNumber(data.sys_stat)) {
+    currentState.sys_stat = data.sys_stat;
+  }
+  if (isFiniteNumber(data.load_present)) {
+    currentState.load_present = data.load_present;
+  }
   if (data.eload) {
     currentState.eload = {
       enabled: Boolean(data.eload.enabled),
@@ -5581,13 +5607,13 @@ markBootUiReady();
           }
         }
       } catch (_) {
-        // Not JSON — ignore for data feed, it's still shown in terminal
+        // Not JSON ï¿½ ignore for data feed, it's still shown in terminal
       }
     }
 
     async sendCommand(cmd) {
       if (!this.port?.writable) {
-        termLog('[System] Not connected — cannot send', 'term-line--system');
+        termLog('[System] Not connected ï¿½ cannot send', 'term-line--system');
         return;
       }
       try {
@@ -5628,34 +5654,67 @@ markBootUiReady();
     if (e.key === 'Enter') { e.preventDefault(); sendTerminalCommand(); }
   });
 
-  // --- Fallback for non-Web-Serial environments ---
-  if (!WEB_SERIAL_SUPPORTED) {
-    document.querySelectorAll('.serial-config__select, .serial-config__btn--connect').forEach(el => {
-      el.title = 'Web Serial API not available — use Chrome or Edge';
-    });
-    // Check if running inside PyQt (backendLink available)
-    const checkBackend = () => {
-      if (typeof backendLink !== 'undefined' && backendLink) {
-        document.querySelectorAll('.serial-config').forEach(el => {
-          const badge = el.querySelector('.serial-config__status-label');
-          if (badge) badge.textContent = 'Managed by backend';
-          const dot = el.querySelector('.serial-config__dot');
-          if (dot) dot.classList.add('is-connected');
-        });
-      }
-    };
-    setTimeout(checkBackend, 2000);
-  }
+  // --- Backend-managed serial mode (PyQt WebEngine) ---
+  let _backendPortName = '';
 
-  // Boot message
+  window.__bmsSyncSerialConfigPanel = function (connected, portName) {
+    if (portName !== undefined) _backendPortName = portName || '';
+    if (!connected) _backendPortName = '';
+    const displayPort = _backendPortName;
+
+    const dot = document.getElementById('bms-serial-dot');
+    const label = document.getElementById('bms-serial-status');
+    const portSelect = document.getElementById('bms-port-select');
+    const connectBtn = document.getElementById('bms-serial-connect');
+    const baudSelect = document.getElementById('bms-baud-select');
+
+    if (dot) dot.classList.toggle('is-connected', connected);
+    if (label) {
+      label.textContent = connected && displayPort
+        ? displayPort
+        : connected ? 'Connected' : 'Disconnected';
+    }
+    if (connectBtn) {
+      connectBtn.textContent = connected ? 'Connected' : 'Disconnected';
+      connectBtn.classList.toggle('is-connected', connected);
+      connectBtn.disabled = true;
+      connectBtn.title = 'Managed by backend';
+    }
+    if (portSelect) {
+      portSelect.innerHTML = '';
+      const opt = document.createElement('option');
+      opt.value = displayPort || '';
+      opt.textContent = displayPort || (connected ? 'Backend' : 'No port');
+      opt.selected = true;
+      portSelect.appendChild(opt);
+      portSelect.disabled = true;
+      portSelect.title = 'Managed by backend';
+    }
+    if (baudSelect) {
+      baudSelect.disabled = true;
+      baudSelect.title = 'Managed by backend';
+    }
+  };
+
+  // Disable connect button in non-Web-Serial environments immediately
   if (!WEB_SERIAL_SUPPORTED) {
-    console.log('[Serial] Web Serial API not available. Use Chrome/Edge for direct COM port access.');
+    const connectBtn = document.getElementById('bms-serial-connect');
+    if (connectBtn) { connectBtn.disabled = true; connectBtn.title = 'Managed by backend'; }
+    document.querySelectorAll('.serial-config__select').forEach(el => {
+      el.disabled = true; el.title = 'Managed by backend';
+    });
+    console.log('[Serial] Web Serial API not available. Backend manages serial connection.');
   } else {
-    console.log('[Serial] Web Serial API available — serial ports can be configured from the GUI.');
+    console.log('[Serial] Web Serial API availableï¿½ serial ports can be configured from the GUI.');
   }
 
   // Expose for external use
   window.__bmsSerialBms = bmsSerial;
   window.__bmsSerialEload = eloadSerial;
   window.__bmsToggleTerminal = toggleTerminal;
+
+  // Allow backend to pipe raw serial lines into the terminal
+  window.__bmsTerminalAppend = function (text) {
+    termLog(text, 'term-line--rx');
+  };
 })();
