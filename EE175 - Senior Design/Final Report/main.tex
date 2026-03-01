@@ -1,0 +1,355 @@
+\documentclass[12pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{xcolor}
+
+\title{EE175AB Final Design Report\\Battery Management and Communication System (BMS)}
+\author{Kaushik Vada \and Christian Kim \and Connor Stewart \and Nick Poon}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{What the project is all about}
+
+\subsection{Executive Summary}
+This project delivers a complete \textbf{Battery Management and Communication System (BMS)} for a \textbf{10s1p lithium-ion battery pack}. The system combines:
+\begin{itemize}[leftmargin=1.2cm]
+    \item high-voltage battery sensing and protection,
+    \item an isolated embedded control and communication layer, and
+    \item a desktop dashboard for real-time monitoring, command/control, and firmware update support.
+\end{itemize}
+
+The architecture is intentionally split between a battery domain and a host-computer domain to improve safety and reduce fault propagation risk. On the embedded side, firmware on an STM32F303 platform acquires cell telemetry, measures thermistors, estimates current through a shunt path, controls cooling fan operation with automatic and manual modes, and streams telemetry over USB CDC. On the host side, a PyQt6 application embeds a web frontend to visualize live data and send commands back to the controller.
+
+\subsection{Purpose and Application Context}
+The design targets battery-powered engineering prototypes where safe operation, observability, and controlled interfacing with a development computer are required. Example use cases include:
+\begin{itemize}[leftmargin=1.2cm]
+    \item laboratory battery characterization,
+    \item educational power electronics and controls experiments,
+    \item embedded systems validation with pack-level telemetry,
+    \item future integration with AI/ML-based state estimation pipelines.
+\end{itemize}
+
+\subsection{System Photo and Block-Diagram Artifacts}
+The repository includes project media used for design communication and implementation traceability, including:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \texttt{Senior Design Block Diagrams.pdf},
+    \item schematic PDFs for BMS and USB firmware branches,
+    \item GUI screenshots and enclosure renderings referenced in weekly reports,
+    \item firmware and project details documentation in PDF/\LaTeX{} form.
+\end{itemize}
+
+\subsection{Delivered Subsystems}
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{Embedded Firmware (USB-Connection-Firmware):} BQ76930 communication, current sensing, thermistor conversion, fan control, USB telemetry.
+    \item \textbf{Embedded Firmware (Electronic Load branch):} related STM32 infrastructure for hardware-in-loop and load-control workflows.
+    \item \textbf{Desktop Dashboard (BMS\_Dashboard):} PyQt6 launcher, serial parser, command bridge, frontend rendering, packaging/update workflow.
+    \item \textbf{Project Documentation:} weekly reports, architecture summaries, firmware plans, and project detail reports.
+\end{enumerate}
+
+\section{Theoretical basis for the project}
+
+\subsection{Battery Monitoring Theory}
+A 10-cell series lithium-ion pack requires per-cell voltage visibility because pack-level voltage alone cannot detect cell imbalance. The design therefore centers on cell-resolved telemetry and safety checks (OV/UV style fault logic) and uses a dedicated battery monitor IC (BQ76930 family usage documented in firmware and project reports).
+
+\subsection{Current Measurement Theory}
+Pack current is estimated through a shunt resistor and coulomb-counter readout path. In firmware, conversion follows:
+\[
+I_{pack} = N_{LSB}\times I_{LSB},\quad I_{LSB}=\SI{0.000422}{A/LSB}
+\]
+where \(I_{LSB}\) is derived from BQ76930 voltage-per-LSB and a \SI{20}{m\ohm} shunt value.
+
+\subsection{Thermistor Temperature Theory}
+Temperature conversion uses a Beta-model NTC equation with parameters:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \(R_0 = \SI{10}{k\ohm}\) at \SI{25}{\celsius},
+    \item \(\beta = 3950\),
+    \item divider supply near \SI{3.3}{V}.
+\end{itemize}
+Firmware computes divider resistance and applies a Steinhart/Beta approximation:
+\[
+\frac{1}{T}=\frac{1}{T_0}+\frac{1}{\beta}\ln\left(\frac{R}{R_0}\right)
+\]
+then reports temperature in \si{\celsius}.
+
+\subsection{Fan Control Theory}
+Thermal management uses PWM fan actuation and tachometer feedback. The firmware supports:
+\begin{itemize}[leftmargin=1.2cm]
+    \item automatic mode with piecewise temperature-to-duty mapping,
+    \item manual duty override command path from GUI,
+    \item hysteresis to suppress threshold chatter,
+    \item moving-average RPM estimation and timeout-based stall detection.
+\end{itemize}
+
+\subsection{Isolation and Safety Theory}
+The project architecture applies galvanic isolation between battery and PC domains so high-energy transients are less likely to couple into user-facing USB interfaces. Safety is layered:
+\begin{itemize}[leftmargin=1.2cm]
+    \item IC/firmware protections (OV/UV/current/thermal status),
+    \item comparator and hardware disable paths in schematic plan,
+    \item host-side visibility and command arbitration through structured telemetry.
+\end{itemize}
+
+\section{Design Specifications}
+
+Design goals were defined as measurable, testable specifications compatible with EE175 expectations.
+
+\subsection{Electrical and Battery Specifications}
+\begin{longtable}{p{5cm}p{9cm}}
+\toprule
+\textbf{Specification} & \textbf{Target / Requirement} \\
+\midrule
+Cell configuration & 10s1p lithium-ion (Molicel P42A context in project docs) \\
+Nominal pack voltage & Approximately \SI{36}{V} \\
+Pack capacity (nominal) & \SI{4.2}{Ah} \\
+Per-cell monitoring & 10 cell voltages captured and transmitted \\
+Pack current estimate & Shunt-based measurement via BQ76930 current registers \\
+Thermal channels & 10 NTC channels sampled through STM32 ADC path \\
+\bottomrule
+\end{longtable}
+
+\subsection{Control and Communication Specifications}
+\begin{longtable}{p{5cm}p{9cm}}
+\toprule
+\textbf{Specification} & \textbf{Target / Requirement} \\
+\midrule
+Host interface & USB-C / USB CDC serial telemetry \\
+Default serial speed & 115200 baud (GUI and firmware workflow) \\
+Fan control output & PWM control with auto and manual modes \\
+Fan telemetry & Duty, auto/manual state, and RPM reporting \\
+Data protocol robustness & Multi-format parser support and frame assembly resilience \\
+Desktop runtime & PyQt6 launcher with embedded web frontend \\
+\bottomrule
+\end{longtable}
+
+\subsection{Software/Usability Specifications}
+\begin{itemize}[leftmargin=1.2cm]
+    \item Auto-detect serial port workflow with exclusion rules for known non-target ports.
+    \item Real-time telemetry display for cell voltages, temperatures, current, and fan metrics.
+    \item Bidirectional command path (GUI to MCU) with fallback queue polling.
+    \item Build/package support for Windows, macOS, and Linux release artifacts.
+\end{itemize}
+
+\subsection{Safety and Reliability Specifications}
+\begin{itemize}[leftmargin=1.2cm]
+    \item Over-current and thermal fault observability.
+    \item Sensor conversion fault coding for disconnected/shorted/error states.
+    \item Isolation boundary between battery and host domains.
+    \item Reportable system status flags (e.g., SYS\_STAT, load presence, fan mode/status).
+\end{itemize}
+
+\section{Implementation Strategy}
+
+\subsection{High-Level Architecture (System Block Design)}
+The implementation strategy separated development into parallel tracks:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{Hardware + firmware track:} establish MCU interfaces, BMS monitor communication, thermal sensing, and fan control.
+    \item \textbf{Desktop software track:} establish serial ingestion, parsing, UI rendering, and command channel.
+    \item \textbf{Documentation + verification track:} weekly technical reports, firmware architecture notes, and evolving project detail documents.
+\end{enumerate}
+
+\subsection{Repository-Level Decomposition}
+\begin{itemize}[leftmargin=1.2cm]
+    \item \texttt{USB-Connection-Firmware/}: primary embedded BMS telemetry/control firmware.
+    \item \texttt{Electronic\_Load\_Firmware/}: related STM32 firmware branch and drivers.
+    \item \texttt{BMS\_Dashboard/}: desktop app, backend parser/bridge, frontend scene, packaging and updater.
+    \item \texttt{Project Details/} and \texttt{Weekly Reports/}: design intent, progress, and architecture snapshots.
+\end{itemize}
+
+\subsection{Communication Strategy}
+The strategy intentionally used plain serial framing and tolerant parsing to accelerate bring-up:
+\begin{itemize}[leftmargin=1.2cm]
+    \item firmware emits structured lines and status tokens,
+    \item Python parser reconstructs coherent frames from mixed-line streams,
+    \item frontend consumes normalized dictionaries/JSON-like objects for display,
+    \item command bridge supports GUI-triggered control actions.
+\end{itemize}
+
+\subsection{Risk Mitigation Strategy}
+\begin{itemize}[leftmargin=1.2cm]
+    \item Auto-detect BQ address and CRC mode to reduce deployment fragility.
+    \item Treat malformed/mixed serial logs as expected, not exceptional.
+    \item Maintain fallback mock data and command queue mechanisms to continue UI testing when hardware is unavailable.
+    \item Keep firmware and GUI independent enough for staged integration.
+\end{itemize}
+
+\section{Actual Implementation}
+
+\subsection{Embedded Firmware Implementation}
+\subsubsection{MCU Platform and Peripheral Bring-Up}
+Implementation was built around STM32CubeIDE-generated scaffolding plus custom logic. The firmware includes initialization and runtime usage of:
+\begin{itemize}[leftmargin=1.2cm]
+    \item I2C for BQ76930 communication,
+    \item ADC channels for NTC sensing,
+    \item timers for PWM fan control and tach period capture,
+    \item USB device CDC interface for host communications.
+\end{itemize}
+
+\subsubsection{Battery Monitor Communication}
+Key implementation details include:
+\begin{itemize}[leftmargin=1.2cm]
+    \item auto-detection of BMS address candidates (\texttt{0x08}/\texttt{0x18}),
+    \item optional CRC8 support with I2C transactions,
+    \item register read/write wrappers for SYS\_STAT/control/protection/current paths,
+    \item conversion utilities for current and voltage reporting.
+\end{itemize}
+
+\subsubsection{Thermistor Acquisition and Conversion}
+The firmware configures ADC sampling with long sample times for higher-impedance thermistor networks, converts raw ADC readings to voltage, then converts voltage to temperature with explicit fault code branches for:
+\begin{itemize}[leftmargin=1.2cm]
+    \item hardware/timeout conversion errors,
+    \item open-circuit and short-circuit sensor conditions.
+\end{itemize}
+
+\subsubsection{Fan Control and Diagnostics}
+Fan control implementation includes:
+\begin{itemize}[leftmargin=1.2cm]
+    \item PWM duty mapping to timer ARR/CCR settings,
+    \item tachometer capture for RPM calculation,
+    \item moving average smoothing and timeout handling,
+    \item command-driven manual override.
+\end{itemize}
+
+\subsection{Desktop Software Implementation}
+\subsubsection{Runtime/Launcher Layer}
+\texttt{gui\_launcher.py} provides a desktop shell with:
+\begin{itemize}[leftmargin=1.2cm]
+    \item PyQt6 windowing and embedded WebEngine frontend,
+    \item bridge exposure (\texttt{sendCommand}) from JS to Python,
+    \item serial worker thread lifecycle management,
+    \item update flow integration and cross-platform icon/resource handling.
+\end{itemize}
+
+\subsubsection{Serial Parsing and Telemetry Reconstruction}
+\texttt{backend/data\_stream.py} implements robust parsing of line-oriented telemetry using regex-based extraction and frame reconstruction for:
+\begin{itemize}[leftmargin=1.2cm]
+    \item indexed cell/temperature tokens,
+    \item pack current and fan fields,
+    \item mixed-format line streams,
+    \item stale frame timeout finalization and last-known state propagation.
+\end{itemize}
+
+\subsubsection{Frontend and Interaction Layer}
+The frontend stack (HTML/CSS/JS loaded by the launcher) renders live battery and thermal state while allowing command dispatch to firmware through the QWebChannel bridge and queue fallback path.
+
+\subsubsection{Packaging and Distribution}
+The BMS dashboard repository includes:
+\begin{itemize}[leftmargin=1.2cm]
+    \item dependency manifests,
+    \item PyInstaller spec and release docs,
+    \item helper scripts for icons and update tooling,
+    \item release links for Windows/macOS/Linux binaries.
+\end{itemize}
+
+\subsection{Engineering Process Implementation}
+Weekly reports track implementation increments such as fan auto-curve tuning, parser upgrades, command reliability improvements, and host runtime fixes. Project details documents preserve architecture decisions and evolving firmware strategy.
+
+\section{Validation/Verification of Functionality}
+
+\subsection{Verification Approach}
+Validation was executed using staged testing:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item module-level firmware checks (ADC conversion, BMS register access, PWM control),
+    \item parser-level host checks on mixed serial logs,
+    \item GUI integration checks for display refresh and command dispatch,
+    \item end-to-end bench tests with hardware connected when available.
+\end{enumerate}
+
+\subsection{Measured/Reported Verification Items}
+\begin{longtable}{p{5cm}p{4cm}p{5cm}}
+\toprule
+\textbf{Test Item} & \textbf{Pass Criteria} & \textbf{Observed Outcome} \\
+\midrule
+BQ address detection & Correctly locks to valid address & Implemented with dual-address probe and runtime selection \\
+CRC compatibility & Correct read/write framing with/without CRC & Firmware supports both modes and dynamic handling \\
+NTC conversion path & Stable conversion under intended sample timing & Long ADC sample time selected to improve stability \\
+Fan PWM control & Duty updates reflected in fan behavior & Manual and auto duty control paths implemented \\
+Fan RPM telemetry & RPM values reported and filtered & Tach capture + averaging + timeout logic implemented \\
+Serial parser resilience & Reconstructs frames from mixed lines & Multi-format regex parser and pending-frame logic implemented \\
+GUI command reliability & Commands reach firmware consistently & Direct bridge + polling fallback command queue present \\
+\bottomrule
+\end{longtable}
+
+\subsection{Pass/Fail Conditions}
+\textbf{Pass:}
+\begin{itemize}[leftmargin=1.2cm]
+    \item ten cell voltages and thermistor channels are visible in GUI,
+    \item current and fan telemetry update in real time,
+    \item manual fan command changes duty and reports status,
+    \item no critical parser drops under expected mixed serial logs,
+    \item protection/fault indicators can be surfaced to host software.
+\end{itemize}
+
+\textbf{Fail:}
+\begin{itemize}[leftmargin=1.2cm]
+    \item repeated I2C telemetry corruption with no fallback,
+    \item unstable or non-physical temperature reporting under normal conditions,
+    \item command path deadlock or unresponsive GUI control loop,
+    \item inability to maintain data stream continuity for system state decisions.
+\end{itemize}
+
+\subsection{Current Validation Status}
+Based on weekly-report milestones, the project moved from architecture and enclosure definition (Oct 2025), to firmware and telemetry bring-up (Jan 2026), to parser and GUI reliability hardening plus fan-control integration (Feb 2026), and then toward live hardware integration/calibration and fault-management expansion.
+
+\section{Future Improvements}
+
+\subsection{Firmware Enhancements}
+\begin{itemize}[leftmargin=1.2cm]
+    \item Add stronger packet framing (length + CRC) for all telemetry records.
+    \item Introduce explicit firmware state machine enums with fault latching/clear policy.
+    \item Add calibration storage for thermistor offsets and current-sense gain correction.
+    \item Expand diagnostics counters (I2C retries, parser frame drops, watchdog resets).
+\end{itemize}
+
+\subsection{Control and Safety Enhancements}
+\begin{itemize}[leftmargin=1.2cm]
+    \item Implement refined thermal derating logic rather than threshold-only responses.
+    \item Add SOC/SOH estimation module (coulomb count + OCV fusion) for better state reporting.
+    \item Harden redundant hardware trip pathways and post-fault forensic logging.
+\end{itemize}
+
+\subsection{Desktop/UX Enhancements}
+\begin{itemize}[leftmargin=1.2cm]
+    \item Add persistent session logging and exportable CSV/JSON datasets.
+    \item Add trend charts for voltage sag, thermal gradients, and fan response.
+    \item Provide explicit alert panes with acknowledgement workflow and fault timeline.
+    \item Add guided configuration pages for thresholds and protection profiles.
+\end{itemize}
+
+\subsection{Verification and Documentation Enhancements}
+\begin{itemize}[leftmargin=1.2cm]
+    \item Build a formal test matrix with traceability from requirements to test evidence.
+    \item Automate parser regression tests with recorded serial fixture files.
+    \item Add reproducible bring-up and factory-reset procedures.
+    \item Expand final documentation with a reproducibility appendix (BOM revisions, wiring maps, and known issues).
+\end{itemize}
+
+
+\subsection{Repository-wide artifact review (files, images, PDFs, schematics)}
+To satisfy complete repository traceability for the EE175 folder, a full-file manifest was generated and reviewed at:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \texttt{Final Report/ee175\_artifact\_manifest.tsv}
+\end{itemize}
+
+This manifest enumerates every file found under \texttt{EE175 - Senior Design} with path, extension, byte count, and SHA-256 fingerprint prefix. The current manifest snapshot contains 4506 artifacts (excluding itself), spanning firmware source, generated build outputs, dashboard runtime assets, PDFs, CAD/schematic exports, and weekly-report images.
+
+\textbf{Audit highlights used to inform this report:}
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{PDF/schematic set reviewed:} block diagrams, BMS schematics, e-load schematics, firmware architecture/plan PDFs, CubeMX project report PDF, weekly-report PDFs, and syllabus/template PDFs.
+    \item \textbf{Image set reviewed:} dashboard branding/icons, weekly-report figures (BMS GUI, enclosure, battery pack, firmware screenshots), and schematic crop exports in firmware temp folders.
+    \item \textbf{Firmware source reviewed:} primary STM32 application and USB CDC stack usage in \texttt{USB-Connection-Firmware/Core/Src/main.c} and related CubeMX outputs.
+    \item \textbf{Dashboard source reviewed:} launcher/backend/frontend implementation for serial ingestion, command bridging, and 3D UI presentation.
+\end{itemize}
+
+\section*{Conclusion}
+This EE175 project demonstrates a complete cross-domain engineering design: battery pack instrumentation, embedded control, host communication, and operator-facing visualization. The repository evidences iterative progress from concept and architecture to integrated firmware/dashboard behavior, with clear opportunities for production-grade hardening in future revisions.
+
+\end{document}
