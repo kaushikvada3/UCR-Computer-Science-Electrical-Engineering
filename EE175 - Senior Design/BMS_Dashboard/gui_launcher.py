@@ -467,21 +467,21 @@ class DashboardWindow(QMainWindow):
         self.serial_worker.connected_port_changed.connect(self.handle_connected_port_change)
         self.serial_thread.start()
 
-        # E-Load Serial Worker (optional)
+        # E-Load Serial Worker (always created; starts paused if no port configured)
         eload_port = settings.eload_port()
-        self.eload_worker = None
-        self.eload_thread = None
-        if eload_port is not None:
-            self.eload_worker = SerialWorker(port=eload_port, baudrate=settings.eload_baudrate())
-            self.eload_thread = QThread()
-            self.eload_worker.moveToThread(self.eload_thread)
-            self.eload_thread.started.connect(self.eload_worker.start_monitoring)
-            self.eload_worker.data_received.connect(self.handle_eload_data)
-            self.eload_worker.connection_status.connect(self.handle_eload_connection_status)
-            self.eload_thread.start()
-            print("[E-Load] E-Load serial worker started on", eload_port)
+        eload_baud = settings.eload_baudrate()
+        self.eload_worker = SerialWorker(port=eload_port, baudrate=eload_baud)
+        self.eload_thread = QThread()
+        self.eload_worker.moveToThread(self.eload_thread)
+        self.eload_thread.started.connect(self.eload_worker.start_monitoring)
+        self.eload_worker.data_received.connect(self.handle_eload_data)
+        self.eload_worker.connection_status.connect(self.handle_eload_connection_status)
+        self.eload_worker.connected_port_changed.connect(self.handle_eload_connected_port_change)
+        self.eload_thread.start()
+        if eload_port:
+            print(f"[E-Load] E-Load serial worker started on {eload_port}")
         else:
-            print("[E-Load] E-Load disabled (no port configured)")
+            print("[E-Load] E-Load serial worker created (paused, no port configured)")
 
         self.bridge = Bridge(self.serial_worker)
         self.channel = QWebChannel()
@@ -541,21 +541,132 @@ class DashboardWindow(QMainWindow):
         )
 
     def _process_drained_commands(self, result):
-        """Callback for drained JS commands."""
+        """Callback for drained JS commands. Routes by prefix."""
         if not result:
             return
         try:
             cmds = json.loads(result)
             for cmd in cmds:
-                print(f"[CMD-POLL] Forwarding: {cmd!r}", flush=True)
-                self.serial_worker.send_command(str(cmd))
+                cmd_str = str(cmd)
+                print(f"[CMD-POLL] Forwarding: {cmd_str!r}", flush=True)
+                if cmd_str.startswith("SERIAL:"):
+                    self._handle_serial_command(cmd_str)
+                elif cmd_str.startswith("ELOAD:"):
+                    if self.eload_worker:
+                        fw_cmd = self._translate_eload_command(cmd_str)
+                        if fw_cmd:
+                            self.eload_worker.send_command(fw_cmd)
+                    else:
+                        print(f"[CMD-POLL] E-Load worker not available, dropping: {cmd_str!r}", flush=True)
+                else:
+                    self.serial_worker.send_command(cmd_str)
         except Exception as e:
             print(f"[CMD-POLL] Error: {e}", flush=True)
+
+    def _translate_eload_command(self, cmd):
+        """Translate dashboard ELOAD: commands to firmware serial protocol."""
+        if cmd == "ELOAD:ON":
+            return "E 1"
+        elif cmd == "ELOAD:OFF":
+            return "E 0"
+        elif cmd == "ELOAD:STATUS":
+            return "S"
+        elif cmd.startswith("ELOAD:SET:"):
+            try:
+                dac_val = int(cmd.split(":")[-1])
+                dac_val = max(0, min(4095, dac_val))
+                return f"D {dac_val}"
+            except ValueError:
+                print(f"[CMD-POLL] Invalid DAC value in: {cmd!r}", flush=True)
+                return None
+        elif cmd.startswith("ELOAD:ISET:"):
+            try:
+                iset_mv = float(cmd.split(":")[-1])
+                dac_mv = iset_mv * 10560.0 / 560.0
+                dac_code = int(round(dac_mv * 4096.0 / 3500.0))
+                dac_code = max(0, min(4095, dac_code))
+                return f"D {dac_code}"
+            except ValueError:
+                print(f"[CMD-POLL] Invalid I_SET value in: {cmd!r}", flush=True)
+                return None
+        elif cmd.startswith("ELOAD:VSET:"):
+            print(f"[CMD-POLL] VSET not supported (current load), ignoring: {cmd!r}", flush=True)
+            return None
+        else:
+            print(f"[CMD-POLL] Unknown ELOAD command: {cmd!r}", flush=True)
+            return None
+
+    def _handle_serial_command(self, cmd_str: str):
+        """Handle SERIAL:* commands from the frontend UI for port management.
+
+        Format: SERIAL:<SCAN|BMS|ELOAD>:<CONNECT|DISCONNECT>[:<port>:<baud>]
+        Examples:
+          SERIAL:SCAN
+          SERIAL:BMS:CONNECT:/dev/cu.usbmodem14101:115200
+          SERIAL:BMS:DISCONNECT
+          SERIAL:ELOAD:CONNECT:/dev/cu.usbmodem14201:115200
+          SERIAL:ELOAD:DISCONNECT
+        """
+        parts = cmd_str.split(":")
+        # parts[0]=SERIAL, parts[1]=device, parts[2]=verb, parts[3]=port, parts[4]=baud
+        device = parts[1] if len(parts) > 1 else ""
+        verb = parts[2] if len(parts) > 2 else ""
+
+        if device == "SCAN":
+            ports = SerialWorker.list_available_ports()
+            ports_json = json.dumps(ports)
+            self.view.page().runJavaScript(
+                f"if(window.__bmsUpdatePortList) window.__bmsUpdatePortList({ports_json});"
+            )
+            return
+
+        if device == "BMS":
+            if verb == "CONNECT" and len(parts) >= 5:
+                port = parts[3]
+                baud = int(parts[4]) if parts[4].isdigit() else 115200
+                print(f"[SERIAL] BMS connect: {port} @ {baud}", flush=True)
+                self.serial_worker.set_baudrate(baud)
+                self.serial_worker.set_target_port(port)
+                self.settings.set_serial(port, baud)
+            elif verb == "DISCONNECT":
+                print("[SERIAL] BMS disconnect", flush=True)
+                self.serial_worker.pause()
+            return
+
+        if device == "ELOAD":
+            if verb == "CONNECT" and len(parts) >= 5:
+                port = parts[3]
+                baud = int(parts[4]) if parts[4].isdigit() else 115200
+                print(f"[SERIAL] E-Load connect: {port} @ {baud}", flush=True)
+                self.eload_worker.set_baudrate(baud)
+                self.eload_worker.set_target_port(port)
+                self.settings.set_eload(port, baud)
+            elif verb == "DISCONNECT":
+                print("[SERIAL] E-Load disconnect", flush=True)
+                self.eload_worker.pause()
+                self.settings.set_eload(None, self.settings.eload_baudrate())
+            return
+
+        print(f"[SERIAL] Unknown serial command: {cmd_str!r}", flush=True)
 
     def handle_eload_connection_status(self, connected: bool):
         """Handle E-Load connection status changes"""
         status_text = "Connected to E-Load" if connected else "E-Load Disconnected"
         print(f"[E-Load] {status_text}")
+        connected_js = "true" if connected else "false"
+        port = self.eload_worker.get_connected_port() or "" if self.eload_worker else ""
+        port_js = json.dumps(port)
+        self.view.page().runJavaScript(
+            f"if(window.__eloadSyncSerialConfigPanel) window.__eloadSyncSerialConfigPanel({connected_js}, {port_js});"
+        )
+
+    def handle_eload_connected_port_change(self, connected_port: str):
+        """Handle E-Load connected port change"""
+        port_js = json.dumps(connected_port or "")
+        connected_js = "true" if connected_port else "false"
+        self.view.page().runJavaScript(
+            f"if(window.__eloadSyncSerialConfigPanel) window.__eloadSyncSerialConfigPanel({connected_js}, {port_js});"
+        )
 
     def handle_connection_status(self, is_connected: bool):
         self._set_frontend_connection_state(is_connected)
@@ -649,8 +760,7 @@ class DashboardWindow(QMainWindow):
     def _apply_chrome_cue(self) -> None:
         if self._chrome_cue_applied:
             return
-        if self.toolbar:
-            self.toolbar.setVisible(True)
+        # Toolbar is permanently hidden — port selection is handled in-page
         self.statusBar().setVisible(True)
         self.statusBar().showMessage("Starting dashboard...")
         self._chrome_cue_applied = True
@@ -767,6 +877,22 @@ class DashboardWindow(QMainWindow):
         self.view.page().runJavaScript(
             f"if(window.__bmsSyncSerialConfigPanel) window.__bmsSyncSerialConfigPanel({str(current_connected).lower()}, {port_js});"
         )
+
+        # Send available ports to frontend
+        ports = SerialWorker.list_available_ports()
+        ports_json = json.dumps(ports)
+        self.view.page().runJavaScript(
+            f"if(window.__bmsUpdatePortList) window.__bmsUpdatePortList({ports_json});"
+        )
+
+        # Sync E-Load serial status
+        eload_port = self.eload_worker.get_connected_port() or "" if self.eload_worker else ""
+        eload_connected_js = "true" if eload_port else "false"
+        eload_port_js = json.dumps(eload_port)
+        self.view.page().runJavaScript(
+            f"if(window.__eloadSyncSerialConfigPanel) window.__eloadSyncSerialConfigPanel({eload_connected_js}, {eload_port_js});"
+        )
+
         self._show_pending_update_result()
 
         if self.is_packaged:
@@ -814,6 +940,11 @@ class DashboardWindow(QMainWindow):
             self.serial_worker.stop()
             self.serial_thread.quit()
             self.serial_thread.wait()
+        if hasattr(self, "eload_worker") and self.eload_worker:
+            self.eload_worker.stop()
+        if hasattr(self, "eload_thread") and self.eload_thread:
+            self.eload_thread.quit()
+            self.eload_thread.wait()
 
         if hasattr(self, "httpd"):
             self.httpd.shutdown()
@@ -823,6 +954,7 @@ class DashboardWindow(QMainWindow):
     def _build_toolbar(self) -> None:
         self.toolbar = self.addToolBar("Controls")
         self.toolbar.setMovable(False)
+        self.toolbar.setVisible(False)  # Serial config is now in-page UI
 
         reload_action = QAction(QIcon.fromTheme("view-refresh"), "Reload", self)
         reload_action.setStatusTip("Force-reload the dashboard surface")

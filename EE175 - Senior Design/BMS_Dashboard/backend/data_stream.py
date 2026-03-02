@@ -97,12 +97,16 @@ class SerialWorker(QObject):
         self._has_last_pack_current = False
         self._last_fan_ctrl = {}  # Persist fan data across frame boundaries
         self._is_connected = False
+        self._paused = not bool(port)  # Paused if no port given (idle until assigned)
 
     def start_monitoring(self):
         """Main loop for the worker thread."""
         self.running = True
         
         while self.running:
+            if self._paused:
+                time.sleep(1)
+                continue
             if self.serial_conn is None or not self.serial_conn.is_open:
                 self._attempt_connection()
             
@@ -255,11 +259,24 @@ class SerialWorker(QObject):
         self._mark_disconnected()
         logger.info("Serial baudrate updated to %d", normalized)
 
+    def pause(self):
+        """Disconnect and stop reconnection attempts until a new port is set."""
+        self._paused = True
+        if self.serial_conn and self.serial_conn.is_open:
+            try:
+                self.serial_conn.close()
+            except Exception:
+                pass
+            self.serial_conn = None
+        self._mark_disconnected()
+        logger.info("Serial worker paused")
+
     def set_target_port(self, port):
         """Set a new target port (`None`/`auto` for auto-detect) and reconnect."""
         normalized = self._normalize_port(port)
         with self._port_lock:
             self.port = normalized
+        self._paused = False  # Resume on port assignment
         if self.serial_conn and self.serial_conn.is_open:
             try:
                 self.serial_conn.close()
@@ -287,8 +304,8 @@ class SerialWorker(QObject):
         if not line:
             return self._finalize_pending_frame(force=False)
 
-        # Check if this is E-Load format
-        if 'DAC_set' in line and 'VSENSE' in line:
+        # Check if this is E-Load format (new or old)
+        if ('I_SET=' in line and 'DAC=' in line) or ('DAC_set' in line and 'VSENSE' in line):
             return self._parse_eload_string_format(line)
 
         json_frame = self._try_parse_json_payload(line)
@@ -662,37 +679,60 @@ class SerialWorker(QObject):
 
     def _parse_eload_string_format(self, line: str) -> Optional[dict]:
         """
-        Parse E-Load format: DAC_set=1750mV DAC_rb=1750mV | VSENSE=266mV | S1=215mV S2=0mV S3=143mV S4=194mV
+        Parse E-Load telemetry. Supports two formats:
+
+        New format (integer-only, no units):
+          I_SET=928 DAC=2048 VOUT=1750 VSENSE=5000 S1=0 S2=0 S3=0 S4=0 EN=1
+
+        Old format (mV suffix):
+          DAC_set=1750mV DAC_rb=1750mV | VSENSE=266mV | S1=215mV S2=0mV S3=143mV S4=194mV
 
         Returns normalized dict with eload data structure.
         """
         import re
 
-        # Extract all key=value pairs
-        pattern = r'(\w+)=(\d+)mV'
+        # Match KEY=INTEGER pairs (works for both formats)
+        pattern = r'(\w+)=(\d+)'
         matches = re.findall(pattern, line)
 
         if not matches:
             return None
 
-        # Convert to dict and convert mV to V
         raw = {}
-        for key, value_mv in matches:
-            raw[key.lower()] = float(value_mv) / 1000.0  # mV to V
+        for key, value_str in matches:
+            raw[key.lower()] = int(value_str)
 
-        # Map to normalized eload structure
-        eload_data = {
-            'eload': {
-                'v_set': raw.get('dac_set', 0.0),       # DAC setpoint
-                'v_set_rb': raw.get('dac_rb', 0.0),     # DAC readback
-                'v': raw.get('vsense', 0.0),            # Measured voltage
-                's1': raw.get('s1', 0.0),               # Sense channel 1
-                's2': raw.get('s2', 0.0),               # Sense channel 2
-                's3': raw.get('s3', 0.0),               # Sense channel 3
-                's4': raw.get('s4', 0.0),               # Sense channel 4
-                'enabled': raw.get('vsense', 0.0) > 0.01  # Enabled if sensing voltage
+        # Detect new format by presence of 'i_set' key
+        if 'i_set' in raw:
+            # New firmware format — all integer values
+            eload_data = {
+                'eload': {
+                    'i_set': raw.get('i_set', 0) / 10.0,     # tenths-mV → mV
+                    'dac': raw.get('dac', 0),                  # raw DAC code
+                    'vout': raw.get('vout', 0) / 1000.0,       # mV → V
+                    'v': raw.get('vsense', 0) / 1000.0,        # VSENSE mV → V
+                    's1': raw.get('s1', 0) / 1000.0,           # mV → V
+                    's2': raw.get('s2', 0) / 1000.0,
+                    's3': raw.get('s3', 0) / 1000.0,
+                    's4': raw.get('s4', 0) / 1000.0,
+                    'enabled': bool(raw.get('en', 0)),
+                    'v_set': raw.get('vout', 0) / 1000.0,      # alias for compat
+                }
             }
-        }
+        else:
+            # Old format fallback
+            eload_data = {
+                'eload': {
+                    'v_set': raw.get('dac_set', 0) / 1000.0,
+                    'v_set_rb': raw.get('dac_rb', 0) / 1000.0,
+                    'v': raw.get('vsense', 0) / 1000.0,
+                    's1': raw.get('s1', 0) / 1000.0,
+                    's2': raw.get('s2', 0) / 1000.0,
+                    's3': raw.get('s3', 0) / 1000.0,
+                    's4': raw.get('s4', 0) / 1000.0,
+                    'enabled': raw.get('vsense', 0) > 10,
+                }
+            }
 
         return eload_data
 
@@ -981,31 +1021,40 @@ class SerialWorker(QObject):
             fan_rpm = fan_ctrl.get("rpm", 0)
             
             # 3. Map E-Load
-            # New format: "eload_stats": {"en": 1, "i_set": 1.5, "v": 24.0, "i_act": 1.4, "p": 33.6}
-            eload = raw.get("eload_stats", {})
-            
-            # Backward compatibility for old firmware (optional)
-            if not eload and "eload" in raw:
-                 old_eload = raw["eload"]
-                 eload = {
-                     "en": old_eload.get("en", 0),
-                     "i_set": old_eload.get("i", 0.0),
-                     "v_set": old_eload.get(
-                         "v_set",
-                         old_eload.get("target_voltage", old_eload.get("v_target", 0.0)),
-                     ),
-                     "v": 0.0, "i_act": 0.0, "p": 0.0
-                 }
+            # New format from _parse_eload_string_format:
+            #   raw["eload"] = {"i_set": mV, "dac": code, "vout": V, "v": V,
+            #                   "s1..s4": V, "enabled": bool, "v_set": V}
+            # Legacy structured format: raw["eload_stats"] = {"en": 1, "i_set": 1.5, ...}
+            eload_stats = raw.get("eload_stats", {})
+            eload_raw = raw.get("eload", {})
 
-            target_current = self._coerce_numeric(
+            # Prefer eload_stats (structured JSON firmware), fall back to eload_raw
+            # (string-format telemetry parsed by _parse_eload_string_format)
+            if eload_stats:
+                eload = eload_stats
+            elif eload_raw:
+                eload = eload_raw
+            else:
+                eload = {}
+
+            # Read all fields using the keys that _parse_eload_string_format produces
+            i_set = self._coerce_numeric(
                 eload.get("i_set", eload.get("target_current"))
             )
-            target_voltage = self._coerce_numeric(
+            v_set = self._coerce_numeric(
                 eload.get("v_set", eload.get("target_voltage", eload.get("v_target")))
             )
             measured_voltage = self._coerce_numeric(eload.get("v", eload.get("voltage")))
             measured_current = self._coerce_numeric(eload.get("i_act", eload.get("actual_current")))
             power_value = self._coerce_numeric(eload.get("p", eload.get("power")))
+            dac_val = self._coerce_numeric(eload.get("dac"))
+            vout_val = self._coerce_numeric(eload.get("vout"))
+            s1_val = self._coerce_numeric(eload.get("s1"))
+            s2_val = self._coerce_numeric(eload.get("s2"))
+            s3_val = self._coerce_numeric(eload.get("s3"))
+            s4_val = self._coerce_numeric(eload.get("s4"))
+            # "enabled" can come as bool (string format) or int "en" (JSON format)
+            en_val = eload.get("enabled", eload.get("en", 0))
             pack_current = self._coerce_numeric(raw.get("i"))
 
             result = {
@@ -1013,13 +1062,25 @@ class SerialWorker(QObject):
                 "fan1": {"rpm": fan_rpm},  # Keeping fan1/fan2 struct for now, mapping both to same rpm
                 "fan2": {"rpm": fan_rpm},
                 "pack_current": float(pack_current if pack_current is not None else 0.0),
+                # Use keys that the frontend's flushDashboardData / updateEloadTelemetry expect:
+                # i_set, enabled, v, dac, vout, v_set, s1-s4
                 "eload": {
-                    "enabled": bool(eload.get("en", 0)),
-                    "target_current": float(target_current if target_current is not None else 0.0),
-                    "target_voltage": float(target_voltage if target_voltage is not None else 0.0),
+                    "enabled": bool(en_val),
+                    "i_set": float(i_set if i_set is not None else 0.0),
+                    "v_set": float(v_set if v_set is not None else 0.0),
+                    "v": float(measured_voltage if measured_voltage is not None else 0.0),
+                    "dac": int(dac_val) if dac_val is not None else 0,
+                    "vout": float(vout_val if vout_val is not None else 0.0),
+                    "s1": float(s1_val if s1_val is not None else 0.0),
+                    "s2": float(s2_val if s2_val is not None else 0.0),
+                    "s3": float(s3_val if s3_val is not None else 0.0),
+                    "s4": float(s4_val if s4_val is not None else 0.0),
+                    # Legacy aliases kept for any consumers that still use them
+                    "target_current": float(i_set if i_set is not None else 0.0),
+                    "target_voltage": float(v_set if v_set is not None else 0.0),
                     "voltage": float(measured_voltage if measured_voltage is not None else 0.0),
                     "actual_current": float(measured_current if measured_current is not None else 0.0),
-                    "power": float(power_value if power_value is not None else 0.0)
+                    "power": float(power_value if power_value is not None else 0.0),
                 },
                 "thermistors": {
                     "raw": raw.get("ntc_raw", []),

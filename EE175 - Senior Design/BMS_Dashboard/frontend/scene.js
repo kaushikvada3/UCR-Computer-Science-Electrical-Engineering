@@ -2401,6 +2401,17 @@ async function loadEloadModel() {
         eloadControls.target.copy(eloadCameraDefaultTarget);
         eloadControls.update();
 
+        // If the port was already connected before this tab was opened,
+        // eloadHasRevealed will be true but the animation fired on null objects.
+        // Reset progress to 0 and fire a fresh reveal now that the scene exists.
+        if (eloadHasRevealed) {
+          eloadRevealProgress = 0;
+          eloadRevealFrom = 0;
+          eloadRevealActive = false;
+          startEloadReveal(true);
+          console.log('[BMS] E-Load scene ready: replaying reveal (was pre-connected)');
+        }
+
         console.log('[BMS] E-Load GLB model loaded, size:', size.x.toFixed(1), size.y.toFixed(1), size.z.toFixed(1));
         resolve(object);
       },
@@ -3460,7 +3471,7 @@ function buildPartPopupContent(target) {
       return {
         title: "Heatsink / FETs",
         rows: [
-          { label: "Power", value: isFiniteNumber(eload.power) ? `${eload.power.toFixed(2)} W` : "-- W" },
+          { label: "I_SET", value: isFiniteNumber(eload.i_set) ? `${eload.i_set.toFixed(1)} mV` : "-- mV" },
           { label: "Heat Level", value: `${(avgHeat * 100).toFixed(0)}%` },
           { label: "FET Count", value: `${eloadFetWorldPositions.length}` },
         ],
@@ -3478,19 +3489,12 @@ function buildPartPopupContent(target) {
     case "eload-shell":
     case "eload-lid": {
       const eload = currentState?.eload || {};
-      const R_SENSE = 0.1;
-      let curVal = null;
-      if (isFiniteNumber(eload.s3) && isFiniteNumber(eload.s4)) {
-        curVal = (eload.s3 - eload.s4) / R_SENSE;
-      } else if (isFiniteNumber(eload.actual_current)) {
-        curVal = eload.actual_current;
-      }
       return {
         title: target.type === "eload-lid" ? "E-Load Lid" : "E-Load Enclosure",
         rows: [
-          { label: "Voltage", value: isFiniteNumber(eload.v) ? `${eload.v.toFixed(2)} V` : "-- V" },
-          { label: "Current", value: curVal !== null ? `${curVal.toFixed(3)} A` : "-- A" },
-          { label: "Power", value: isFiniteNumber(eload.power) ? `${eload.power.toFixed(2)} W` : "-- W" },
+          { label: "VSENSE", value: isFiniteNumber(eload.v) ? `${(eload.v * 1000).toFixed(0)} mV` : "-- mV" },
+          { label: "I_SET", value: isFiniteNumber(eload.i_set) ? `${eload.i_set.toFixed(1)} mV` : "-- mV" },
+          { label: "DAC", value: isFiniteNumber(eload.dac) ? `${Math.round(eload.dac)}` : "--" },
         ],
       };
     }
@@ -3523,8 +3527,8 @@ function buildPartPopupContent(target) {
       return {
         title: "E-Load Controller",
         rows: [
-          { label: "Voltage", value: isFiniteNumber(eload.v) ? `${eload.v.toFixed(2)} V` : "-- V" },
-          { label: "Power", value: isFiniteNumber(eload.power) ? `${eload.power.toFixed(2)} W` : "-- W" },
+          { label: "VSENSE", value: isFiniteNumber(eload.v) ? `${(eload.v * 1000).toFixed(0)} mV` : "-- mV" },
+          { label: "DAC", value: isFiniteNumber(eload.dac) ? `${Math.round(eload.dac)}` : "--" },
           { label: "Status", value: eload.enabled ? "Active" : "Standby" },
         ],
       };
@@ -3749,10 +3753,10 @@ const MIN_UI_SCALE = 0.65;
 const MAX_UI_SCALE = 1.0;
 const COMPACT_LAYOUT_ENTER_WIDTH = 980;
 const COMPACT_LAYOUT_EXIT_WIDTH = 1080;
-const CELL_VOLTAGE_MIN = 3.2;
+const CELL_VOLTAGE_MIN = 2.85;
 const CELL_VOLTAGE_MAX = 4.2;
-const CELL_VOLTAGE_RED_MAX = 3.5;
-const CELL_VOLTAGE_GREEN_MAX = 3.63;
+const CELL_VOLTAGE_LOW = 2.85;
+const CELL_VOLTAGE_HIGH = 3.8;
 const LOW_CELL_MIN_FILL_PERCENT = 10;
 const CELL_COUNT = 10;
 const FAN_ESTIMATED_RPM_PER_DUTY = 27;
@@ -3787,11 +3791,15 @@ function createBlankState() {
     fan_control: { auto: true, duty: 0 },
     eload: {
       enabled: false,
-      target_voltage: 0,
-      target_current: 0,
-      voltage: null,
-      actual_current: null,
-      power: null,
+      i_set: 0,
+      dac: 0,
+      vout: 0,
+      v: null,
+      s1: 0,
+      s2: 0,
+      s3: 0,
+      s4: 0,
+      v_set: 0,
     },
     sys_stat: null,
     load_present: null,
@@ -4336,16 +4344,16 @@ function updateHud(data) {
         0,
         Math.min(100, ((cell.voltage - CELL_VOLTAGE_MIN) / (CELL_VOLTAGE_MAX - CELL_VOLTAGE_MIN)) * 100)
       );
-      const displayPct = cell.voltage < CELL_VOLTAGE_RED_MAX
+      const displayPct = cell.voltage < CELL_VOLTAGE_LOW
         ? Math.max(pct, LOW_CELL_MIN_FILL_PERCENT)
         : pct;
       levelEl.style.height = `${displayPct}%`;
 
       // Color thresholds:
-      // < 3.5V -> red, 3.5V to 3.63V -> green, > 3.63V -> orange.
-      if (cell.voltage < CELL_VOLTAGE_RED_MAX) levelEl.style.backgroundColor = 'var(--danger-color)';
-      else if (cell.voltage <= CELL_VOLTAGE_GREEN_MAX) levelEl.style.backgroundColor = 'var(--success-color)';
-      else levelEl.style.backgroundColor = 'orange';
+      // < 2.85V -> orange-red (low), 2.85V to 3.8V -> green (normal), > 3.8V -> red (overcharged).
+      if (cell.voltage < CELL_VOLTAGE_LOW) levelEl.style.backgroundColor = 'orange';
+      else if (cell.voltage <= CELL_VOLTAGE_HIGH) levelEl.style.backgroundColor = 'var(--success-color)';
+      else levelEl.style.backgroundColor = 'var(--danger-color)';
     }
   });
 
@@ -4359,13 +4367,13 @@ function colorForVoltage(voltage) {
   if (!isFiniteNumber(voltage)) {
     return new THREE.Color(0.55, 0.55, 0.55);
   }
-  if (voltage < CELL_VOLTAGE_RED_MAX) {
-    return new THREE.Color(0xff453a); // danger
+  if (voltage < CELL_VOLTAGE_LOW) {
+    return new THREE.Color(0xff9f0a); // orange (low)
   }
-  if (voltage <= CELL_VOLTAGE_GREEN_MAX) {
-    return new THREE.Color(0x30d158); // success
+  if (voltage <= CELL_VOLTAGE_HIGH) {
+    return new THREE.Color(0x30d158); // green (normal)
   }
-  return new THREE.Color(0xff9f0a); // high/orange
+  return new THREE.Color(0xff453a); // red (overcharged)
 }
 
 function updateCellColorTargets(data) {
@@ -4557,9 +4565,10 @@ const eloadCurrentInput = document.getElementById("eload-current-input");
 
 // Telemetry Elements
 const telemVoltage = document.getElementById("telem-voltage");
-const telemCurrent = document.getElementById("telem-current");
-const telemPower = document.getElementById("telem-power");
-const telemRPM = document.getElementById("telem-rpm");
+const telemIset = document.getElementById("telem-iset");
+const telemDac = document.getElementById("telem-dac");
+const telemVout = document.getElementById("telem-vout");
+const telemEn = document.getElementById("telem-en");
 const telemS1 = document.getElementById("telem-s1");
 const telemS2 = document.getElementById("telem-s2");
 const telemS3 = document.getElementById("telem-s3");
@@ -4675,36 +4684,39 @@ window.addEventListener("pointerup", () => {
   });
 });
 
-function commitVoltageSetpoint(rawValue) {
-  const value = normalizeSetpoint(rawValue, 0, 40);
-  syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, value);
-  sendBackendCommand(`ELOAD:VSET:${value.toFixed(2)}`);
+function commitDACSetpoint(rawValue) {
+  const dac_code = Math.round(normalizeSetpoint(rawValue, 0, 4095));
+  syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, dac_code);
+  sendBackendCommand(`ELOAD:SET:${dac_code}`);
 }
 
 function commitCurrentSetpoint(rawValue) {
-  const value = normalizeSetpoint(rawValue, 0, 20);
-  syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, value);
-  sendBackendCommand(`ELOAD:ISET:${value.toFixed(2)}`);
-  sendBackendCommand(`ELOAD:SET:${Math.round(value * 1000)}`);
+  const iset_mv = normalizeSetpoint(rawValue, 0, 185.6);
+  syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, iset_mv);
+  // Calculate DAC code from I_SET mV: DAC_mV = I_SET_mV * 10560 / 560
+  // DAC_code = DAC_mV * 4096 / 3500
+  const dac_mv = iset_mv * 10560 / 560;
+  const dac_code = Math.round(dac_mv * 4096 / 3500);
+  sendBackendCommand(`ELOAD:SET:${Math.max(0, Math.min(4095, dac_code))}`);
 }
 
 eloadVoltageSlider.addEventListener("input", (e) => {
-  const value = normalizeSetpoint(e.target.value, 0, 40);
-  eloadVoltageInput.value = value.toFixed(2);
+  const value = Math.round(normalizeSetpoint(e.target.value, 0, 4095));
+  eloadVoltageInput.value = value;
   updateSliderUI(e.target);
 });
 
 eloadVoltageSlider.addEventListener("change", (e) => {
-  commitVoltageSetpoint(e.target.value);
+  commitDACSetpoint(e.target.value);
 });
 
 eloadVoltageInput.addEventListener("change", (e) => {
-  commitVoltageSetpoint(e.target.value);
+  commitDACSetpoint(e.target.value);
 });
 
 eloadCurrentSlider.addEventListener("input", (e) => {
-  const value = normalizeSetpoint(e.target.value, 0, 20);
-  eloadCurrentInput.value = value.toFixed(2);
+  const value = normalizeSetpoint(e.target.value, 0, 185.6);
+  eloadCurrentInput.value = value.toFixed(1);
   updateSliderUI(e.target);
 });
 
@@ -4720,6 +4732,14 @@ eloadCurrentInput.addEventListener("change", (e) => {
 let _fanThrottleTimer = 0;
 let _fanLastSendTime = 0;
 let _fanPendingDuty = -1;
+
+// Clear Faults button — writes 0x0F to SYS_STAT on BQ76930
+const clearFaultsBtn = document.getElementById("clear-faults-btn");
+if (clearFaultsBtn) {
+  clearFaultsBtn.addEventListener("click", () => {
+    sendBackendCommand("BMS:CLEAR_FAULTS");
+  });
+}
 
 fanAutoBtn.addEventListener("click", () => {
   setFanMode(true);
@@ -4838,47 +4858,57 @@ function normalizeCells(cells) {
 }
 
 function updateEloadTelemetry(eload) {
-  // Display VSENSE in mV
+  // I_SET display (in mV)
+  if (telemIset && isFiniteNumber(eload?.i_set)) {
+    telemIset.textContent = `${eload.i_set.toFixed(1)} mV`;
+  } else if (telemIset) {
+    telemIset.textContent = "-- mV";
+  }
+
+  // DAC code display
+  if (telemDac && isFiniteNumber(eload?.dac)) {
+    telemDac.textContent = `${Math.round(eload.dac)}`;
+  } else if (telemDac) {
+    telemDac.textContent = "--";
+  }
+
+  // VOUT (DAC output voltage) display
+  if (telemVout && isFiniteNumber(eload?.vout)) {
+    telemVout.textContent = `${(eload.vout * 1000).toFixed(0)} mV`;
+  } else if (telemVout) {
+    telemVout.textContent = "-- mV";
+  }
+
+  // VSENSE display (in mV)
   if (telemVoltage && isFiniteNumber(eload?.v)) {
     telemVoltage.textContent = `${(eload.v * 1000).toFixed(0)} mV`;
   } else if (telemVoltage) {
     telemVoltage.textContent = "-- mV";
   }
 
-  // Display S1-S4 sense channels in mV
+  // S1-S4 sense channels in mV
   if (telemS1 && isFiniteNumber(eload?.s1)) {
     telemS1.textContent = `${(eload.s1 * 1000).toFixed(0)} mV`;
-  } else if (telemS1) {
-    telemS1.textContent = "-- mV";
-  }
-
+  } else if (telemS1) { telemS1.textContent = "-- mV"; }
   if (telemS2 && isFiniteNumber(eload?.s2)) {
     telemS2.textContent = `${(eload.s2 * 1000).toFixed(0)} mV`;
-  } else if (telemS2) {
-    telemS2.textContent = "-- mV";
-  }
-
+  } else if (telemS2) { telemS2.textContent = "-- mV"; }
   if (telemS3 && isFiniteNumber(eload?.s3)) {
     telemS3.textContent = `${(eload.s3 * 1000).toFixed(0)} mV`;
-  } else if (telemS3) {
-    telemS3.textContent = "-- mV";
-  }
-
+  } else if (telemS3) { telemS3.textContent = "-- mV"; }
   if (telemS4 && isFiniteNumber(eload?.s4)) {
     telemS4.textContent = `${(eload.s4 * 1000).toFixed(0)} mV`;
-  } else if (telemS4) {
-    telemS4.textContent = "-- mV";
-  }
+  } else if (telemS4) { telemS4.textContent = "-- mV"; }
 
-  // Calculate current from sense resistors
-  // Formula: I = (S3 - S4) / R_sense (adjust based on actual circuit)
-  const R_SENSE = 0.1;  // 0.1 ohm sense resistor (adjust to actual value)
-  if (telemCurrent && isFiniteNumber(eload?.s3) && isFiniteNumber(eload?.s4)) {
-    const voltage_diff = eload.s3 - eload.s4;
-    const current = voltage_diff / R_SENSE;
-    telemCurrent.textContent = `${current.toFixed(2)} A`;
-  } else if (telemCurrent) {
-    telemCurrent.textContent = "-- A";
+  // EN status display
+  if (telemEn) {
+    if (typeof eload?.enabled === "boolean") {
+      telemEn.textContent = eload.enabled ? "ENABLED" : "DISABLED";
+      telemEn.style.color = eload.enabled ? "var(--success-color, #30d158)" : "var(--danger-color, #ff453a)";
+    } else {
+      telemEn.textContent = "--";
+      telemEn.style.color = "";
+    }
   }
 
   // Update enabled toggle
@@ -4886,61 +4916,43 @@ function updateEloadTelemetry(eload) {
     eloadToggle.checked = eload.enabled;
   }
 
-  // Update setpoint controls if available
+  // Update setpoint controls if user is not actively editing
   const activeElement = document.activeElement;
-  if (
-    activeElement !== eloadVoltageInput &&
-    activeElement !== eloadVoltageSlider &&
-    isFiniteNumber(eload?.v_set)
-  ) {
-    syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, eload.v_set);
+  if (activeElement !== eloadVoltageInput && activeElement !== eloadVoltageSlider
+    && isFiniteNumber(eload?.dac)) {
+    syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, eload.dac);
   }
-  if (
-    activeElement !== eloadCurrentInput &&
-    activeElement !== eloadCurrentSlider &&
-    isFiniteNumber(eload?.target_current)
-  ) {
-    syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, eload.target_current);
+  if (activeElement !== eloadCurrentInput && activeElement !== eloadCurrentSlider
+    && isFiniteNumber(eload?.i_set)) {
+    syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, eload.i_set);
   }
 
-  // Update power summary elements on E-Load page
+  // Power summary cards
   const eloadActualVoltageEl = document.getElementById("eload-actual-voltage");
   const eloadActualCurrentEl = document.getElementById("eload-actual-current");
   const eloadPowerEl = document.getElementById("eload-power");
 
   if (eloadActualVoltageEl) {
-    eloadActualVoltageEl.textContent = isFiniteNumber(eload?.v) ? `${eload.v.toFixed(2)} V` : "-- V";
+    eloadActualVoltageEl.textContent = isFiniteNumber(eload?.v)
+      ? `${(eload.v * 1000).toFixed(0)} mV` : "-- mV";
   }
   if (eloadActualCurrentEl) {
-    const R_SENSE_POWER = 0.1;
-    if (isFiniteNumber(eload?.s3) && isFiniteNumber(eload?.s4)) {
-      const currentCalc = (eload.s3 - eload.s4) / R_SENSE_POWER;
-      eloadActualCurrentEl.textContent = `${currentCalc.toFixed(3)} A`;
-    } else if (isFiniteNumber(eload?.actual_current)) {
-      eloadActualCurrentEl.textContent = `${eload.actual_current.toFixed(3)} A`;
-    } else {
-      eloadActualCurrentEl.textContent = "-- A";
-    }
+    eloadActualCurrentEl.textContent = isFiniteNumber(eload?.i_set)
+      ? `${eload.i_set.toFixed(1)} mV` : "-- mV";
   }
   if (eloadPowerEl) {
-    if (isFiniteNumber(eload?.power)) {
-      eloadPowerEl.textContent = `${eload.power.toFixed(2)} W`;
-    } else if (isFiniteNumber(eload?.v) && isFiniteNumber(eload?.actual_current)) {
-      eloadPowerEl.textContent = `${(eload.v * eload.actual_current).toFixed(2)} W`;
-    } else {
-      eloadPowerEl.textContent = "-- W";
-    }
+    eloadPowerEl.textContent = isFiniteNumber(eload?.vout)
+      ? `${(eload.vout * 1000).toFixed(0)} mV` : "-- mV";
   }
 
-  // Drive thermal visualization from telemetry power data.
-  // Total power / 4 FETs → normalized heat per FET (25W per FET = full red).
-  if (isFiniteNumber(eload?.power) && eload.power > 0) {
-    const perFet = Math.min(eload.power / 4 / 25, 1.0);
-    eloadFetHeatLevels = [perFet, perFet, perFet, perFet];
-  } else if (isFiniteNumber(eload?.actual_current) && eload.actual_current > 0) {
-    // Fallback: derive heat from I² (20 A = max)
-    const heat = Math.min((eload.actual_current * eload.actual_current) / 400, 1.0);
+  // Drive thermal visualization from I_SET as proxy for heat
+  // (actual current not measurable with 1mOhm shunts)
+  // I_SET range: 0-185.6 mV → normalize to 0-1
+  if (isFiniteNumber(eload?.i_set) && eload.i_set > 0) {
+    const heat = Math.min(eload.i_set / 185.6, 1.0);
     eloadFetHeatLevels = [heat, heat, heat, heat];
+  } else {
+    eloadFetHeatLevels = [0, 0, 0, 0];
   }
   refreshPartPopupData();
 }
@@ -5034,17 +5046,18 @@ function flushDashboardData() {
     currentState.load_present = data.load_present;
   }
   if (data.eload) {
+    const e = data.eload;
     currentState.eload = {
-      enabled: Boolean(data.eload.enabled),
-      target_voltage: isFiniteNumber(data.eload.target_voltage)
-        ? Number(data.eload.target_voltage)
-        : currentState.eload?.target_voltage || 0,
-      target_current: isFiniteNumber(data.eload.target_current)
-        ? Number(data.eload.target_current)
-        : currentState.eload?.target_current || 0,
-      voltage: isFiniteNumber(data.eload.voltage) ? Number(data.eload.voltage) : null,
-      actual_current: isFiniteNumber(data.eload.actual_current) ? Number(data.eload.actual_current) : null,
-      power: isFiniteNumber(data.eload.power) ? Number(data.eload.power) : null,
+      enabled: Boolean(e.enabled),
+      i_set: isFiniteNumber(e.i_set) ? Number(e.i_set) : currentState.eload?.i_set || 0,
+      dac: isFiniteNumber(e.dac) ? Number(e.dac) : currentState.eload?.dac || 0,
+      vout: isFiniteNumber(e.vout) ? Number(e.vout) : currentState.eload?.vout || 0,
+      v: isFiniteNumber(e.v) ? Number(e.v) : currentState.eload?.v || null,
+      s1: isFiniteNumber(e.s1) ? Number(e.s1) : currentState.eload?.s1 || 0,
+      s2: isFiniteNumber(e.s2) ? Number(e.s2) : currentState.eload?.s2 || 0,
+      s3: isFiniteNumber(e.s3) ? Number(e.s3) : currentState.eload?.s3 || 0,
+      s4: isFiniteNumber(e.s4) ? Number(e.s4) : currentState.eload?.s4 || 0,
+      v_set: isFiniteNumber(e.v_set) ? Number(e.v_set) : currentState.eload?.v_set || 0,
     };
 
     // Trigger E-Load reveal on first real telemetry (or when connected)
@@ -5105,18 +5118,15 @@ function mockStream() {
     },
     eload: {
       enabled: eloadToggle.checked,
-      target_voltage: parseFloat(eloadVoltageInput.value) || 0,
-      target_current: parseFloat(eloadCurrentInput.value) || 0,
-      voltage: mockVoltage,
-      actual_current: mockActualCurrent,
-      power: Number((mockVoltage * mockActualCurrent).toFixed(2)),
-      // Sense channel data for E-Load telemetry
-      v: mockVoltage,
-      s1: Number((mockVoltage * 0.25 + Math.random() * 0.05).toFixed(4)),
-      s2: Number((mockVoltage * 0.50 + Math.random() * 0.05).toFixed(4)),
-      s3: Number((mockActualCurrent * 0.1 + 0.002 + Math.random() * 0.001).toFixed(5)),
-      s4: Number((0.002 + Math.random() * 0.001).toFixed(5)),
-      v_set: parseFloat(eloadVoltageInput.value) || 0,
+      dac: Math.round(parseFloat(eloadVoltageInput.value) || 0),
+      i_set: parseFloat(eloadCurrentInput.value) || 0,
+      vout: (parseFloat(eloadVoltageInput.value) || 0) * 3500 / 4096 / 1000,
+      v: 5.0 + (Math.random() - 0.5) * 0.1,
+      s1: Math.random() * 0.002,
+      s2: Math.random() * 0.002,
+      s3: Math.random() * 0.002,
+      s4: Math.random() * 0.002,
+      v_set: (parseFloat(eloadVoltageInput.value) || 0) * 3500 / 4096 / 1000,
     },
   });
 }
@@ -5300,25 +5310,22 @@ let eloadSimulationEnabled = false;
 let eloadSimulationIntervalId = null;
 
 function mockEloadStream() {
-  const targetV = parseFloat(eloadVoltageInput.value) || 12;
-  const targetI = parseFloat(eloadCurrentInput.value) || 1;
-  const mockV = Number((targetV + (Math.random() - 0.5) * 0.4).toFixed(3));
-  const mockI = Number((targetI + (Math.random() - 0.5) * 0.1).toFixed(3));
-  const s3val = Number((Math.abs(mockI) * 0.1 + 0.002 + Math.random() * 0.001).toFixed(5));
-  const s4val = Number((0.002 + Math.random() * 0.001).toFixed(5));
+  const targetDac = Math.round(parseFloat(eloadVoltageInput.value) || 0);
+  const targetIset = parseFloat(eloadCurrentInput.value) || 0;
+  const dac_mv = targetDac * 3500 / 4096;
+  const iset_mv = dac_mv * 560 / 10560;
 
   const eloadData = {
     enabled: eloadToggle.checked,
-    v: mockV,
-    s1: Number((mockV * 0.25 + Math.random() * 0.05).toFixed(4)),
-    s2: Number((mockV * 0.50 + Math.random() * 0.05).toFixed(4)),
-    s3: s3val,
-    s4: s4val,
-    v_set: parseFloat(eloadVoltageInput.value) || 0,
-    target_current: parseFloat(eloadCurrentInput.value) || 0,
-    voltage: mockV,
-    actual_current: Math.abs(mockI),
-    power: Number((mockV * Math.abs(mockI)).toFixed(2)),
+    dac: targetDac,
+    vout: dac_mv / 1000.0,
+    i_set: iset_mv + (Math.random() - 0.5) * 0.5,
+    v: 5.0 + (Math.random() - 0.5) * 0.1,  // VSENSE ~5V USB
+    s1: Math.random() * 0.002,
+    s2: Math.random() * 0.002,
+    s3: Math.random() * 0.002,
+    s4: Math.random() * 0.002,
+    v_set: dac_mv / 1000.0,
   };
 
   updateEloadTelemetry(eloadData);
@@ -5376,7 +5383,10 @@ markBootUiReady();
 
 // --------------- Serial Port Manager (Web Serial API) ---------------
 (function initSerialManager() {
-  const WEB_SERIAL_SUPPORTED = Boolean(navigator?.serial);
+  // In PyQt WebEngine, navigator.serial may exist as a stub but doesn't work.
+  // Detect PyQt mode by checking for the QWebChannel bridge or localhost serving.
+  const IS_PYQT_MODE = Boolean(window.qt || window.QWebChannel || location.hostname === 'localhost');
+  const WEB_SERIAL_SUPPORTED = Boolean(navigator?.serial) && !IS_PYQT_MODE;
 
   // --- Terminal DOM ---
   const terminalEl = document.getElementById('serial-terminal');
@@ -5444,8 +5454,11 @@ markBootUiReady();
     }
 
     _bindUI() {
-      this.connectBtn?.addEventListener('click', () => this._handleConnectClick());
-      this.refreshBtn?.addEventListener('click', () => this._scanPorts());
+      // Only bind Web Serial connect/refresh in browser mode; PyQt mode wires these separately
+      if (WEB_SERIAL_SUPPORTED) {
+        this.connectBtn?.addEventListener('click', () => this._handleConnectClick());
+        this.refreshBtn?.addEventListener('click', () => this._scanPorts());
+      }
       this.termToggle?.addEventListener('click', () => {
         activeTerminalChannel = this.prefix;
         terminalPortBadge && (terminalPortBadge.textContent = this.portName || '--');
@@ -5581,8 +5594,8 @@ markBootUiReady();
           termLog('[System] Read error: ' + err.message, 'term-line--system');
         }
       } finally {
-        try { this.reader?.releaseLock(); } catch (_) {}
-        try { await readableStreamClosed; } catch (_) {}
+        try { this.reader?.releaseLock(); } catch (_) { }
+        try { await readableStreamClosed; } catch (_) { }
         this.reader = null;
       }
     }
@@ -5598,16 +5611,41 @@ markBootUiReady();
             if (this.prefix === 'bms') {
               window.updateDashboard?.(data);
             } else if (this.prefix === 'eload') {
-              // Feed eload data through the dashboard merge path
               if (data.eload || data.v !== undefined || data.vsense !== undefined) {
                 const eloadPayload = data.eload || data;
                 window.updateDashboard?.({ eload: eloadPayload });
               }
             }
+            return;  // Successfully parsed JSON, skip string parser
           }
         }
       } catch (_) {
-        // Not JSON � ignore for data feed, it's still shown in terminal
+        // Not JSON - fall through to string format parsing
+      }
+
+      // Try E-Load string format: I_SET=928 DAC=2048 VOUT=1750 ...
+      if (this.prefix === 'eload' && line.includes('=')) {
+        const pairs = {};
+        const re = /(\w+)=(\d+)/g;
+        let m;
+        while ((m = re.exec(line)) !== null) {
+          pairs[m[1].toLowerCase()] = parseInt(m[2], 10);
+        }
+        if (pairs.i_set !== undefined && pairs.dac !== undefined) {
+          const eloadPayload = {
+            i_set: pairs.i_set / 10.0,
+            dac: pairs.dac,
+            vout: (pairs.vout || 0) / 1000.0,
+            v: (pairs.vsense || 0) / 1000.0,
+            s1: (pairs.s1 || 0) / 1000.0,
+            s2: (pairs.s2 || 0) / 1000.0,
+            s3: (pairs.s3 || 0) / 1000.0,
+            s4: (pairs.s4 || 0) / 1000.0,
+            enabled: Boolean(pairs.en),
+            v_set: (pairs.vout || 0) / 1000.0,
+          };
+          window.updateDashboard?.({ eload: eloadPayload });
+        }
       }
     }
 
@@ -5664,9 +5702,7 @@ markBootUiReady();
 
     const dot = document.getElementById('bms-serial-dot');
     const label = document.getElementById('bms-serial-status');
-    const portSelect = document.getElementById('bms-port-select');
     const connectBtn = document.getElementById('bms-serial-connect');
-    const baudSelect = document.getElementById('bms-baud-select');
 
     if (dot) dot.classList.toggle('is-connected', connected);
     if (label) {
@@ -5675,37 +5711,134 @@ markBootUiReady();
         : connected ? 'Connected' : 'Disconnected';
     }
     if (connectBtn) {
-      connectBtn.textContent = connected ? 'Connected' : 'Disconnected';
+      connectBtn.textContent = connected ? 'Disconnect' : 'Connect';
       connectBtn.classList.toggle('is-connected', connected);
-      connectBtn.disabled = true;
-      connectBtn.title = 'Managed by backend';
     }
-    if (portSelect) {
-      portSelect.innerHTML = '';
-      const opt = document.createElement('option');
-      opt.value = displayPort || '';
-      opt.textContent = displayPort || (connected ? 'Backend' : 'No port');
-      opt.selected = true;
-      portSelect.appendChild(opt);
-      portSelect.disabled = true;
-      portSelect.title = 'Managed by backend';
+    // Select matching port in dropdown if connected
+    if (connected && displayPort) {
+      const portSelect = document.getElementById('bms-port-select');
+      if (portSelect) {
+        for (const opt of portSelect.options) {
+          if (opt.value === displayPort) { opt.selected = true; break; }
+        }
+      }
     }
-    if (baudSelect) {
-      baudSelect.disabled = true;
-      baudSelect.title = 'Managed by backend';
+  };
+
+  window.__eloadSyncSerialConfigPanel = function (connected, portName) {
+    const dot = document.getElementById('eload-serial-dot');
+    const label = document.getElementById('eload-serial-status');
+    const connectBtn = document.getElementById('eload-serial-connect');
+
+    if (dot) dot.classList.toggle('is-connected', connected);
+    if (label) {
+      label.textContent = connected && portName
+        ? portName
+        : connected ? 'Connected' : 'Disconnected';
     }
+    if (connectBtn) {
+      connectBtn.textContent = connected ? 'Disconnect' : 'Connect';
+      connectBtn.classList.toggle('is-connected', connected);
+    }
+    if (connected && portName) {
+      const portSelect = document.getElementById('eload-port-select');
+      if (portSelect) {
+        for (const opt of portSelect.options) {
+          if (opt.value === portName) { opt.selected = true; break; }
+        }
+      }
+    }
+
+    // Drive the 3D reveal transition directly from the connection event.
+    // This makes it reliable regardless of whether a data packet has arrived yet.
+    if (connected && !eloadSimulationEnabled) {
+      if (!eloadHasRevealed) {
+        eloadHasRevealed = true;
+        startEloadReveal(true);
+      }
+      // Update status indicator to show live connection
+      if (eloadStatusDot) {
+        eloadStatusDot.className = 'status__dot status__dot--active';
+      }
+      if (eloadStatusLabel) {
+        eloadStatusLabel.textContent = portName ? `Live — ${portName}` : 'E-Load Live';
+      }
+    } else if (!connected && !eloadSimulationEnabled) {
+      if (eloadHasRevealed) {
+        eloadHasRevealed = false;
+        startEloadReveal(false);
+      }
+      // Restore standby indicator
+      if (eloadStatusDot) {
+        eloadStatusDot.className = 'status__dot status__dot--waiting';
+      }
+      if (eloadStatusLabel) {
+        eloadStatusLabel.textContent = 'E-Load Standby';
+      }
+    }
+  };
+
+  window.__bmsUpdatePortList = function (ports) {
+    ['bms', 'eload'].forEach(prefix => {
+      const select = document.getElementById(prefix + '-port-select');
+      if (!select) return;
+      const currentVal = select.value;
+      select.innerHTML = '';
+      if (!ports || ports.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No ports found';
+        select.appendChild(opt);
+      } else {
+        ports.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p;
+          if (p === currentVal) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
+    });
   };
 
   // Disable connect button in non-Web-Serial environments immediately
   if (!WEB_SERIAL_SUPPORTED) {
-    const connectBtn = document.getElementById('bms-serial-connect');
-    if (connectBtn) { connectBtn.disabled = true; connectBtn.title = 'Managed by backend'; }
-    document.querySelectorAll('.serial-config__select').forEach(el => {
-      el.disabled = true; el.title = 'Managed by backend';
+    console.log('[Serial] Web Serial API not available. Using backend serial management.');
+
+    ['bms', 'eload'].forEach(prefix => {
+      const connectBtn = document.getElementById(prefix + '-serial-connect');
+      const refreshBtn = document.getElementById(prefix + '-serial-refresh');
+
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+          sendBackendCommand('SERIAL:SCAN');
+        });
+      }
+
+      if (connectBtn) {
+        connectBtn.addEventListener('click', () => {
+          const isConnected = connectBtn.classList.contains('is-connected');
+          if (isConnected) {
+            sendBackendCommand(`SERIAL:${prefix.toUpperCase()}:DISCONNECT`);
+          } else {
+            const portSelect = document.getElementById(prefix + '-port-select');
+            const baudSelect = document.getElementById(prefix + '-baud-select');
+            const port = portSelect?.value || '';
+            const baud = baudSelect?.value || '115200';
+            if (!port) {
+              console.warn(`[Serial] No port selected for ${prefix}. Click refresh to scan.`);
+              return;
+            }
+            sendBackendCommand(`SERIAL:${prefix.toUpperCase()}:CONNECT:${port}:${baud}`);
+          }
+        });
+      }
     });
-    console.log('[Serial] Web Serial API not available. Backend manages serial connection.');
+
+    // Trigger initial port scan after a short delay
+    setTimeout(() => sendBackendCommand('SERIAL:SCAN'), 1000);
   } else {
-    console.log('[Serial] Web Serial API available� serial ports can be configured from the GUI.');
+    console.log('[Serial] Web Serial API available - serial ports can be configured from the GUI.');
   }
 
   // Expose for external use

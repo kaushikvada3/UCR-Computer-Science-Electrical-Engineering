@@ -95,6 +95,7 @@
           <div class="metric-card">
             <p class="metric-card__label">SYS_STAT</p>
             <p class="metric-card__value" data-sys-stat>--</p>
+            <button class="mode-btn clear-faults-btn" id="clear-faults-btn">Clear Faults</button>
           </div>
           <div class="metric-card">
             <p class="metric-card__label">Load Present</p>
@@ -255,6 +256,18 @@
           </div>
           <div class="telemetry-grid">
             <div class="stat-box">
+              <span class="stat-label">I_SET</span>
+              <span class="stat-value" id="telem-iset">-- mV</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">DAC Code</span>
+              <span class="stat-value" id="telem-dac">--</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">VOUT (DAC)</span>
+              <span class="stat-value" id="telem-vout">-- mV</span>
+            </div>
+            <div class="stat-box">
               <span class="stat-label">VSENSE</span>
               <span class="stat-value" id="telem-voltage">-- mV</span>
             </div>
@@ -275,8 +288,8 @@
               <span class="stat-value" id="telem-s4">-- mV</span>
             </div>
             <div class="stat-box">
-              <span class="stat-label">Current (calc)</span>
-              <span class="stat-value" id="telem-current">-- A</span>
+              <span class="stat-label">EN Status</span>
+              <span class="stat-value" id="telem-en">--</span>
             </div>
           </div>
         </section>
@@ -284,16 +297,16 @@
         <!-- E-Load Power Summary -->
         <section class="hud__section metrics glass-panel">
           <div class="metric-card">
-            <p class="metric-card__label">Output Voltage</p>
-            <p class="metric-card__value" id="eload-actual-voltage">-- V</p>
+            <p class="metric-card__label">VSENSE (USB VBUS)</p>
+            <p class="metric-card__value" id="eload-actual-voltage">-- mV</p>
           </div>
           <div class="metric-card">
-            <p class="metric-card__label">Output Current</p>
-            <p class="metric-card__value" id="eload-actual-current">-- A</p>
+            <p class="metric-card__label">I_SET (Setpoint)</p>
+            <p class="metric-card__value" id="eload-actual-current">-- mV</p>
           </div>
           <div class="metric-card">
-            <p class="metric-card__label">Power Dissipation</p>
-            <p class="metric-card__value" id="eload-power">-- W</p>
+            <p class="metric-card__label">DAC Output (VOUT)</p>
+            <p class="metric-card__value" id="eload-power">-- mV</p>
           </div>
           <div class="metric-card metric-card--simulate">
             <div class="metric-card__row">
@@ -322,10 +335,10 @@
           </div>
 
           <div class="control-group">
-            <p class="metric-card__label">Target Voltage (V_SET)</p>
+            <p class="metric-card__label">DAC Code (0–4095)</p>
             <div class="input-row">
               <div class="glass-slider" data-glass-slider>
-                <input type="range" min="0" max="40" step="0.01" value="0" id="eload-voltage-slider"
+                <input type="range" min="0" max="4095" step="1" value="0" id="eload-voltage-slider"
                   class="glass-slider__input">
                 <div class="glass-slider__track">
                   <div class="glass-slider__progress"></div>
@@ -336,17 +349,16 @@
                   <div class="glass-slider__thumb-specular"></div>
                 </div>
               </div>
-              <input type="number" min="0" max="40" step="0.01" value="0.00" id="eload-voltage-input"
+              <input type="number" min="0" max="4095" step="1" value="0" id="eload-voltage-input"
                 class="numeric-input">
-              <span class="unit">V</span>
             </div>
           </div>
 
           <div class="control-group">
-            <p class="metric-card__label">Target Current (I_SET)</p>
+            <p class="metric-card__label">I_SET Target (mV)</p>
             <div class="input-row">
               <div class="glass-slider" data-glass-slider>
-                <input type="range" min="0" max="20" step="0.01" value="0" id="eload-current-slider"
+                <input type="range" min="0" max="185.6" step="0.1" value="0" id="eload-current-slider"
                   class="glass-slider__input">
                 <div class="glass-slider__track">
                   <div class="glass-slider__progress"></div>
@@ -357,9 +369,9 @@
                   <div class="glass-slider__thumb-specular"></div>
                 </div>
               </div>
-              <input type="number" min="0" max="20" step="0.01" value="0.00" id="eload-current-input"
+              <input type="number" min="0" max="185.6" step="0.1" value="0.0" id="eload-current-input"
                 class="numeric-input">
-              <span class="unit">A</span>
+              <span class="unit">mV</span>
             </div>
           </div>
         </section>

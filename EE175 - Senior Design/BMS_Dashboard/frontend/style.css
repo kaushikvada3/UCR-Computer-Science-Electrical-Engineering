@@ -1118,6 +1118,19 @@ h1 {
   transform: translateY(0);
 }
 
+.clear-faults-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+  background: rgba(255, 69, 58, 0.15);
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+}
+
+.clear-faults-btn:hover {
+  background: rgba(255, 69, 58, 0.3);
+  color: #ffffff;
+}
+
 body.compact-layout .detail-panel {
   position: fixed;
   top: auto;
