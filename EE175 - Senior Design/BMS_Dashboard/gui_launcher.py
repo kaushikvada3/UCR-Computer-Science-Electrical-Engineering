@@ -571,26 +571,18 @@ class DashboardWindow(QMainWindow):
             return "E 0"
         elif cmd == "ELOAD:STATUS":
             return "S"
-        elif cmd.startswith("ELOAD:SET:"):
-            try:
-                dac_val = int(cmd.split(":")[-1])
-                dac_val = max(0, min(4095, dac_val))
-                return f"D {dac_val}"
-            except ValueError:
-                print(f"[CMD-POLL] Invalid DAC value in: {cmd!r}", flush=True)
-                return None
-        elif cmd.startswith("ELOAD:ISET:"):
-            try:
-                iset_mv = float(cmd.split(":")[-1])
-                dac_mv = iset_mv * 10560.0 / 560.0
-                dac_code = int(round(dac_mv * 4096.0 / 3500.0))
-                dac_code = max(0, min(4095, dac_code))
-                return f"D {dac_code}"
-            except ValueError:
-                print(f"[CMD-POLL] Invalid I_SET value in: {cmd!r}", flush=True)
-                return None
-        elif cmd.startswith("ELOAD:VSET:"):
-            print(f"[CMD-POLL] VSET not supported (current load), ignoring: {cmd!r}", flush=True)
+        elif cmd.startswith("ELOAD:CH:"):
+            # ELOAD:CH:1:1  or  ELOAD:CH:3:0  — per-channel toggle
+            parts = cmd.split(":")
+            if len(parts) == 4:
+                try:
+                    ch = int(parts[2])
+                    state = int(parts[3])
+                    if 1 <= ch <= 4 and state in (0, 1):
+                        return f"L {ch} {state}"
+                except ValueError:
+                    pass
+            print(f"[CMD-POLL] Invalid channel command: {cmd!r}", flush=True)
             return None
         else:
             print(f"[CMD-POLL] Unknown ELOAD command: {cmd!r}", flush=True)

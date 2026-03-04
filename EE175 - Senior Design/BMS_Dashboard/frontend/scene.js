@@ -2646,7 +2646,7 @@ void main() {
 }
 `;
 
-// GLSL fragment shader — infrared thermal camera driven by 4 FET heat sources
+// GLSL fragment shader — lava-lamp style thermal visualization driven by 4 FET heat sources
 const THERMAL_FRAG = `
 precision highp float;
 
@@ -2678,12 +2678,13 @@ float noise(vec3 p) {
     f.z);
 }
 
-float fbm(vec3 p) {
-  float v = 0.0, a = 0.5;
-  for (int i = 0; i < 4; i++) {
+/* ---- lava lamp FBM: fewer octaves, larger scale for big flowing blobs ---- */
+float lavaFbm(vec3 p) {
+  float v = 0.0, a = 0.6;
+  for (int i = 0; i < 3; i++) {
     v += a * noise(p);
-    p = p * 2.0 + 0.5;
-    a *= 0.5;
+    p = p * 1.8 + 0.3;
+    a *= 0.45;
   }
   return v;
 }
@@ -2706,18 +2707,39 @@ void main() {
   for (int i = 0; i < 4; i++) {
     float dist = distance(vWorldPos, uFetPos[i]);
     float falloff = 1.0 - smoothstep(0.0, uHeatRadius, dist);
-    falloff = falloff * falloff;  // concentrate heat near source
+    falloff = falloff * falloff;
     temperature += uFetHeat[i] * falloff;
   }
 
-  // Organic noise variation for natural heat pattern
-  vec3 nCoord = vWorldPos * 3.5 + vec3(uTime * 0.12, uTime * 0.08, uTime * 0.1);
-  float n = fbm(nCoord);
-  temperature += (n - 0.4) * 0.10 * uIntensity;
+  // === Lava lamp motion ===
+  // Primary blob layer: large scale, strong upward flow
+  vec3 p1 = vWorldPos * 1.5 + vec3(
+    sin(uTime * 0.07) * 0.3,
+    -uTime * 0.25,
+    cos(uTime * 0.09) * 0.2
+  );
+  float lava1 = lavaFbm(p1);
 
-  // Slow breathing pulse
-  float pulse = 0.5 + 0.5 * sin(uTime * 1.2);
-  temperature *= 0.92 + 0.08 * pulse;
+  // Secondary blob layer: different scale and speed for organic variety
+  vec3 p2 = vWorldPos * 2.2 + vec3(
+    cos(uTime * 0.11) * 0.4,
+    -uTime * 0.15,
+    sin(uTime * 0.06) * 0.35
+  );
+  float lava2 = lavaFbm(p2);
+
+  // Combine: main blobs + secondary detail
+  float lavaPattern = lava1 * 0.65 + lava2 * 0.35;
+
+  // Threshold to create distinct amorphous blob shapes
+  lavaPattern = smoothstep(0.25, 0.65, lavaPattern);
+
+  // Modulate temperature with lava pattern
+  temperature += lavaPattern * 0.35 * uIntensity;
+
+  // Slow breathing pulse (more dramatic than original)
+  float pulse = 0.5 + 0.5 * sin(uTime * 0.8);
+  temperature *= 0.85 + 0.15 * pulse;
 
   // Apply global intensity
   temperature *= uIntensity * 1.5;
@@ -3746,6 +3768,11 @@ const CELL_HISTORY_LENGTH = 45;
 const TREND_WIDTH = 260;
 const TREND_HEIGHT = 90;
 const TREND_PADDING = 8;
+
+// --- E-Load Shunt Trend History (reuses same circular buffer pattern as BMS cells) ---
+const ELOAD_HISTORY_LENGTH = 45;
+const eloadShuntHistory = { s1: [], s2: [], s3: [], s4: [] };
+
 const DETAIL_REFRESH_INTERVAL_MS = 120;
 const BASE_UI_WIDTH = 1400;
 const BASE_UI_HEIGHT = 860;
@@ -3789,6 +3816,7 @@ function createBlankState() {
     fan1: { rpm: 0 },
     fan2: { rpm: 0 },
     fan_control: { auto: true, duty: 0 },
+    bal_status: { enabled: false, threshold: 15, mask: 0 },
     eload: {
       enabled: false,
       i_set: 0,
@@ -3820,6 +3848,7 @@ function populateCellGrid() {
         <p class="cell-card__title">Cell ${cell.id}</p>
         <p class="cell-card__value">-- V</p>
       </div>
+      <span class="bal-indicator"></span>
     `;
     card.dataset.cellId = cell.id;
     card.addEventListener("click", () => {
@@ -4206,6 +4235,60 @@ function drawCellTrend(cellId) {
   detailTrendLatest.textContent = `${latest.toFixed(3)} V`;
 }
 
+// --- E-Load Shunt Trend Graph Drawing (same pattern as BMS drawCellTrend) ---
+function drawEloadShuntTrend(channel) {
+  const lineEl = document.getElementById(`eload-trend-line-${channel}`);
+  const areaEl = document.getElementById(`eload-trend-area-${channel}`);
+  const minEl = document.getElementById(`eload-trend-min-${channel}`);
+  const maxEl = document.getElementById(`eload-trend-max-${channel}`);
+  const latestEl = document.getElementById(`eload-trend-latest-${channel}`);
+  if (!lineEl || !areaEl) return;
+
+  const history = eloadShuntHistory[channel] || [];
+  if (!history.length) {
+    lineEl.setAttribute("d", "");
+    areaEl.setAttribute("d", "");
+    if (minEl) minEl.textContent = "-- mV";
+    if (maxEl) maxEl.textContent = "-- mV";
+    if (latestEl) latestEl.textContent = "-- mV";
+    return;
+  }
+
+  const values = history.slice(-ELOAD_HISTORY_LENGTH);
+  const latest = values[values.length - 1];
+
+  let minV = Math.min(...values);
+  let maxV = Math.max(...values);
+  if (Math.abs(maxV - minV) < 0.5) {
+    minV -= 0.5;
+    maxV += 0.5;
+  }
+
+  const range = maxV - minV;
+  const usableWidth = TREND_WIDTH - TREND_PADDING * 2;
+  const usableHeight = TREND_HEIGHT - TREND_PADDING * 2;
+
+  const points = values.map((value, idx) => {
+    const t = values.length === 1 ? 0 : idx / (values.length - 1);
+    const x = TREND_PADDING + t * usableWidth;
+    const y = TREND_PADDING + (1 - (value - minV) / range) * usableHeight;
+    return { x, y };
+  });
+
+  const linePath = points
+    .map((pt, idx) => `${idx === 0 ? "M" : "L"}${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
+    .join(" ");
+
+  const floorY = (TREND_HEIGHT - TREND_PADDING).toFixed(2);
+  const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(2)} ${floorY} L${points[0].x.toFixed(2)} ${floorY} Z`;
+
+  lineEl.setAttribute("d", linePath);
+  areaEl.setAttribute("d", areaPath);
+  if (minEl) minEl.textContent = `${minV.toFixed(0)} mV`;
+  if (maxEl) maxEl.textContent = `${maxV.toFixed(0)} mV`;
+  if (latestEl) latestEl.textContent = `${latest.toFixed(0)} mV`;
+}
+
 function positionDetailPanel() {
   if (!detailPanel || !cellGridEl) return;
   const { width, height } = getViewportSize();
@@ -4323,6 +4406,15 @@ function updateHud(data) {
     const cell = cellsById.get(id);
     const valueEl = card.querySelector(".cell-card__value");
     if (!valueEl) return;
+
+    const balIndicator = card.querySelector(".bal-indicator");
+    if (balIndicator) {
+      if (data.bal_status?.enabled && (data.bal_status.mask & (1 << (id - 1)))) {
+        balIndicator.classList.add("active");
+      } else {
+        balIndicator.classList.remove("active");
+      }
+    }
 
     const levelEl = card.querySelector(".battery-level");
     if (!cell || !isFiniteNumber(cell.voltage)) {
@@ -4557,11 +4649,14 @@ function sendBackendCommand(cmd) {
 }
 
 // --- E-Load UI Logic ---
-const eloadToggle = document.getElementById("eload-toggle");
-const eloadVoltageSlider = document.getElementById("eload-voltage-slider");
-const eloadVoltageInput = document.getElementById("eload-voltage-input");
-const eloadCurrentSlider = document.getElementById("eload-current-slider");
-const eloadCurrentInput = document.getElementById("eload-current-input");
+// Per-channel toggle controls (replaces single eload-toggle)
+const eloadChToggles = [
+  document.getElementById("eload-ch1-toggle"),
+  document.getElementById("eload-ch2-toggle"),
+  document.getElementById("eload-ch3-toggle"),
+  document.getElementById("eload-ch4-toggle"),
+];
+const eloadToggle = { get checked() { return eloadChToggles.some(t => t?.checked); } };  // compat shim
 
 // Telemetry Elements
 const telemVoltage = document.getElementById("telem-voltage");
@@ -4574,6 +4669,79 @@ const telemS2 = document.getElementById("telem-s2");
 const telemS3 = document.getElementById("telem-s3");
 const telemS4 = document.getElementById("telem-s4");
 
+// Charge Mode Elements
+const chargeOffBtn = document.getElementById("charge-off-btn");
+const chargeOnBtn = document.getElementById("charge-on-btn");
+let isChargeMode = false;
+
+// Cell Balancing Elements
+const balOffBtn = document.getElementById("bal-off-btn");
+const balAltBtn = document.getElementById("bal-alt-btn");
+const balControls = document.getElementById("bal-controls");
+const balSlider = document.getElementById("bal-slider");
+const balValue = document.getElementById("bal-value");
+
+let isBalEnabled = false;
+
+if (balOffBtn) {
+  balOffBtn.addEventListener("click", () => {
+    if (!isBalEnabled) return;
+    isBalEnabled = false;
+    balOffBtn.classList.add("active");
+    if (balAltBtn) balAltBtn.classList.remove("active");
+    if (balControls) balControls.classList.add("disabled");
+    sendBackendCommand("BMS:BAL:ALT:OFF");
+  });
+}
+
+if (balAltBtn) {
+  balAltBtn.addEventListener("click", () => {
+    if (isBalEnabled) return;
+    isBalEnabled = true;
+    balAltBtn.classList.add("active");
+    if (balOffBtn) balOffBtn.classList.remove("active");
+    if (balControls) balControls.classList.remove("disabled");
+    sendBackendCommand("BMS:BAL:ALT:ON");
+  });
+}
+
+if (balSlider) {
+  balSlider.addEventListener("change", (e) => {
+    const val = parseInt(e.target.value, 10);
+    sendBackendCommand(`BMS:BAL:THRESH:${val}`);
+  });
+  balSlider.addEventListener("input", (e) => {
+    if (balValue) balValue.textContent = `${e.target.value} mV`;
+    updateSliderUI(e.target);
+  });
+}
+
+// Charge Mode Handlers (after balance elements are declared)
+if (chargeOffBtn) {
+  chargeOffBtn.addEventListener("click", () => {
+    if (!isChargeMode) return;
+    isChargeMode = false;
+    chargeOffBtn.classList.add("active");
+    if (chargeOnBtn) chargeOnBtn.classList.remove("active");
+    sendBackendCommand("BMS:CHARGE:OFF");
+  });
+}
+
+if (chargeOnBtn) {
+  chargeOnBtn.addEventListener("click", () => {
+    if (isChargeMode) return;
+    isChargeMode = true;
+    chargeOnBtn.classList.add("active");
+    if (chargeOffBtn) chargeOffBtn.classList.remove("active");
+    // Deactivate manual balancing when entering charge mode
+    isBalEnabled = false;
+    if (balAltBtn) balAltBtn.classList.remove("active");
+    if (balOffBtn) balOffBtn.classList.add("active");
+    if (balControls) balControls.classList.add("disabled");
+    sendBackendCommand("BMS:CHARGE:ON");
+  });
+}
+
 // Fan Elements
 const fanAutoBtn = document.getElementById("fan-auto-btn");
 const fanManualBtn = document.getElementById("fan-manual-btn");
@@ -4585,11 +4753,30 @@ const simulateDataModeEl = document.getElementById("simulate-data-mode");
 
 let isFanAuto = true;
 
-// -- E-Load Control --
-eloadToggle.addEventListener("change", (e) => {
-  const cmd = e.target.checked ? "ELOAD:ON" : "ELOAD:OFF";
-  sendBackendCommand(cmd);
+// -- E-Load Per-Channel Toggle Controls --
+eloadChToggles.forEach((toggle, idx) => {
+  if (!toggle) return;
+  toggle.addEventListener("change", (e) => {
+    const ch = idx + 1;
+    const state = e.target.checked ? 1 : 0;
+    sendBackendCommand(`ELOAD:CH:${ch}:${state}`);
+  });
 });
+
+const eloadAllOnBtn = document.getElementById("eload-all-on");
+const eloadAllOffBtn = document.getElementById("eload-all-off");
+if (eloadAllOnBtn) {
+  eloadAllOnBtn.addEventListener("click", () => {
+    sendBackendCommand("ELOAD:ON");
+    eloadChToggles.forEach((t) => { if (t) t.checked = true; });
+  });
+}
+if (eloadAllOffBtn) {
+  eloadAllOffBtn.addEventListener("click", () => {
+    sendBackendCommand("ELOAD:OFF");
+    eloadChToggles.forEach((t) => { if (t) t.checked = false; });
+  });
+}
 
 // -- E-Load Fan Visualization Controls --
 const eloadFanToggle = document.getElementById("eload-fan-toggle");
@@ -4684,49 +4871,6 @@ window.addEventListener("pointerup", () => {
   });
 });
 
-function commitDACSetpoint(rawValue) {
-  const dac_code = Math.round(normalizeSetpoint(rawValue, 0, 4095));
-  syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, dac_code);
-  sendBackendCommand(`ELOAD:SET:${dac_code}`);
-}
-
-function commitCurrentSetpoint(rawValue) {
-  const iset_mv = normalizeSetpoint(rawValue, 0, 185.6);
-  syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, iset_mv);
-  // Calculate DAC code from I_SET mV: DAC_mV = I_SET_mV * 10560 / 560
-  // DAC_code = DAC_mV * 4096 / 3500
-  const dac_mv = iset_mv * 10560 / 560;
-  const dac_code = Math.round(dac_mv * 4096 / 3500);
-  sendBackendCommand(`ELOAD:SET:${Math.max(0, Math.min(4095, dac_code))}`);
-}
-
-eloadVoltageSlider.addEventListener("input", (e) => {
-  const value = Math.round(normalizeSetpoint(e.target.value, 0, 4095));
-  eloadVoltageInput.value = value;
-  updateSliderUI(e.target);
-});
-
-eloadVoltageSlider.addEventListener("change", (e) => {
-  commitDACSetpoint(e.target.value);
-});
-
-eloadVoltageInput.addEventListener("change", (e) => {
-  commitDACSetpoint(e.target.value);
-});
-
-eloadCurrentSlider.addEventListener("input", (e) => {
-  const value = normalizeSetpoint(e.target.value, 0, 185.6);
-  eloadCurrentInput.value = value.toFixed(1);
-  updateSliderUI(e.target);
-});
-
-eloadCurrentSlider.addEventListener("change", (e) => {
-  commitCurrentSetpoint(e.target.value);
-});
-
-eloadCurrentInput.addEventListener("change", (e) => {
-  commitCurrentSetpoint(e.target.value);
-});
 
 // -- Fan Control --
 let _fanThrottleTimer = 0;
@@ -4900,32 +5044,37 @@ function updateEloadTelemetry(eload) {
     telemS4.textContent = `${(eload.s4 * 1000).toFixed(0)} mV`;
   } else if (telemS4) { telemS4.textContent = "-- mV"; }
 
-  // EN status display
+  // EN status display (derived from per-channel states)
   if (telemEn) {
-    if (typeof eload?.enabled === "boolean") {
-      telemEn.textContent = eload.enabled ? "ENABLED" : "DISABLED";
-      telemEn.style.color = eload.enabled ? "var(--success-color, #30d158)" : "var(--danger-color, #ff453a)";
+    const anyOn = eload?.ch1 || eload?.ch2 || eload?.ch3 || eload?.ch4 || eload?.enabled;
+    if (anyOn !== undefined) {
+      telemEn.textContent = anyOn ? "ACTIVE" : "ALL OFF";
+      telemEn.style.color = anyOn ? "var(--success-color, #30d158)" : "var(--danger-color, #ff453a)";
     } else {
       telemEn.textContent = "--";
       telemEn.style.color = "";
     }
   }
 
-  // Update enabled toggle
-  if (typeof eload?.enabled === "boolean") {
-    eloadToggle.checked = eload.enabled;
-  }
+  // Sync per-channel toggles with telemetry
+  ["ch1", "ch2", "ch3", "ch4"].forEach((ch, idx) => {
+    if (typeof eload?.[ch] === "boolean" && eloadChToggles[idx]) {
+      eloadChToggles[idx].checked = eload[ch];
+    }
+  });
 
-  // Update setpoint controls if user is not actively editing
-  const activeElement = document.activeElement;
-  if (activeElement !== eloadVoltageInput && activeElement !== eloadVoltageSlider
-    && isFiniteNumber(eload?.dac)) {
-    syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, eload.dac);
-  }
-  if (activeElement !== eloadCurrentInput && activeElement !== eloadCurrentSlider
-    && isFiniteNumber(eload?.i_set)) {
-    syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, eload.i_set);
-  }
+  // Push to shunt history circular buffers and redraw trend graphs
+  ["s1", "s2", "s3", "s4"].forEach((ch) => {
+    if (isFiniteNumber(eload?.[ch])) {
+      const mv = eload[ch] * 1000;  // V -> mV for graph display
+      eloadShuntHistory[ch].push(mv);
+      if (eloadShuntHistory[ch].length > ELOAD_HISTORY_LENGTH) {
+        eloadShuntHistory[ch].shift();
+      }
+      drawEloadShuntTrend(ch);
+    }
+  });
+
 
   // Power summary cards
   const eloadActualVoltageEl = document.getElementById("eload-actual-voltage");
@@ -4980,12 +5129,15 @@ function clearDashboardData(reason = "manual") {
   currentState = createBlankState();
   cellVoltageHistory.clear();
   trendDirtyCells.clear();
+  // Clear E-Load shunt trend history
+  ["s1", "s2", "s3", "s4"].forEach((ch) => {
+    eloadShuntHistory[ch] = [];
+    drawEloadShuntTrend(ch);
+  });
   clearMeshTargets();
 
   updateHud(currentState);
   updateEloadTelemetry(currentState.eload);
-  syncSetpointControl(eloadVoltageSlider, eloadVoltageInput, 0);
-  syncSetpointControl(eloadCurrentSlider, eloadCurrentInput, 0);
   fanSlider.value = "0";
   fanValue.textContent = "0%";
   updateSliderUI(fanSlider);
@@ -5058,12 +5210,44 @@ function flushDashboardData() {
       s3: isFiniteNumber(e.s3) ? Number(e.s3) : currentState.eload?.s3 || 0,
       s4: isFiniteNumber(e.s4) ? Number(e.s4) : currentState.eload?.s4 || 0,
       v_set: isFiniteNumber(e.v_set) ? Number(e.v_set) : currentState.eload?.v_set || 0,
+      ch1: typeof e.ch1 === "boolean" ? e.ch1 : currentState.eload?.ch1 ?? true,
+      ch2: typeof e.ch2 === "boolean" ? e.ch2 : currentState.eload?.ch2 ?? true,
+      ch3: typeof e.ch3 === "boolean" ? e.ch3 : currentState.eload?.ch3 ?? true,
+      ch4: typeof e.ch4 === "boolean" ? e.ch4 : currentState.eload?.ch4 ?? true,
     };
 
     // Trigger E-Load reveal on first real telemetry (or when connected)
     if (!eloadHasRevealed && !eloadSimulationEnabled) {
       eloadHasRevealed = true;
       startEloadReveal(true);
+    }
+  }
+
+  if (data.bal_status) {
+    currentState.bal_status = data.bal_status;
+    const isEn = Boolean(data.bal_status.enabled);
+    if (isEn) {
+      isBalEnabled = true;
+      if (balAltBtn) balAltBtn.classList.add("active");
+      if (balOffBtn) balOffBtn.classList.remove("active");
+      if (balControls) balControls.classList.remove("disabled");
+    } else {
+      isBalEnabled = false;
+      if (balOffBtn) balOffBtn.classList.add("active");
+      if (balAltBtn) balAltBtn.classList.remove("active");
+      if (balControls) balControls.classList.add("disabled");
+    }
+  }
+
+  if (data.bal_status && isFiniteNumber(data.bal_status.charge)) {
+    const chg = Boolean(data.bal_status.charge);
+    isChargeMode = chg;
+    if (chg) {
+      if (chargeOnBtn) chargeOnBtn.classList.add("active");
+      if (chargeOffBtn) chargeOffBtn.classList.remove("active");
+    } else {
+      if (chargeOffBtn) chargeOffBtn.classList.add("active");
+      if (chargeOnBtn) chargeOnBtn.classList.remove("active");
     }
   }
 
@@ -5118,15 +5302,15 @@ function mockStream() {
     },
     eload: {
       enabled: eloadToggle.checked,
-      dac: Math.round(parseFloat(eloadVoltageInput.value) || 0),
-      i_set: parseFloat(eloadCurrentInput.value) || 0,
-      vout: (parseFloat(eloadVoltageInput.value) || 0) * 3500 / 4096 / 1000,
+      dac: 0,
+      i_set: 0,
+      vout: 0,
       v: 5.0 + (Math.random() - 0.5) * 0.1,
       s1: Math.random() * 0.002,
       s2: Math.random() * 0.002,
       s3: Math.random() * 0.002,
       s4: Math.random() * 0.002,
-      v_set: (parseFloat(eloadVoltageInput.value) || 0) * 3500 / 4096 / 1000,
+      v_set: 0,
     },
   });
 }
@@ -5310,22 +5494,21 @@ let eloadSimulationEnabled = false;
 let eloadSimulationIntervalId = null;
 
 function mockEloadStream() {
-  const targetDac = Math.round(parseFloat(eloadVoltageInput.value) || 0);
-  const targetIset = parseFloat(eloadCurrentInput.value) || 0;
-  const dac_mv = targetDac * 3500 / 4096;
-  const iset_mv = dac_mv * 560 / 10560;
-
   const eloadData = {
     enabled: eloadToggle.checked,
-    dac: targetDac,
-    vout: dac_mv / 1000.0,
-    i_set: iset_mv + (Math.random() - 0.5) * 0.5,
+    dac: 0,
+    vout: 0,
+    i_set: 0,
     v: 5.0 + (Math.random() - 0.5) * 0.1,  // VSENSE ~5V USB
     s1: Math.random() * 0.002,
     s2: Math.random() * 0.002,
     s3: Math.random() * 0.002,
     s4: Math.random() * 0.002,
-    v_set: dac_mv / 1000.0,
+    v_set: 0,
+    ch1: eloadChToggles[0]?.checked ?? true,
+    ch2: eloadChToggles[1]?.checked ?? true,
+    ch3: eloadChToggles[2]?.checked ?? true,
+    ch4: eloadChToggles[3]?.checked ?? true,
   };
 
   updateEloadTelemetry(eloadData);
@@ -5623,7 +5806,8 @@ markBootUiReady();
         // Not JSON - fall through to string format parsing
       }
 
-      // Try E-Load string format: I_SET=928 DAC=2048 VOUT=1750 ...
+      // Try E-Load string format: S1=200 S2=198 S3=201 S4=199 CH1=1 CH2=1 CH3=1 CH4=1
+      // Also supports legacy: I_SET=928 DAC=2048 VOUT=1750 ...
       if (this.prefix === 'eload' && line.includes('=')) {
         const pairs = {};
         const re = /(\w+)=(\d+)/g;
@@ -5631,7 +5815,29 @@ markBootUiReady();
         while ((m = re.exec(line)) !== null) {
           pairs[m[1].toLowerCase()] = parseInt(m[2], 10);
         }
-        if (pairs.i_set !== undefined && pairs.dac !== undefined) {
+        // Simplified format (CH1-CH4, no I_SET/DAC)
+        if (pairs.ch1 !== undefined && pairs.s1 !== undefined) {
+          const anyOn = pairs.ch1 || pairs.ch2 || pairs.ch3 || pairs.ch4;
+          const eloadPayload = {
+            i_set: 0,
+            dac: 0,
+            vout: 0,
+            v: 0,
+            s1: (pairs.s1 || 0) / 1000.0,
+            s2: (pairs.s2 || 0) / 1000.0,
+            s3: (pairs.s3 || 0) / 1000.0,
+            s4: (pairs.s4 || 0) / 1000.0,
+            enabled: Boolean(anyOn),
+            v_set: 0,
+            ch1: Boolean(pairs.ch1),
+            ch2: Boolean(pairs.ch2),
+            ch3: Boolean(pairs.ch3),
+            ch4: Boolean(pairs.ch4),
+          };
+          window.updateDashboard?.({ eload: eloadPayload });
+        }
+        // Legacy format with I_SET/DAC
+        else if (pairs.i_set !== undefined && pairs.dac !== undefined) {
           const eloadPayload = {
             i_set: pairs.i_set / 10.0,
             dac: pairs.dac,

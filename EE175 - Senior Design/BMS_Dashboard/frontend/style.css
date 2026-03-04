@@ -655,11 +655,47 @@ h1 {
   padding: 0.5rem;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  position: relative;
 }
 
 .cell-card:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
+}
+
+.bal-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff9800;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.bal-indicator.active {
+  opacity: 1;
+  animation: bal-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes bal-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(255, 152, 0, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
+  }
 }
 
 .battery-icon {
@@ -1054,6 +1090,64 @@ h1 {
   font-feature-settings: "tnum";
 }
 
+/* E-Load Shunt Trend Graphs */
+.eload-trend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.eload-trend {
+  padding: 0.5rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.eload-trend .detail-graph__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+}
+
+/* E-Load Channel Toggles */
+.eload-channel-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.eload-ch-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.eload-ch-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.eload-all-btn {
+  grid-column: span 2;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.eload-all-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 /* Power Mode Selector */
 .mode-selector {
   display: flex;
@@ -1242,6 +1336,23 @@ body.compact-layout .detail-panel.is-visible {
 
 .toggle-switch input:checked+label::after {
   transform: translateX(20px);
+}
+
+/* Small toggle variant for channel controls */
+.toggle-switch--small {
+  width: 32px;
+  height: 16px;
+}
+
+.toggle-switch--small label::after {
+  width: 10px;
+  height: 10px;
+  left: 2px;
+  top: 2px;
+}
+
+.toggle-switch--small input:checked+label::after {
+  transform: translateX(14px);
 }
 
 /* --- Telemetry Grid (Premium Redesign) --- */
@@ -1477,6 +1588,7 @@ body.compact-layout .detail-panel.is-visible {
   text-align: right;
   white-space: nowrap;
 }
+
 /* Serial Configuration Panel */
 .serial-config__body {
   display: flex;
@@ -1684,9 +1796,23 @@ body.compact-layout .detail-panel.is-visible {
   flex-shrink: 0;
 }
 
-.serial-terminal__title-row { display: flex; align-items: center; gap: 8px; }
-.serial-terminal__icon { font-size: 0.95rem; }
-.serial-terminal__title { font-size: 0.8rem; font-weight: 700; color: var(--text-primary); margin: 0; letter-spacing: 0.02em; }
+.serial-terminal__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.serial-terminal__icon {
+  font-size: 0.95rem;
+}
+
+.serial-terminal__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
 
 .serial-terminal__port-badge {
   font-size: 0.65rem;
@@ -1698,7 +1824,10 @@ body.compact-layout .detail-panel.is-visible {
   padding: 1px 6px;
 }
 
-.serial-terminal__header-actions { display: flex; gap: 4px; }
+.serial-terminal__header-actions {
+  display: flex;
+  gap: 4px;
+}
 
 .serial-terminal__btn {
   background: rgba(255, 255, 255, 0.06);
@@ -1737,15 +1866,34 @@ body.compact-layout .detail-panel.is-visible {
   word-break: break-all;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 3px);
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.03) 0px, rgba(0, 0, 0, 0.03) 1px, transparent 1px, transparent 3px);
 }
 
-.serial-terminal__log::-webkit-scrollbar { width: 5px; }
-.serial-terminal__log::-webkit-scrollbar-track { background: transparent; }
-.serial-terminal__log::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
-.serial-terminal__log .term-line { display: block; }
-.serial-terminal__log .term-line--tx { color: rgba(90, 200, 250, 0.9); }
-.serial-terminal__log .term-line--system { color: rgba(255, 160, 30, 0.85); font-style: italic; }
+.serial-terminal__log::-webkit-scrollbar {
+  width: 5px;
+}
+
+.serial-terminal__log::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.serial-terminal__log::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+.serial-terminal__log .term-line {
+  display: block;
+}
+
+.serial-terminal__log .term-line--tx {
+  color: rgba(90, 200, 250, 0.9);
+}
+
+.serial-terminal__log .term-line--system {
+  color: rgba(255, 160, 30, 0.85);
+  font-style: italic;
+}
 
 .serial-terminal__input-row {
   display: flex;
@@ -1766,8 +1914,13 @@ body.compact-layout .detail-panel.is-visible {
   transition: background 0.2s ease;
 }
 
-.serial-terminal__input::placeholder { color: rgba(255, 255, 255, 0.25); }
-.serial-terminal__input:focus { background: rgba(255, 255, 255, 0.07); }
+.serial-terminal__input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.serial-terminal__input:focus {
+  background: rgba(255, 255, 255, 0.07);
+}
 
 .serial-terminal__send {
   background: rgba(10, 132, 255, 0.15);

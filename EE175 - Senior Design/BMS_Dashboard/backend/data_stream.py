@@ -63,8 +63,12 @@ LOAD_PRESENT_RE = re.compile(
     r'\bLoad\s*Present\s*:\s*(\d+)',
     re.IGNORECASE,
 )
+BAL_STATUS_RE = re.compile(
+    r'\bbal_en\s*:\s*(\d+)\s+bal_thresh\s*:\s*(\d+)\s+bal_mask\s*:\s*(\d+)(?:\s+bal_alt\s*:\s*(\d+))?(?:\s+charge\s*:\s*(\d+))?\b',
+    re.IGNORECASE,
+)
 NON_VOLTAGE_HINT_RE = re.compile(
-    r'\b(?:ntc|status|bms|rpm|fan|eload|current|temp|fault|ctrl|sys_stat|load)\b',
+    r'\b(?:ntc|status|bms|rpm|fan|eload|current|temp|fault|ctrl|sys_stat|load|bal_en|CH[1-4])\b|^OK\b',
     re.IGNORECASE,
 )
 EXCLUDED_SERIAL_PORTS = {"COM3"}
@@ -304,8 +308,8 @@ class SerialWorker(QObject):
         if not line:
             return self._finalize_pending_frame(force=False)
 
-        # Check if this is E-Load format (new or old)
-        if ('I_SET=' in line and 'DAC=' in line) or ('DAC_set' in line and 'VSENSE' in line):
+        # Check if this is E-Load format (simplified, new, or old)
+        if ('CH1=' in line and 'CH2=' in line) or ('I_SET=' in line and 'DAC=' in line) or ('DAC_set' in line and 'VSENSE' in line):
             return self._parse_eload_string_format(line)
 
         json_frame = self._try_parse_json_payload(line)
@@ -347,7 +351,16 @@ class SerialWorker(QObject):
             if load_present is not None:
                 self._pending_frame["load_present"] = load_present
                 self._pending_started_at = now
-            # SYS_STAT line is typically the last in a cycle; finalize now
+
+        # Parse cell balancing status
+        bal_status = self._extract_bal_status(line)
+        if bal_status is not None:
+            self._ensure_pending_frame()
+            self._pending_frame["bal_status"] = bal_status
+            self._pending_started_at = now
+
+        # bal_en line is the last in a telemetry cycle; finalize frame
+        if (sys_stat is not None or load_present is not None or bal_status is not None):
             if "v" in self._pending_frame:
                 return self._consume_pending_frame()
             return None
@@ -439,6 +452,7 @@ class SerialWorker(QObject):
             or FAN_STATUS_LINE_RE.search(line)
             or SYS_STAT_RE.search(line)
             or LOAD_PRESENT_RE.search(line)
+            or BAL_STATUS_RE.search(line)
         )
 
     def _reset_pending_frame(self, expect_ntc: bool = False):
@@ -518,6 +532,8 @@ class SerialWorker(QObject):
             raw_out["sys_stat"] = self._pending_frame["sys_stat"]
         if "load_present" in self._pending_frame:
             raw_out["load_present"] = self._pending_frame["load_present"]
+        if "bal_status" in self._pending_frame:
+            raw_out["bal_status"] = self._pending_frame["bal_status"]
 
         self._saw_structured_frame = True
         self._reset_pending_frame()
@@ -702,9 +718,30 @@ class SerialWorker(QObject):
         for key, value_str in matches:
             raw[key.lower()] = int(value_str)
 
-        # Detect new format by presence of 'i_set' key
-        if 'i_set' in raw:
-            # New firmware format — all integer values
+        # Detect simplified format (CH1-CH4, no I_SET/DAC/VOUT/VSENSE)
+        if 'ch1' in raw:
+            # Simplified firmware format: S1=200 S2=198 S3=201 S4=199 CH1=1 CH2=1 CH3=0 CH4=1
+            any_on = raw.get('ch1', 0) or raw.get('ch2', 0) or raw.get('ch3', 0) or raw.get('ch4', 0)
+            eload_data = {
+                'eload': {
+                    'i_set': 0.0,
+                    'dac': 0,
+                    'vout': 0.0,
+                    'v': 0.0,
+                    's1': raw.get('s1', 0) / 1000.0,
+                    's2': raw.get('s2', 0) / 1000.0,
+                    's3': raw.get('s3', 0) / 1000.0,
+                    's4': raw.get('s4', 0) / 1000.0,
+                    'enabled': bool(any_on),
+                    'v_set': 0.0,
+                    'ch1': bool(raw.get('ch1', 0)),
+                    'ch2': bool(raw.get('ch2', 0)),
+                    'ch3': bool(raw.get('ch3', 0)),
+                    'ch4': bool(raw.get('ch4', 0)),
+                }
+            }
+        elif 'i_set' in raw:
+            # Legacy firmware format with I_SET/DAC — all integer values
             eload_data = {
                 'eload': {
                     'i_set': raw.get('i_set', 0) / 10.0,     # tenths-mV → mV
@@ -888,6 +925,23 @@ class SerialWorker(QObject):
             return None
         try:
             return int(match.group(1))
+        except (TypeError, ValueError):
+            return None
+
+    def _extract_bal_status(self, line: str) -> Optional[dict]:
+        """Extract cell balancing status from lines like 'bal_en:1 bal_thresh:15 bal_mask:516 bal_alt:0 charge:0'."""
+        match = BAL_STATUS_RE.search(line)
+        if not match:
+            return None
+        try:
+            result = {
+                "enabled": int(match.group(1)),
+                "threshold": int(match.group(2)),
+                "mask": int(match.group(3)),
+            }
+            result["alt"] = int(match.group(4)) if match.group(4) is not None else 0
+            result["charge"] = int(match.group(5)) if match.group(5) is not None else 0
+            return result
         except (TypeError, ValueError):
             return None
 
@@ -1075,6 +1129,11 @@ class SerialWorker(QObject):
                     "s2": float(s2_val if s2_val is not None else 0.0),
                     "s3": float(s3_val if s3_val is not None else 0.0),
                     "s4": float(s4_val if s4_val is not None else 0.0),
+                    # Per-channel enable states
+                    "ch1": bool(eload.get("ch1", True)),
+                    "ch2": bool(eload.get("ch2", True)),
+                    "ch3": bool(eload.get("ch3", True)),
+                    "ch4": bool(eload.get("ch4", True)),
                     # Legacy aliases kept for any consumers that still use them
                     "target_current": float(i_set if i_set is not None else 0.0),
                     "target_voltage": float(v_set if v_set is not None else 0.0),
@@ -1101,6 +1160,8 @@ class SerialWorker(QObject):
                 result["sys_stat"] = int(raw["sys_stat"])
             if "load_present" in raw:
                 result["load_present"] = int(raw["load_present"])
+            if "bal_status" in raw:
+                result["bal_status"] = raw["bal_status"]
 
             return result
         except Exception as e:

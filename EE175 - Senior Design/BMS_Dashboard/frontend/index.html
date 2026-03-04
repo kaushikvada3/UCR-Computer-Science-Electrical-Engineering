@@ -145,6 +145,45 @@
           </div>
         </section>
 
+        <!-- Charge Mode Control -->
+        <section class="hud__section glass-panel">
+          <div class="timeline__header">
+            <p class="eyebrow">Charge Mode</p>
+            <div class="mode-selector small">
+              <button class="mode-btn active" id="charge-off-btn">Off</button>
+              <button class="mode-btn" id="charge-on-btn">Charge</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Cell Balancing Control -->
+        <section class="hud__section glass-panel">
+          <div class="timeline__header">
+            <p class="eyebrow">Cell Balancing</p>
+            <div class="mode-selector small">
+              <button class="mode-btn active" id="bal-off-btn">Off</button>
+              <button class="mode-btn" id="bal-alt-btn">Balance Cells</button>
+            </div>
+          </div>
+          <div class="control-group disabled" id="bal-controls">
+            <p class="metric-card__label">Delta Threshold</p>
+            <div class="input-row">
+              <div class="glass-slider" data-glass-slider>
+                <input type="range" min="5" max="50" step="5" value="15" id="bal-slider" class="glass-slider__input">
+                <div class="glass-slider__track">
+                  <div class="glass-slider__progress"></div>
+                </div>
+                <div class="glass-slider__thumb">
+                  <div class="glass-slider__thumb-filter"></div>
+                  <div class="glass-slider__thumb-overlay"></div>
+                  <div class="glass-slider__thumb-specular"></div>
+                </div>
+              </div>
+              <span class="value-display" id="bal-value">15 mV</span>
+            </div>
+          </div>
+        </section>
+
         <!-- Serial Configuration -->
         <section class="hud__section glass-panel serial-config" id="bms-serial-config">
           <div class="timeline__header">
@@ -248,66 +287,76 @@
         </div>
       </header>
 
-      <!-- Left Column: E-Load Telemetry Metrics -->
+      <!-- Left Column: E-Load Graphs & Status -->
       <div class="left-column">
-        <section class="hud__section glass-panel">
+
+        <!-- E-Load Shunt Current Trend Graphs -->
+        <section class="hud__section glass-panel eload-graphs">
           <div class="timeline__header">
-            <p class="eyebrow">ELoad Telemetry</p>
+            <p class="eyebrow">Shunt Current Trends</p>
           </div>
-          <div class="telemetry-grid">
-            <div class="stat-box">
-              <span class="stat-label">I_SET</span>
-              <span class="stat-value" id="telem-iset">-- mV</span>
+          <div class="eload-trend-grid">
+            <div class="eload-trend">
+              <div class="detail-graph__header">
+                <span class="detail-stat__label">S1 (CH1)</span>
+                <span class="detail-stat__value detail-graph__latest" id="eload-trend-latest-s1">-- mV</span>
+              </div>
+              <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none">
+                <path class="detail-graph__area" id="eload-trend-area-s1"></path>
+                <path class="detail-graph__line" id="eload-trend-line-s1"></path>
+              </svg>
+              <div class="detail-graph__range">
+                <span id="eload-trend-min-s1">-- mV</span>
+                <span id="eload-trend-max-s1">-- mV</span>
+              </div>
             </div>
-            <div class="stat-box">
-              <span class="stat-label">DAC Code</span>
-              <span class="stat-value" id="telem-dac">--</span>
+            <div class="eload-trend">
+              <div class="detail-graph__header">
+                <span class="detail-stat__label">S2 (CH2)</span>
+                <span class="detail-stat__value detail-graph__latest" id="eload-trend-latest-s2">-- mV</span>
+              </div>
+              <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none">
+                <path class="detail-graph__area" id="eload-trend-area-s2"></path>
+                <path class="detail-graph__line" id="eload-trend-line-s2"></path>
+              </svg>
+              <div class="detail-graph__range">
+                <span id="eload-trend-min-s2">-- mV</span>
+                <span id="eload-trend-max-s2">-- mV</span>
+              </div>
             </div>
-            <div class="stat-box">
-              <span class="stat-label">VOUT (DAC)</span>
-              <span class="stat-value" id="telem-vout">-- mV</span>
+            <div class="eload-trend">
+              <div class="detail-graph__header">
+                <span class="detail-stat__label">S3 (CH3)</span>
+                <span class="detail-stat__value detail-graph__latest" id="eload-trend-latest-s3">-- mV</span>
+              </div>
+              <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none">
+                <path class="detail-graph__area" id="eload-trend-area-s3"></path>
+                <path class="detail-graph__line" id="eload-trend-line-s3"></path>
+              </svg>
+              <div class="detail-graph__range">
+                <span id="eload-trend-min-s3">-- mV</span>
+                <span id="eload-trend-max-s3">-- mV</span>
+              </div>
             </div>
-            <div class="stat-box">
-              <span class="stat-label">VSENSE</span>
-              <span class="stat-value" id="telem-voltage">-- mV</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">S1</span>
-              <span class="stat-value" id="telem-s1">-- mV</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">S2</span>
-              <span class="stat-value" id="telem-s2">-- mV</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">S3</span>
-              <span class="stat-value" id="telem-s3">-- mV</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">S4</span>
-              <span class="stat-value" id="telem-s4">-- mV</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">EN Status</span>
-              <span class="stat-value" id="telem-en">--</span>
+            <div class="eload-trend">
+              <div class="detail-graph__header">
+                <span class="detail-stat__label">S4 (CH4)</span>
+                <span class="detail-stat__value detail-graph__latest" id="eload-trend-latest-s4">-- mV</span>
+              </div>
+              <svg class="detail-graph__svg" viewBox="0 0 260 90" preserveAspectRatio="none">
+                <path class="detail-graph__area" id="eload-trend-area-s4"></path>
+                <path class="detail-graph__line" id="eload-trend-line-s4"></path>
+              </svg>
+              <div class="detail-graph__range">
+                <span id="eload-trend-min-s4">-- mV</span>
+                <span id="eload-trend-max-s4">-- mV</span>
+              </div>
             </div>
           </div>
         </section>
 
-        <!-- E-Load Power Summary -->
-        <section class="hud__section metrics glass-panel">
-          <div class="metric-card">
-            <p class="metric-card__label">VSENSE (USB VBUS)</p>
-            <p class="metric-card__value" id="eload-actual-voltage">-- mV</p>
-          </div>
-          <div class="metric-card">
-            <p class="metric-card__label">I_SET (Setpoint)</p>
-            <p class="metric-card__value" id="eload-actual-current">-- mV</p>
-          </div>
-          <div class="metric-card">
-            <p class="metric-card__label">DAC Output (VOUT)</p>
-            <p class="metric-card__value" id="eload-power">-- mV</p>
-          </div>
+        <!-- Simulate toggle -->
+        <section class="hud__section glass-panel">
           <div class="metric-card metric-card--simulate">
             <div class="metric-card__row">
               <p class="metric-card__label">Simulate Data</p>
@@ -328,82 +377,42 @@
         <section class="hud__section eload glass-panel">
           <div class="timeline__header">
             <p class="eyebrow">E-Load Control</p>
-            <div class="toggle-switch">
-              <input type="checkbox" id="eload-toggle" />
-              <label for="eload-toggle"></label>
+          </div>
+          <div class="eload-channel-toggles">
+            <div class="eload-ch-toggle">
+              <span class="eload-ch-label">CH1</span>
+              <div class="toggle-switch toggle-switch--small">
+                <input type="checkbox" id="eload-ch1-toggle" checked />
+                <label for="eload-ch1-toggle" aria-label="Toggle Channel 1"></label>
+              </div>
             </div>
+            <div class="eload-ch-toggle">
+              <span class="eload-ch-label">CH2</span>
+              <div class="toggle-switch toggle-switch--small">
+                <input type="checkbox" id="eload-ch2-toggle" checked />
+                <label for="eload-ch2-toggle" aria-label="Toggle Channel 2"></label>
+              </div>
+            </div>
+            <div class="eload-ch-toggle">
+              <span class="eload-ch-label">CH3</span>
+              <div class="toggle-switch toggle-switch--small">
+                <input type="checkbox" id="eload-ch3-toggle" checked />
+                <label for="eload-ch3-toggle" aria-label="Toggle Channel 3"></label>
+              </div>
+            </div>
+            <div class="eload-ch-toggle">
+              <span class="eload-ch-label">CH4</span>
+              <div class="toggle-switch toggle-switch--small">
+                <input type="checkbox" id="eload-ch4-toggle" checked />
+                <label for="eload-ch4-toggle" aria-label="Toggle Channel 4"></label>
+              </div>
+            </div>
+            <button class="eload-all-btn" id="eload-all-on" title="All ON">All ON</button>
+            <button class="eload-all-btn" id="eload-all-off" title="All OFF">All OFF</button>
           </div>
 
-          <div class="control-group">
-            <p class="metric-card__label">DAC Code (0–4095)</p>
-            <div class="input-row">
-              <div class="glass-slider" data-glass-slider>
-                <input type="range" min="0" max="4095" step="1" value="0" id="eload-voltage-slider"
-                  class="glass-slider__input">
-                <div class="glass-slider__track">
-                  <div class="glass-slider__progress"></div>
-                </div>
-                <div class="glass-slider__thumb">
-                  <div class="glass-slider__thumb-filter"></div>
-                  <div class="glass-slider__thumb-overlay"></div>
-                  <div class="glass-slider__thumb-specular"></div>
-                </div>
-              </div>
-              <input type="number" min="0" max="4095" step="1" value="0" id="eload-voltage-input"
-                class="numeric-input">
-            </div>
-          </div>
-
-          <div class="control-group">
-            <p class="metric-card__label">I_SET Target (mV)</p>
-            <div class="input-row">
-              <div class="glass-slider" data-glass-slider>
-                <input type="range" min="0" max="185.6" step="0.1" value="0" id="eload-current-slider"
-                  class="glass-slider__input">
-                <div class="glass-slider__track">
-                  <div class="glass-slider__progress"></div>
-                </div>
-                <div class="glass-slider__thumb">
-                  <div class="glass-slider__thumb-filter"></div>
-                  <div class="glass-slider__thumb-overlay"></div>
-                  <div class="glass-slider__thumb-specular"></div>
-                </div>
-              </div>
-              <input type="number" min="0" max="185.6" step="0.1" value="0.0" id="eload-current-input"
-                class="numeric-input">
-              <span class="unit">mV</span>
-            </div>
-          </div>
         </section>
 
-        <!-- Fan Visualization Control -->
-        <section class="hud__section glass-panel eload-viz-panel">
-          <div class="timeline__header">
-            <p class="eyebrow">Fan Visualization</p>
-            <div class="toggle-switch">
-              <input type="checkbox" id="eload-fan-toggle" checked />
-              <label for="eload-fan-toggle" aria-label="Toggle fan blade spin"></label>
-            </div>
-          </div>
-          <div class="control-group" id="eload-fan-speed-controls">
-            <p class="metric-card__label">Spin Speed</p>
-            <div class="input-row">
-              <div class="glass-slider" data-glass-slider>
-                <input type="range" min="0" max="100" step="1" value="50" id="eload-fan-speed-slider"
-                  class="glass-slider__input">
-                <div class="glass-slider__track">
-                  <div class="glass-slider__progress"></div>
-                </div>
-                <div class="glass-slider__thumb">
-                  <div class="glass-slider__thumb-filter"></div>
-                  <div class="glass-slider__thumb-overlay"></div>
-                  <div class="glass-slider__thumb-specular"></div>
-                </div>
-              </div>
-              <span class="value-display" id="eload-fan-speed-value">50%</span>
-            </div>
-          </div>
-        </section>
 
         <!-- Heat Visualization Control -->
         <section class="hud__section glass-panel eload-viz-panel">
