@@ -1,0 +1,122 @@
+                     8                                                             7                                             6                           5            4   3                                         *                2                                                  1
+                                                                                                                                                                                                         DWG. NO. REV. SHT.
+
+    THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR                                                                                                                                                                            REVISION                     DESCRIPTION                     DATE           APPROVED
+    HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+    BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+    RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+
+
+F                                                                                                                                                                                                                                                                                                                     F
+                                                                                                                                                          +3V3
+
+                                                                      FAN CONTROL                                                        COJ3
+                                                                                                                                         J3
+                                                                                                                          COJ7
+                                                                                                                          J7
+                                                                            +12V                                     S1
+                                                                                                                    PIJ70S1
+                                                                                                                                                1     1
+                                                                                                                                                    PIJ301
+
+                                                                                                                                                                  ENC_B
+                                                                         POFAN0TACH                                     1
+                              POFAN0ENTop-Level[6D], STM32[3B], STM32[6D] FAN_TACH                                                              2
+                                                                                                                    PIJ701
+     Top-Level[6D], STM32[4E]   FAN-EN                                                                                                                3
+                                                                                                                                                    PIJ303
+                                                                                                                      2
+                                                                                                                    PIJ702
+                                          PIR30 2                       COQ9
+                                                                        Q9                                              3
+                                                                                                                                                3 PIJ302
+                                                                                                                                                    2             ENC_A
+                                                    COR30
+                                                    R30                                                             PIJ703
+
+
+
+                                                  10k                4                               8
+                                                                   PIQ904    G                  D  PIQ908             4                         4     4
+                                          PIR30 1 0402                1                              7              PIJ704
+                                                                                                                                                    PIJ304
+                                                                   PIQ901
+                                                                             S                  D PIQ907
+                                                                     2                               6               S2                                          ENC_SW
+                                                                   PIQ902
+                                                                             S                  D PIQ906            PIJ70S2
+                                                                                                                                                5     5
+                                                                     3                               5                                              PIJ305
+                                                                   PIQ903
+                                                                             S                  D PIQ905                    5055670431
+                                                                        IAUC120N06S5L032ATMA1                                            B5B-XH-A
+
+
+E                                                                                                                                                                                                                                                                                                                     E
+                                                            PGND                                                 PGND
+                                                                                                                                                          PGND
+
+
+
+
+                                                     NLENC0B
+                                                    ENC_B
+       Top-Level[6D], STM32[7F] POENC0B
+                                 ENC_B
+                                                 NLENC0A                     pot finish schematic logic config
+                               POENC0A          ENC_A
+       Top-Level[6D], STM32[7F] ENC_A
+                               POENC0SW       NLENC0SW
+                                            ENC_SW                           - don't forget the add button
+       Top-Level[6D], STM32[7F] ENC_SW
+                                                                             matrix
+
+
+
+
+D                                                                                                                                                                                                                                                                                                                     D
+
+
+
+
+C                                                                                                                                                                                                                                                                                                                     C
+
+
+
+
+B                                                                                                                                                                                                                                                                                                                     B
+
+                                                                                                                                                                                                                                                                                                                          DWG. NO.
+
+
+
+
+                                                                                                                                                                                                                                                                                                                      *   SHT. REV.
+
+
+                                                                                                                                                                                                                     PROJECT                                                                      *
+                                                                                                                                                                                          APPROVALS        DATE
+                                                                                                                                                                                                                                                                                                  *
+                                                                                                                                                                                  ENG:                                                                                                            *
+                                                                                                                                                                                          *
+                                                                                                                                                                                  DSN:
+                                                                                                                                                                                                                                                                                                  *
+                                                                                                                                                                                          *                          PROJECT REVISION:               DOCUMENT REVISION:     DESIGN ITEM:
+                                                                                                                                                                                  CHK:
+                                                                                                                                                                                                                                             Version control disabled Version control disabled
+                                                                                                                                                                                          *                          TITLE
+
+A
+                                                                                                                                                                                  BOM:
+                                                                                                                                                                                         REFERENCE DOCUMENTS
+                                                                                                                                                                                                                              Power                                                                                   A
+
+                                                                                                                                                                                  ASSY DWG:                            SIZE    CAGE CODE        DWG NO.                                                         REV
+
+                                                                                                                                                                                  FAB DWG:
+                                                                                                                                                                                                                        B
+                                                                                                                                                                                  PCB DWG:                           SCALE:              FILE NAME                                    SHEET                OF
+                                                                                                                                                                                                                                                     User-Input.SchDoc                                *         *
+                     8                                                             7                                             6                           5            4   3                                                          2                                                  1
+

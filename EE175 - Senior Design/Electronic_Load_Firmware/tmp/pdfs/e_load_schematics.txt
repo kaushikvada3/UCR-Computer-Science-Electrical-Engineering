@@ -1,0 +1,3246 @@
+8
+in+ -> shunt/current
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN
+in- -> OR
+vref or limit
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED
+reference
+AND MAY
+from DAC
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+F
+
+Top-Level[4C], ADC+DAC[3E] POI0SET
+I_SET
+
+I_SET
+
+POO\F\F\
+Top-Level[4D], STM32[4F] OFF
+
+OFF
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+1
+
+DWG. NO. REV. SHT.
+
+REVISION
+
+SR Latch logic may be iffy
+
+DESCRIPTION
+
+DATE
+
+APPROVED
+
+PC817 octocoupler? allow load to be triggered externally (iso-input)
+Power-up:12 V rail powers op-amps and MOSFETs.5 V rail powers MCU, ADC, and peripherals.The negative
+rail (-5 V) gives op-amps full range control.
+Set current:User enters a current (e.g., 2 A) via keypad or PC command.MCU sets an analog control voltage
+(I_SET).
+
+F
+
+Feedback control:Op-amps drive MOSFET gates to make the shunt voltage equal I_SET.Current is held constant
+regardless of DUT voltage.
+Measurement:ADC continuously reads shunt voltages and input voltage.MCU calculates and displays I, V, and P
+on LCD.
+Protection:If temperature rises, fan engages.If over-temp or over-current, MCU disables BJTs (Q8 –Q11), shutting
+off MOSFETs.
+
+Power Stages
+
+PIJ20P
+
+COC11
+C11
+
+PIU206
+
+PIC1302
+COC12
+C12
+
+Q6
+IRFP250NPBF
+
+1
+
+PIQ601
+
+PIQ603
+
+PIU209
+
+PIU208
+
+10
+PIU2010
+
+PIR1101
+
+PIR1002
+
+47R
+0603
+
+PIR1201
+
+PIR1501
+
+PIR1502
+
+SMBJ58A
+
+Q8
+IRFP250NPBF
+
+1
+
+PIQ801
+
+PIQ803
+D
+
+COC15
+C15
+1n
+PIC1501 0603
+
+PGND
+COR13
+R13
+PIR1301
+
+PIR1302
+
+POV0SHUNT04
+V_SHUNT_4
+COR17
+R17
+
+PIR1602
+
+PIR1701
+
+2512 5W 1%
+
+PIR1702
+
+10k
+0603
+
+PPIR200PPIR20 1
+
+PPIR210PPIR2101
+
+COR20
+R20
+NPIR200N 0.001R
+
+PIR1902
+
+PIR1802
+
+PGND
+
+1k
+0603
+
+COR19
+R19
+NPIR190N 0.001R
+
+0.001R
+N
+PIR180N
+
+PID201
+
+PIC1502
+
+PIR1202
+
+10k
+0603
+
+PPIR190PPIR1901
+
+PIR902
+
+47R
+0603
+
+POV0SHUNT03
+V_SHUNT_3
+PIR1601
+
+COR18
+R18
+
+PIR901
+
+PIU201
+
+COR16
+R16
+
+10k
+0603
+
+2
+
+PIU2014
+
+12
+
+PIU2012
+
+PIQ802 COQ8
+
+PID202 PGND
+COD2
+D2
+
+1
+
+U2D
+AD8630ARZ-REEL7
+COR9
+R9
+14
+
+2
+
+4
+
+2
+
+PIU2013
+
+I_SET
+
+PIQ703
+
+POV0SHUNT02
+V_SHUNT_2
+
+PIR1402
+
+13
+
+Q7
+IRFP250NPBF
+
+1k
+0603
+
+COR15
+R15
+
+2512 5W 1%
+
+1
+
+PIQ701
+
+PIQ401
+
+COC14
+C14
+1n
+PIC1401 0603
+
+COR12
+R12
+
+PIR1102
+
+V_SHUNT_1 POV0SHUNT01
+NLV0SHUNT01
+V_SHUNT_1
+
+COR14
+R14
+P
+PIR1801
+PIR180P
+
+PIR802
+
+Q4
+BCW89-QR
+
+PIQ402
+
+PIC1402
+
+COC13
+C13
+
+1k
+0603
+
+10k
+0603
+
+PIR801
+
+PIU201
+
+PIC1301 0603
+
+COR11
+R11
+
+1k
+0603
+
+PIR1401
+
+9
+
+I_SET
+
+1n
+
+1n
+PIR1001
+
+PIR702
+
+47R
+0603
+
+PIU201
+
+PIC1201 0603
+
+COR10
+R10
+
+PIR701
+
+3
+
+3
+
+PIU207
+
+5
+PIU205
+
+2
+
+PIR502
+
+PIU204
+
+PIQ702 COQ7
+
+E
+
+COR21
+R21
+NPIR210N 0.001R
+2512 5W 1%
+
+PIC1202
+
+6
+
+I_SET
+
+3
+
+PIQ503
+
+11
+D
+
+Q5
+IRFP250NPBF
+
+U2C
+AD8630ARZ-REEL7
+COR8
+R8
+8
+
+PIQ403 COQ4
+
+11
+
+1
+
+PIQ501
+
+47R
+0603
+
+PIU201
+
+4
+
+2
+PIR602
+
+PIR501
+
+100k
+0402
+
+PIQ301
+
+PIU204
+
+PIQ602 COQ6
+
+OFF
+
+COR5
+R5
+
+3
+
+PIR601
+
+U2B
+AD8630ARZ-REEL7
+COR7
+R7
+7
+
+Q3
+BCW89-QR
+
+2512 5W 1%
+
+PIU201
+
+3
+PIU203
+
+100k
+0402
+
+PIQ201
+
+PIU204
+
+PIQ502 COQ5
+
+PIR402
+
+4
+
+1
+4
+2
+
+PIU202
+
+U2A
+AD8630ARZ-REEL7
+COR6
+R6
+1
+
+PIR401
+
+2
+PIQ302
+
+PGND
+
+1
+
+100k
+0402
+
+PIQ101
+
+PIU204 COU2ACOU2BCOU2CCOU2D
+
+NLI0SET
+I_SET
+
+PIR302
+
+OFF
+
+XT60-M
+
+PIC1102
+
+100nF
+
+PIQ303 COQ3
+
+11
+
+100k
+0402
+
+PIR301
+
+Q2
+BCW89-QR
+
+2
+
+PIQ102
+
+2
+PIQ202
+
+COR4
+R4
+
+3
+
+2
+
+PIR202
+
+OFF
+
+11
+
+PIR201
+
+Q1
+BCW89-QR
+
+1
+
+COR2
+R2
+
+PIQ203 COQ2
+
+3
+
+3
+
+NLO\F\F\
+OFF
+
+COR3
+R3
+
++5V
+
+3
+
++5V
+
+PIC1101
+
+PIQ103 COQ1
+
++5V
+
+1
+
++5V
+
++5V
+
+E
+
+COJ2
+J2
+P
+N
+PIJ20N
+
+PIR20 2
+
+PIR2102
+
+C
+
+C
+PGND
+
+PGND
+
+PGND
+
+PGND
+
+VOLTAGE REFERENCE
++4.096V
+
++5V
+
+COU7
+U7
+2
+
+PIU702
+
+VIN
+
+6
+VREF PIU706
+
+B
+
+2
+
+B
+
+5
+
+PIU705
+
+EN
+NC
+
+8
+GND
+7
+GND PIU707
+4
+GND PIU704
+1
+GND PIU701
+PIU708
+
++ PIC2402 COC24
+C24
+PIC2401 1u
+
+DWG. NO.
+
+PIU703
+
+1
+
+3
+
+PGND
+
+1
+
+precision ref for adc vref to ensure
+accurate measurements
+
+APPROVALS
+ENG:
+DSN:
+CHK:
+
+DATE
+
+*
+
+PROJECT REVISION:
+
+*
+
+TITLE
+
+BOM:
+ASSY DWG:
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+*
+*
+
+*
+
+REFERENCE DOCUMENTS
+
+A
+
+Schematic Changes:
+PROJECT
+* guide.
+Tie VDDA to 3.3 V through a bead + decoupling; follow STM32 analog layout
+*
+- Separate AGND/DGND star point near STM32 if you bring analog in.
+
+SHT. REV.
+
+LM4140
+
+DOCUMENT REVISION:
+
+DESIGN ITEM:
+
+Version control disabled Version control disabled
+
+For PWM -> RC
+for I_SET replace
+with DACout ->
+I_SET (pure
+SIZE CAGE CODE
+analog)
+
+Remote V-sense precision buffer amplifier. Basically when you test
+
+theres v-drop in load wires. this would measure
+Power batteries/PSU
+acutal voltage directly at DUT terminals
+
+FAB DWG:
+
+B
+
+PCB DWG:
+
+SCALE:
+
+DWG NO.
+
+FILE NAME
+
+2
+
+Power.SchDoc
+
+A
+REV
+
+SHEET
+
+1
+
+1
+
+OF
+
+1
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+*
+
+1
+
+DWG. NO. REV. SHT.
+
+REVISION
+
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+DESCRIPTION
+
+DATE
+
+APPROVED
+
+F
+
+F
+
+I_SET
+
+POI0SET
+Top-Level[4B], Power[8F] I_SET
+
+DAC
+POV0SHUNT0010040
+POV0SHUNT04
+POV0SHUNT03
+POV0SHUNT02
+Top-Level[4B], Power[1C], Power[3C], Power[5C], Power[6C], STM32[6F] POV0SHUNT01
+V_SHUNT_[1..4]
+
++4.096V
+
+POV0SHUNT01
+V_SHUNT_1
+Top-Level[4B], Power[6C], STM32[6F]
+
+E
+
+COU8
+U8
+6
+PIU806
+A0
+
+POV0SHUNT02 Top-Level[4B], Power[5C], STM32[6F]
+V_SHUNT_2
+
+POSCL1
+Top-Level[4B], STM32[6E] SCL1
+
+5
+PIU805
+
+Top-Level[4B], STM32[4E] POSDA1
+SDA1
+
+4
+PIU804
+
+POV0SHUNT03 Top-Level[4B], Power[3C], STM32[6F]
+V_SHUNT_3
+
+SCL
+SDA
+
+3
+VDD PIU803
+1
+VOUT PIU801
+2
+VSS PIU802
+
+COR43
+R43
+PIR4301
+
+NLI0SET
+I_SET
+
+PIR4302
+
+10k
+0603
+
+PIR4502
+
+COR45
+R45
+560R
+PIR45010603
+
+MCP4725A0T-E/CH
+
+E
+
+PIC2802
+
+PIC2702
+
+COC28
+C28
+1n
+PIC2801 0603
+
+PIC2701
+
+COC27
+C27
+100n
+0603
+
+Addr: 0x60
+
+POV0SHUNT04 Top-Level[4B], Power[1C], STM32[6F]
+V_SHUNT_4
+
+PGND
+PGND
+
+It might make more sense to instead of using this external single ended ADC (which doesnt seem to have
+enough inputs to let you connect each shunt line separately), either
+use the STM32's ADC (use differential measurements, not single ended) and then make sure your shunt
+traces are impedance controlled and length matched as they are routed to the STM32
+or find an external differential ADC that can support 5 differential measurement channels (or find one
+that can do a few and just use multiple of them) and connect to the shunt lines and VOLT
+For shunts we should always try to use differential measurements because they are less noisy than single
+ended measurements. The same thing applies with measuring voltage using a differential probe versus a
+standard single ended scope probe with a GND clip
+I dont know if you have STM32CubeIDE but Id recommend getting it so that you can create a project
+with an .ioc file and set the pinout. No need to look through the datasheet for pin functions just select it
+in the menu
+you can find differential adc pins
+If the resolution is 12-bit then thats enough to do vsense, worst case we can do digital LPF if we are still
+getting significant noise on our readings
+
+D
+
+You will not need an ADS1115 since ~14-15 bits via STM32 oversampling/filtering, therefore you can delete the ADS1115 and feed the shunt and VOLTAGE+ into the STM32 ADC (with proper scaling)
+If you absolutely need low-noise 16-bit readings then keep the ADS1115 and run it at 3.3V
+8) “RESET” and “FAULT/STOP”: where do they go (and what MCU pins)?
+place comparator at output of shunt amp
+
+Treat them as two nets:
+
+- need to create a reference threshold V_trip meaning a simple resistor divider from a reference but do that on
+the DAC if I want a programmable trip
+- so therefore the comparator compares the IN+ = current signal, IN- = V_trip (so it should trip when the
+current is greater than the limit)
+
+FAULT (latched hardware fault)
+
+D
+
+Comes from comparator → SR latch output.
+Goes to:
+
+- how to kill the load when the comp trips it should force the MOSFET gates OFF regardless of op-amp
+command. -> comp out -> NMOS that clamps AD8630 output nodes(s) to ground
+
+Hard disable: kills gate drive (GATE_DISABLE into the BJT/op-amp stage
+enable)
+
+add hysteriesis
+MCU input: any GPIO with EXTI interrupt (so firmware can immediately log &
+stop profiles)
+A) The control loop (makes the current constant)
+
+RESET
+
+Your op-amp compares the shunt voltage to I_SET and drives the MOSFET gates (that’s the heart of the load).
+
+Drives SR latch reset input.
+
+eload-schematics
+
+Also optionally drives MCU reset pin (or just the MCU can reset the latch via a
+GPIO).
+
+For that loop, you often don’t need a dedicated “current sense amplifier” because the op-amp is already acting
+on the shunt voltage.
+
+Rule: Hardware fault shutdown must work even if the MCU is dead. The MCU
+only observes and records.
+
+C
+
+C
+
+B) The measurement loop (reports current/voltage/power accurately)
+If your shunt drop is only 10–50 mV, the MCU ADC may struggle to measure it accurately without
+gain/CMRR.
+So you have three good options:
+Amplify shunt with an op-amp into the ADC (gain 20–100×), careful with offset + drift.
+Use a dedicated current shunt monitor like INA226 (digital readout of shunt V + bus V over I²C). The INA226
+explicitly monitors shunt drop and bus voltage and can compute current and power.
+Texas Instruments
++1
+
+B
+DWG. NO.
+
+B
+
+Use an external higher-res ADC (you already have ADS1115 in the reference design, but you also mentioned
+For the RTC you can use the STM32 RTC + 32.768 kHz crystal and coin cell (VBAT pin). If you want I2C based timekeeping or battery backed alarms
+switching
+withoutplans).
+extra layout, keep it.
+
+*
+
+INA226 is measurement, not a setpoint generator. Your DAC (MCP4725) is what creates I_SET in your
+schematic.
+eload-schematics
+APPROVALS
+ENG:
+
+So: INA226 does not replace DAC; it replaces (or improves) your current/voltage measurement chain.
+
+DSN:
+CHK:
+
+DATE
+
+*
+*
+
+PROJECT REVISION:
+
+*
+
+TITLE
+
+ASSY DWG:
+
+7
+
+6
+
+5
+
+4
+
+3
+
+DOCUMENT REVISION:
+
+DESIGN ITEM:
+
+Version control disabled Version control disabled
+
+Power
+
+BOM:
+
+8
+
+*
+*
+*
+*
+
+PROJECT
+
+REFERENCE DOCUMENTS
+
+A
+
+SIZE
+
+FAB DWG:
+
+B
+
+PCB DWG:
+
+SCALE:
+
+SHT. REV.
+
+Important: INA226 does not replace your DAC
+
+CAGE CODE
+
+FILE NAME
+
+2
+
+A
+
+DWG NO.
+
+ADC+DAC.SchDoc
+
+REV
+
+SHEET
+
+1
+
+*
+
+OF
+
+*
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+*
+
+1
+
+DWG. NO. REV. SHT.
+
+REVISION
+
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+DESCRIPTION
+
+DATE
+
+APPROVED
+
+F
+
+F
+
+USB-C
+
+Add conns necessary
+
+COR35
+R35
+
+PIR3702
+Changed wire harness name for layout
+changes
+
+COR37
+R37
+82k5
+
+PIR3701 0805
+
+PIR3502
+
+PIR3602
+
+COR36
+R36
+1k6
+PIR36010402
+
+PIDS102
+PIDS101
+
+CODS1
+DS1
+561nm
+0603
+
+COJ6
+J6
+A12
+PIJ60A12
+GND
+A11
+PIJ60A11
+SSRXp2
+A10
+PIJ60A10 SSRXn2
+A9
+PIJ60A9 VBUS
+A8
+PIJ60A8
+SBU1
+A7
+PIJ60A7
+Dn1
+A6
+PIJ60A6
+Dp1
+A5
+PIJ60A5 CC1
+A4
+PIJ60A4 VBUS
+A3
+PIJ60A3 SSTXn1
+A2
+PIJ60A2
+SSTXp1
+A1
+PIJ60A1
+GND
+SH1
+PIJ60SH1
+SHIELD
+SH2
+PIJ60SH2
+SHIELD
+
+USB-FS
+E
+
+VSENSE
+
+POUSB0FS0VSENSE
+POUSB0FS0DEV0DET
+POUSB0FS
+POUSB0FS0ESD0USB0D0P
+POUSB0FS0ESD0USB0D0N
+USB-FS
+
+PGND
+
+PGND
+
+10
+9
+
+NLUSB0D0N
+USB-D_N
+NLUSB0D0P
+USB-D_P
+
+COD6
+D6
+1
+2
+PID602
+
+ESD-USB-D_N
+ESD-USB-D_P
+
+PID601
+
+COR38
+R38
+
+4
+5
+PID605
+
+1k6
+
+3_8
+PID60308
+
+PIR3802
+
+PID6010
+PID609
+
+ESD
+
+7
+6
+
+PID604
+
+PIR38010402
+DEV_DET
+
+PID607
+PID606
+
+PIR3902
+
+GND
+
+DIODE, ESD, 12V3, 4CH
+PGND
+
+COR39
+R39
+
+5k1
+PIR39010402
+
+R/A
+
+33k2
+0805
+
+USBC
+
+PIR3501
+
+B1
+GND PIJ60B1
+B2
+SSTXp2 PIJ60B2
+B3
+SSTXn2 PIJ60B3
+B4
+VBUS PIJ60B4
+B5
+CC2 PIJ60B5
+B6
+Dp2 PIJ60B6
+B7
+Dn2 PIJ60B7
+B8
+SBU2 PIJ60B8
+B9
+VBUS PIJ60B9
+B10
+SSRXn1 PIJ60B10
+B11
+SSRXp1 PIJ60B11
+B12
+GND PIJ60B12
+SH3
+SHIELD PIJ60SH3
+SH4
+SHIELD PIJ60SH4
+
+E
+
+PIR40 2
+
+COR40
+R40
+5k1
+PIR40 10402
+
+GSB3CA11310DSHR
+PGND
+
+PGND
+
+PGND
+
+PGND
+D
+
+C
+
+C
+
+B
+
+B
+
+*
+APPROVALS
+ENG:
+DSN:
+CHK:
+
+DATE
+
+*
+*
+
+PROJECT REVISION:
+
+*
+
+TITLE
+
+ASSY DWG:
+
+7
+
+6
+
+5
+
+4
+
+3
+
+DOCUMENT REVISION:
+
+DESIGN ITEM:
+
+Version control disabled Version control disabled
+
+Power
+
+BOM:
+
+8
+
+*
+*
+*
+*
+
+PROJECT
+
+REFERENCE DOCUMENTS
+
+A
+
+SIZE
+
+FAB DWG:
+
+B
+
+PCB DWG:
+
+SCALE:
+
+SHT. REV.
+
+DWG. NO.
+
+D
+
+CAGE CODE
+
+FILE NAME
+
+2
+
+A
+
+DWG NO.
+
+Connectors.SchDoc
+
+REV
+
+SHEET
+
+1
+
+*
+
+OF
+
+*
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+*
+
+1
+
+DWG. NO. REV. SHT.
+
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+POWER SUPPLY
+
+F
+
+LINE
+
+PIJ403
+
+NEUTRAL
+
+PGND
+
+Full Bridge One Phase
+
+COJ4
+J4
+
+PGND
+
+COQ10
+Q10
+
+PIR4702
+
+PID101
++
+
+PIT103
+
+NLLINE
+LINE
+
+COF3
+F3PIF301
+
+1A/250V
+
+PIF302
+
+PIT101
+
+PIT104
+
+COZ1
+Z1
+NLNEUTRAL
+NEUTRAL
+
+PIZ101
+
+PID102
+
+115V
+
+PID103
+
+PIC1701
+
+-
+
+E
+
++
+
+CD-HD2004
+
+PIC1702
+
+COC17
+C17
+
++
+
+4.7mF
+
+PIC1802
+PIC1801
+
+10k
+PIR47012512
+
+COC18
+C18
+4.7mF
+
+PID104
+
+PIT105
+
+PIZ102
+
+F
+
+COTP2
+
+COTP3
+COU5
+U5
+
+PITP201
+
+PIQ1003
+
+PIR4802
+
+PIQ101
+
+COR47
+R47
+
+COT1
+T1
+
+APPROVED
+
+BUCK this!
+
++12V
+
+BD911
+
+PIQ1002
+
+COD1
+D1
+
+DATE
+
+PIH10GND
+
+P_bridge = 2 * V_f * I_dc, where V_f = 0.5V
+P_bridge = 2*0.5*0.5 = 0.5W
+I_dc_max = 0.62*0.8 = 0.5A --> about 12V @ 0.5A DC max = 6W DC out
+
+PIJ402
+
+DESCRIPTION
+
+120VAC → +12V → + 5V
+
+COH1
+H1
+574502B00000G
+
+Primary: 115VAC --> Secondary: 12.6VAC RMS, 800mA max (10VA)
+12.6 * sqrt(2) ≈ 17.8V
+V_dc = 17.8V - 1V = 16.8V \\ since diode rated @ 40VRRM, <50% of voltage rating
+
+PIJ401
+
+REVISION
+
+PWR in FET is 4V * 0.5A = 2W
+HSS-B20-0635H-02: 2.6 W @ 75 °C rise” ⇒ 75 / 2.6 ≈ 28.8
+°C/W
+BD911: RθJA ≈ 31 °C/W
+ΔV≈16 − 12= 4V
+PBD911​ ≈ 4 V*0.5 A= 2W
+don’t try to pull way more than ~0.5 A @ 12 V from that
+linear stage
+
+COR48
+R48
+68k
+PIR4801 0603
+
+PIC40 2 COC40
+C40
+
+PIU103 PIU101COU10
+
+PIR4902
+
+PIC40 1 1u
+
+PIU102
+
+PIR4901
+
+U10
+TL431CLP
+
+PIC3202
+
+COC32
+C32
+4u7
+PIC3201 0603
+
+COTP4
+
+COR49
+R49
+18k
+0603
+
+PIC3 02
+
+COC33
+C33
+220n
+PIC3 01 0603
+
+2
+PIU502 VIN
+10
+PIU5010
+VIN
+
+PIC3402
+
+BOOT
+
+9
+5
+
+PIU509
+
+COC34
+C34
+220n
+PIC3401 0603
+
+PIU505
+
+PIC3902
+
+12
+
+1PIL101
+2u2
+
+PIU5012
+
+4
+PIU504
+
+COC31
+C31
+
+PIC3102
+
+100n
+
+0402
+
+PIC3101
+
+EN
+VCC
+
+8
+
+PIU508
+
+PG
+
+FB
+NC
+
+PIC1902
+
+COC19
+C19
+20p
+
+7
+3
+PIU503
+
+PGND
+
+PGND
+
+PGND
+
+PGND
+
+MOV-14D471K
+
+PIC3502
+
+COR28
+R28
+100k
+PIR2801402
+
+PIC3602
+
+COC35
+C35
+22u
+PIC3501 0805
+
+2
+PIF102
+
+1A
+0805
+
+COC36
+C36
+22u
+PIC3601 0805
+
+E
+
+PIR2902
+
+COR29
+R29
+24.9k
+PIR2901402
+
+1
+PIU501 PGND
+11
+PGND
+6
+PIU506 AGND
+
+PGND
+
+PIR2802
+
+1
+PIF101
+
+PIU507
+
+PIU5011
+
+PIT102
+
+PITP301
+
+2
+
+PIL102
+
+PIC1901
+
+COC39
+C39
+1u
+PIC3901 0603
+
+PITP401
+
+SW
+
++5V
+
+COF1
+F1
+
+COL1
+L1
+
+PGND
+
+PGND
+
+LMR36015FSCQRNXTQ1
+PGND
+
+PIT106
+
+PC-12-800
+
+efficiency = 6W / (6W + 2W) = 75%
+
+PGND
+
+PGND
+
+4.7mF beefy caps so that the
+LM1117 doesn't get obliterated LOL
+
+J4 connected to a wall
+outlet therefore full
+bridge rectifier needed
+
+D
+
+D
+
++5V → + 3V3
+COTP5
+
++5V
+
+COTP6
+
+COU3
+U3
+
+PITP501
+
+2
+PIU302 VIN
+10
+VIN
+
+PIU3010
+
+PIC2302
+
+C23
+COC23
+4u7
+
+PIC3702
+
+C37
+COC37
+220n
+
+PIC3802
+
+220n
+
+PITP701
+
+4
+BOOT PIU304
+
+PIU309
+
+C38
+COC38
+
+PIC2301 0603 PIC3701 0603 PIC3801 0603
+
+COTP7
+
+9
+EN
+5
+PIU305 VCC
+
+SW
+
+COL2
+L2
+1PIL201
+2u2
+
+12
+
+PIU3012
+
+COC20
+C20
+PIC2001
+100n
+
+PIC2002
+
+PIC4102
+
+0402
+
+PIC4 02
+
+C44
+COC44
+1u
+PIC4 01 0603
+
+C
+
+C41
+COC41
+22u
+
+PIC4101 0805
+8
+
+PIU308
+
+PG
+
++3V3
+
+COF2
+F2
+1
+PIF201
+
+PITP601
+
+2
+
+PIL202
+
+PIC4202
+
+C42
+COC42
+22u
+
+PIC4302
+
+2
+PIF202
+
+1A
+0805
+
+C43
+COC43
+22u
+
+PIC4201 0805 PIC4301 0805
+
+7
+FB PIU307
+3
+NC PIU303
+
+1
+PGND
+11
+PGND
+6
+PIU306 AGND
+
+C
+
+PIU301
+
+PGND
+
+PGND
+
+PGND
+
+PGND
+
+PGND
+
+PIU3011
+
+PGND
+
+PGND
+
+PGND
+
+LMR36015SC3QRNXTQ1
+PGND
+
+*
+
+DWG. NO.
+
+B
+
+APPROVALS
+ENG:
+DSN:
+CHK:
+
+DATE
+
+*
+*
+
+PROJECT REVISION:
+
+*
+
+TITLE
+
+ASSY DWG:
+
+7
+
+6
+
+5
+
+4
+
+3
+
+DOCUMENT REVISION:
+
+DESIGN ITEM:
+
+Version control disabled Version control disabled
+
+Power
+
+BOM:
+
+8
+
+*
+*
+*
+*
+
+PROJECT
+
+REFERENCE DOCUMENTS
+
+A
+
+SIZE
+
+FAB DWG:
+
+B
+
+PCB DWG:
+
+SCALE:
+
+SHT. REV.
+
+B
+
+- Add TVS diode (SSA210)
+- Add 10-100Ohm in series @ each gate pin to tame the ringing
+- Temperature sensing -> one NTC on MOSFET heatsink and one near the shunts
+- Feed into ADC channels and implement -> over-temp shutdown and fan speed control
+- low-side N-MOSFET to PWM a 12V fan controlled by MCU also add a flyback diode is its a 2wire brushed fan
+-input reverse polarity protection to prevent human plugging that bih so use BIG SCHOTTKY in series or a fuse on the XT60 input
+
+CAGE CODE
+
+FILE NAME
+
+2
+
+A
+
+DWG NO.
+
+Power-Tree.SchDoc
+
+REV
+
+SHEET
+
+1
+
+*
+
+OF
+
+*
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+*
+
+1
+
+DWG. NO. REV. SHT.
+
+REVISION
+
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+F
+
+APPROVED
+
+F
+
+NLENC0A
+ENC_A
+
+POENC0A
+User-Input[8D] ENC_A
+MCUTop-Level[6D],
+CONFIG
+
+SERIAL WIRE DEBUG
+
+NLENC0SW
+ENC_SW
+
+POENC0SW
+Top-Level[6D], User-Input[8D] ENC_SW
+
+COU1B
+COU1A
+U1A
+14
+PIU1014
+PA0
+15
+PA1
+DNP
+COR22
+R22
+0R 0402 PIU1016
+16
+PA2
+17
+PIU1017
+PA3
+20
+PIU1020
+PA4
+ENC_A
+21
+PIU1021
+PA5
+ENC_B
+22
+PA6
+ENC_SW
+23
+PIU1023 PA7
+
+26
+PB0 PIU1026
+27
+PB1
+28
+PB2 PIU1028
+55
+PB3 PIU1055
+56
+PB4 PIU1056
+57
+PB5 PIU1057
+58
+PB6
+59
+PB7 PIU1059
+
+41
+PIU1041
+PA8
+42
+PIU1042
+PA9
+43
+PIU1043
+PA10
+44
+PIU1044 PA11
+45
+PIU1045 PA12
+46
+PIU1046
+PA13
+49
+PIU1049
+PA14
+50
+PIU1050
+PA15
+
+61
+PB8
+62
+PB9 PIU1062
+29
+PB10 PIU1029
+30
+PB11 PIU1030
+33
+PB12 PIU1033
+34
+PB13 PIU1034
+35
+PB14 PIU1035
+36
+PB15 PIU1036
+
+POV0SHUNT0010040
+POV0SHUNT04
+POV0SHUNT03
+POV0SHUNT02
+POV0SHUNT01
+V_SHUNT_[1..4]
+PIR2201
+
+PGND
+
+PIR2202
+
+PIU1015
+
+USB-FS
+
+NLESD0USB0D0N
+ESD-USB-D_N
+NLESD0USB0D0P
+ESD-USB-D_P
+
+ESD-USB-D_N
+ESD-USB-D_P
+
+NLSWD0SWDIO
+SWD_SWDIO
+NLSWD0SWCLK
+SWD_SWCLK
+
+POSCL1
+Top-Level[5C], ADC+DAC[4E] SCL1
+
++3V3
+
+POO\F\F\
+OFF
+Top-Level[5D], Power[8F]
+NLSWD0SWO
+SWD_SWO
+
+PIU1058
+
+POSDA1 Top-Level[5C], ADC+DAC[4E]
+SDA1
+
+PIU1040
+
+D
+
+10
+9
+8
+PIJ108
+7
+PIJ107
+6
+PIJ106
+
+PIJ101
+
+PIJ1010
+
+PIJ102
+
+PIJ109
+
+SAMTEC
+
+PIU1061
+
+8
+54
+PC0
+PD2 PIU1054
+9
+PIU109 PC1
+10
+5
+PIU1010
+PC2
+PF0-OSC_IN(PF0) PIU105
+11
+6
+PIU1011
+PC3
+PF1-OSC_OUT(PF1) PIU106
+24
+18
+PIU1024 PC4
+PF4 PIU1018
+25
+PIU1025 PC5
+37
+60
+PIU1037 PC6
+BOOT0 PIU1060
+38
+PIU1038 PC7
+39
+7
+PIU1039
+PC8
+NRST PIU107
+40
+PC9
+51
+PIU1051 PC10
+52
+PIU1052 PC11
+53
+PIU1053 PC12
+2
+PIU102
+PC13
+3
+PC14-OSC32_IN(PC14)
+4
+PIU104 PC15-OSC32_OUT(PC15)
+
+Top-Level[6D], User-Input[7F] POFAN0TACH
+FAN_TACH
+
+1
+2
+3
+PIJ103
+4
+PIJ104
+5
+PIJ105
+
+SWD_SWO
+SWD_SWDIO
+SWD_SWCLK
+NRST
+
+POFAN0EN Top-Level[6D], User-Input[8F]
+FAN-EN
+
+PGND
+E
+
+PIC102
+
+COY1
+Y1
+
+PIU108
+
+VSENSE
+DEV_DET
+
+COJ1
+J1
+
+PIU1027
+
+PIU1022
+
+POUSB0FS0VSENSE
+POUSB0FS
+POUSB0FS0ESD0USB0D0P
+POUSB0FS0ESD0USB0D0N
+Top-Level[5D], Connectors[7E] POUSB0FS0DEV0DET
+USB-FS
+
+DATE
+
+NLENC0B
+ENC_B
+
+Top-Level[6D], User-Input[8E] POENC0B
+ENC_B
+
+E
+
+DESCRIPTION
+
+PIC202
+
+NLOSC0OUT
+OSC_OUT
+
+1
+PIY101
+
+COC2
+C2
+
+3
+PIY103
+2
+GND PIY102
+4
+GND PIY104
+
+6pF
+PIC201 0402
+
+PIC302
+
+COSW1
+SW1
+1PISW101
+2
+PISW102
+SWITCH, SPST, 0.05A, 12V
+
+COC1
+C1
+100n
+
+PIC101 0402
+
+OSC_OUT
+
+COC3
+C3
+6pF
+0402
+PIC301
+
+PGND
+
+PGND
+
+25MHz
+
+NLNRST
+NRST
+
+PIR102
+
+PGND
+
+PGND
+
+PGND
+
+COR1
+R1
+10k
+
+D
+
+PIR101 0402
+
+PIU103
+
++3V3
+PGND
+
+STM32F303RCT6
+
+PIR50 2
+
+COR50
+R50
+10k
+
+PIR50 1402
+NLFAN0TACH03V3
+FAN_TACH_3V3
+
+PIU101
+
+PIC501
+
+C5
+COC5
+
+C6
+COC6
+100n
+100n
+0402 PIC601 0402
+
+PIC702
+
+C7
+COC7
+100n
+PIC701 0402
+
+PIC802
+
+C8
+COC8
+
+4u7
+PIC801 0603
+
+3
+
+PIQ1 03
+
+1PIQ1101
+
+R51
+COR51
+10k
+PIR5101402
+
+COQ11
+Q11
+360mW
+
+C
+
+PIQ1 02
+
+PIU1019
+
+13
+
+PIU1013
+
+PIC902
+
+PIC10 2
+
+C9
+COC9
+
+10n
+PIC901 0402
+
+PGND
+
+VDDA/VREF+
+
+12
+VSSA/VREF- PIU1012
+
+PGND
+
+STM32F303RCT6
+C10
+COC10
+1u
+
+PIC10 1 0603
+
+PGND
+
+PIQ1203
+
+1PIQ1201
+
+FAN_TACH
+
+2
+
+PGND
+B
+
+Q12
+COQ12
+360mW
+
+PIQ1202
+B
+
+*
+
+DWG. NO.
+
+PGND
+
+APPROVALS
+ENG:
+DSN:
+CHK:
+
+DATE
+
+*
+*
+
+PROJECT REVISION:
+
+*
+
+TITLE
+
+ASSY DWG:
+
+7
+
+6
+
+5
+
+4
+
+3
+
+DOCUMENT REVISION:
+
+DESIGN ITEM:
+
+Version control disabled Version control disabled
+
+Power
+
+BOM:
+
+8
+
+*
+*
+*
+*
+
+PROJECT
+
+REFERENCE DOCUMENTS
+
+A
+
+SIZE
+
+FAB DWG:
+
+B
+
+PCB DWG:
+
+SCALE:
+
+SHT. REV.
+
+100n
+0402
+
+PIC602
+
+PIR5102
+
+63
+VSS_1 PIU1063
+31
+VSS_2 PIU1031
+47
+VSS_3 PIU1047
+
+3
+
+PIC401
+
+C4
+COC4
+
+PIC502
+
+VBAT
+
+64
+PIU1064 VDD_1
+32
+PIU1032 VDD_2
+48
+PIU1048 VDD_3
+19
+VDD_4
+
+C
+
+PIC402
+
++3V3
+
+U1B
+1
+
+2
+
+MCU POWER
++3V3
+
+CAGE CODE
+
+FILE NAME
+
+2
+
+A
+
+DWG NO.
+
+STM32.SchDoc
+
+REV
+
+SHEET
+
+1
+
+*
+
+OF
+
+*
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+*
+
+1
+
+DWG. NO. REV. SHT.
+
+REVISION
+
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+DESCRIPTION
+
+DATE
+
+APPROVED
+
+F
+
+F
+
+USB-FS
+
+U_Connectors
+Connectors.SchDoc
+U_Power
+Power.SchDoc
+
+E
+
+E
+
+USB-FS
+
+U_STM32
+STM32.SchDoc
+
+U_User-Input
+User-Input.SchDoc
+FAN-EN
+FAN_TACH
+
+FAN_TACH
+
+OFF
+
+L_RESET
+
+D
+
+L_RESET
+
+V_SHUNT_[1..4]
+
+ENC_A
+ENC_B
+ENC_SW
+
+SDA1
+
+ENC_A
+ENC_B
+ENC_SW
+
+GATE_DISABLE
+
+OFF
+
+SCL1
+
+D
+
+GATE_DISABLE
+
+FAN-EN
+
+I_SET
+
+V_SHUNT_2
+
+V_SHUNT_3
+
+V_SHUNT_4
+
+V_SHUNT_3
+
+V_SHUNT_4
+
+B
+DWG. NO.
+
+V_SHUNT_1
+V_SHUNT_1
+
+B
+
+V_SHUNT_2
+
+C
+
+I_SET
+
+C
+
+V_SHUNT_[1..4]
+
+U_Power-Tree
+Power-Tree.SchDoc
+
+*
+
+SDA1
+U_ADC+DAC
+ADC+DAC.SchDoc
+
+APPROVALS
+ENG:
+DSN:
+CHK:
+
+A
+
+DATE
+
+Note: Layout Reminder
+
+*
+*
+
+PROJECT REVISION:
+
+*
+
+TITLE
+
+Note: Layout Necessary/Suggested
+
+Note: Design Critical Parameter
+
+Note: Layout Critical Parameter
+
+8
+
+7
+
+ASSY DWG:
+
+6
+
+5
+
+4
+
+3
+
+DOCUMENT REVISION:
+
+DESIGN ITEM:
+
+Version control disabled Version control disabled
+
+Power
+
+BOM:
+
+Note: Design Note, General
+
+*
+*
+*
+*
+
+PROJECT
+
+REFERENCE DOCUMENTS
+
+Note: Design/reminder ("TODO")
+
+SIZE
+
+FAB DWG:
+
+B
+
+PCB DWG:
+
+SCALE:
+
+SHT. REV.
+
+SCL1
+
+CAGE CODE
+
+FILE NAME
+
+2
+
+A
+
+DWG NO.
+
+Top-Level.SchDoc
+
+REV
+
+SHEET
+
+1
+
+*
+
+OF
+
+*
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+*
+
+1
+
+DWG. NO. REV. SHT.
+
+REVISION
+
+THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR
+HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+DESCRIPTION
+
+DATE
+
+APPROVED
+
+F
+
+F
++3V3
+
+FAN CONTROL
+POFAN0TACH
+POFAN0ENTop-Level[6D], STM32[3B], STM32[6D] FAN_TACH
+Top-Level[6D], STM32[4E]
+FAN-EN
+
+PIR30 2
+
+COQ9
+Q9
+4
+G
+1
+PIQ901
+S
+2
+PIQ902
+S
+3
+PIQ903
+S
+
+COR30
+R30
+
+10k
+PIR30 1 0402
+
+COJ3
+J3
+
+COJ7
+J7
+S1
+PIJ70S1
+
++12V
+
+1
+2
+
+2
+PIJ702
+
+ENC_B
+
+3
+PIJ303
+
+3 PIJ302
+2
+
+3
+
+ENC_A
+
+PIJ703
+
+8
+D
+7
+D PIQ907
+6
+D PIQ906
+5
+D PIQ905
+
+PIQ904
+
+PIQ908
+
+4
+PIJ704
+
+4
+
+PGND
+
+4
+
+PIJ304
+
+S2
+
+5
+
+PIJ70S2
+
+5055670431
+
+ENC_SW
+
+5
+PIJ305
+
+B5B-XH-A
+
+IAUC120N06S5L032ATMA1
+E
+
+1
+
+PIJ301
+
+1
+
+PIJ701
+
+E
+
+PGND
+PGND
+
+Top-Level[6D], STM32[7F] POENC0B
+ENC_B
+
+NLENC0B
+ENC_B
+pot finish schematic logic config
+
+POENC0A
+Top-Level[6D], STM32[7F] ENC_A
+
+NLENC0A
+ENC_A
+
+NLENC0SW
+ENC_SW
+
+- don't forget the add button
+matrix
+
+POENC0SW
+Top-Level[6D], STM32[7F] ENC_SW
+
+D
+
+C
+
+C
+
+B
+
+B
+
+*
+APPROVALS
+ENG:
+DSN:
+CHK:
+
+DATE
+
+*
+*
+
+PROJECT REVISION:
+
+*
+
+TITLE
+
+ASSY DWG:
+
+7
+
+6
+
+5
+
+4
+
+3
+
+DOCUMENT REVISION:
+
+DESIGN ITEM:
+
+Version control disabled Version control disabled
+
+Power
+
+BOM:
+
+8
+
+*
+*
+*
+*
+
+PROJECT
+
+REFERENCE DOCUMENTS
+
+A
+
+SIZE
+
+FAB DWG:
+
+B
+
+PCB DWG:
+
+SCALE:
+
+SHT. REV.
+
+DWG. NO.
+
+D
+
+CAGE CODE
+
+FILE NAME
+
+2
+
+A
+
+DWG NO.
+
+User-Input.SchDoc
+
+REV
+
+SHEET
+
+1
+
+*
+
+OF
+
+*
+
+

@@ -82,6 +82,10 @@ void Error_Handler(void);
 #define ENC_SW_EXTI_IRQn EXTI9_5_IRQn
 #define OFF_Pin GPIO_PIN_0
 #define OFF_GPIO_Port GPIOB
+#define LOAD_3_Pin GPIO_PIN_1
+#define LOAD_3_GPIO_Port GPIOB
+#define LOAD_2_Pin GPIO_PIN_5
+#define LOAD_2_GPIO_Port GPIOC
 #define FAN_TACH_Pin GPIO_PIN_6
 #define FAN_TACH_GPIO_Port GPIOC
 #define SCL1_Pin GPIO_PIN_15
@@ -92,6 +96,8 @@ void Error_Handler(void);
 #define SDA1_GPIO_Port GPIOB
 #define FAN_EN_Pin GPIO_PIN_9
 #define FAN_EN_GPIO_Port GPIOB
+#define LOAD_1_Pin GPIO_PIN_10
+#define LOAD_1_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

@@ -1,0 +1,108 @@
+                         8                                           7                                   6                                  5                                                                       4                                              3                                         *                2                                                  1
+                                                                                                                                                                                                                                                                                              DWG. NO. REV. SHT.
+
+    THIS DOCUMENT AND THE DATA DISCLOSED HEREIN OR                                                                                                                                                                                                                                                                 REVISION                     DESCRIPTION                     DATE           APPROVED
+    HEREWITH IS THE PROPERTY OF ALTIUM LIMITED AND MAY
+    BE FREELY DISTRIBUTED IN WHOLE. NO RIGHTS ARE
+    RESERVED OR EXPRESS OR IMPLIED WARANTEE GIVEN.
+
+
+
+F                                                                                                                                                                                                                                                                                                                                                                                                          F
+
+
+
+
+                                                                                                                        U_Connectors
+                                                                                                                        Connectors.SchDoc
+
+
+                                                                                                                                   USB-FS
+                                                                                                                                                                                                                                                    U_Power
+                                                                                                                                                                                                                                                    Power.SchDoc
+
+E                                                                                                                                                                                                                                                                                                                                                                                                          E
+
+
+
+
+                                                                                                         U_STM32
+                                                                                                         STM32.SchDoc
+
+
+
+                                                                                                                                   USB-FS
+                                                                          U_User-Input
+                                                                          User-Input.SchDoc                                                 GATE_DISABLE                                                       GATE_DISABLE
+
+D                                                                                               FAN-EN       FAN-EN                                              OFF                                           OFF                                                                                                                                                                                         D
+                                                                                              FAN_TACH       FAN_TACH
+                                                                                                                                                       L_RESET                                                 L_RESET
+
+
+                                                                                                ENC_A        ENC_A
+                                                                                                ENC_B        ENC_B
+                                                                                               ENC_SW        ENC_SW
+
+
+
+
+                                                                                                                                                              V_SHUNT_[1..4]
+                                                                                                                                                                                                               I_SET
+
+                                                                                                                                                SDA1   SCL1
+
+
+C                                                                                                                                                                                                                                                                                                                                                                                                          C
+
+
+
+
+                                                                                                                                                                                                   V_SHUNT_1    V_SHUNT_2   V_SHUNT_3   V_SHUNT_4
+
+
+
+
+                                                                                                                                                                                                   V_SHUNT_1    V_SHUNT_2   V_SHUNT_3   V_SHUNT_4
+B                                                                                                                                                                                   I_SET                                                                                                                                                                                                                  B
+
+                                                                                                                                                                                                                                                                                                                                                                                                               DWG. NO.
+
+
+
+
+                                                                                                                                                                                  V_SHUNT_[1..4]
+                                                                                                                                                                                  SCL1
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                               SHT. REV.
+                                                                                                                                                                                  SDA1
+                                                                                                                                                                                                                                                                                                                                                                                                           *
+                                                                                                                                                                               U_ADC+DAC
+                                                                                                                                                                               ADC+DAC.SchDoc                                                                                                             PROJECT                                                                      *
+                                                                                                                                                 U_Power-Tree                                                                                                                  APPROVALS        DATE
+                                                                                                                                                                                                                                                                                                                                                                                       *
+                                                                                                                                                 Power-Tree.SchDoc                                                                                                     ENG:                                                                                                            *
+                                                                                                                                                                                                                                                                               *
+                                                                                                                                                                                                                                                                       DSN:
+                                                                                                                                                                                                                                                                                                                                                                                       *
+                                                                                                                                                                                                                                                                               *                          PROJECT REVISION:               DOCUMENT REVISION:     DESIGN ITEM:
+                                                                                                                                                                                                                                                                       CHK:
+                                                                                                                                                                                                                                                                                                                                  Version control disabled Version control disabled
+                                                                                                                                                                                                                                                                               *                          TITLE
+
+A
+    Note: Design/reminder ("TODO")     Note: Layout Reminder                                                                                                                                                                                                           BOM:
+                                                                                                                                                                                                                                                                              REFERENCE DOCUMENTS
+                                                                                                                                                                                                                                                                                                                   Power                                                                                   A
+
+                                                                                                                                                                                                                                                                       ASSY DWG:                            SIZE    CAGE CODE        DWG NO.                                                         REV
+    Note: Design Note, General         Note: Layout Necessary/Suggested
+
+    Note: Design Critical Parameter    Note: Layout Critical Parameter
+                                                                                                                                                                                                                                                                       FAB DWG:
+                                                                                                                                                                                                                                                                                                             B
+                                                                                                                                                                                                                                                                       PCB DWG:                           SCALE:              FILE NAME                                    SHEET                OF
+                                                                                                                                                                                                                                                                                                                                          Top-Level.SchDoc                                 *         *
+                         8                                           7                                   6                                  5                                                                       4                                              3                                                          2                                                  1
+

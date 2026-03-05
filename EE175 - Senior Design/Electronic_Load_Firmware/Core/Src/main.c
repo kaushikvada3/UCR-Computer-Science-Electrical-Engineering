@@ -33,23 +33,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MCP4725_ADDR        (0x60U << 1)   /* 7-bit 0x60 shifted for HAL */
-#define DAC_HALF_SCALE      2048U          /* midpoint of 12-bit range (0-4095) */
 #define REPORT_PERIOD_MS    1000U
-
-/* DAC voltage reference (measured at MCP4725 VDD pin) */
-#define DAC_VREF_MV         3500U
-#define DAC_CODE_TO_MV(c)   ((uint32_t)(c) * DAC_VREF_MV / 4096U)
-#define DAC_MV_TO_CODE(mv)  ((uint16_t)((uint32_t)(mv) * 4096U / DAC_VREF_MV))
 
 /* ADC reference (MCU VDD) */
 #define ADC_VREF_MV         3300U
 #define ADC_RAW_TO_MV(r)    ((uint32_t)(r) * ADC_VREF_MV / 4096U)
-
-/* VSENSE resistor divider: R35=33.2k (series), R37=82.5k (shunt to GND) */
-#define VSENSE_R_SERIES_OHM 33200U
-#define VSENSE_R_SHUNT_OHM  82500U
-#define VSENSE_RAW_TO_MV(r) (ADC_RAW_TO_MV(r) * (VSENSE_R_SERIES_OHM + VSENSE_R_SHUNT_OHM) / VSENSE_R_SHUNT_OHM)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -68,12 +56,20 @@ TIM_HandleTypeDef htim17;
 
 /* USER CODE BEGIN PV */
 extern USBD_HandleTypeDef hUsbDeviceFS;
+extern volatile uint8_t cmd_ready[];
+extern volatile uint8_t cmd_ready_flag;
 
 static volatile uint16_t adc_dma_buf[5]; /* [0..3]=V_SHUNT_1..4, [4]=VSENSE */
 
 static uint32_t last_report_tick_ms = 0U;
 static uint8_t  banner_sent = 0U;
-static char     report_buf[256];
+static char     report_buf[128];
+/* Per-channel load state: 1=ON (GPIO LOW, PNP active), 0=OFF (GPIO HIGH, PNP off)
+ * Index 0=CH1(PB0), 1=CH2(PB10), 2=CH3(PC5), 3=CH4(PB1) */
+static uint8_t  chan_enabled[4] = {1U, 1U, 1U, 1U};  /* all ON at startup */
+
+static GPIO_TypeDef * const chan_port[4] = {OFF_GPIO_Port, LOAD_1_GPIO_Port, LOAD_2_GPIO_Port, LOAD_3_GPIO_Port};
+static const uint16_t       chan_pin[4]  = {OFF_Pin,       LOAD_1_Pin,       LOAD_2_Pin,       LOAD_3_Pin};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,8 +82,6 @@ static void MX_TIM3_Init(void);
 static void MX_TIM17_Init(void);
 /* USER CODE BEGIN PFP */
 static uint8_t  usb_is_configured(void);
-static void     dac_write_raw(uint16_t val);
-static uint16_t dac_read_raw(void);
 static HAL_StatusTypeDef clock_try_hse30_pll72_usb48(void);
 static HAL_StatusTypeDef clock_try_hsi_pll48_usb48(void);
 /* USER CODE END PFP */
@@ -97,34 +91,6 @@ static HAL_StatusTypeDef clock_try_hsi_pll48_usb48(void);
 static uint8_t usb_is_configured(void)
 {
   return (hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED) ? 1U : 0U;
-}
-
-/* ---- MCP4725 DAC driver ---- */
-static void dac_write_raw(uint16_t val)
-{
-  uint8_t buf[2];
-  if (val > 4095U) val = 4095U;
-  /* MCP4725 fast-mode write (2 bytes after I2C address):
-   *   Byte 0: [C1=0 | C0=0 | PD1=0 | PD0=0 | D11 | D10 | D9 | D8]
-   *   Byte 1: [D7 | D6 | D5 | D4 | D3 | D2 | D1 | D0]
-   */
-  buf[0] = (uint8_t)((val >> 8) & 0x0FU);
-  buf[1] = (uint8_t)(val & 0xFFU);
-  (void)HAL_I2C_Master_Transmit(&hi2c1, MCP4725_ADDR, buf, 2, 10);
-}
-
-static uint16_t dac_read_raw(void)
-{
-  uint8_t rx[3];
-  /* MCP4725 read returns 3 bytes:
-   *   rx[0] = status byte (RDY/BSY, POR, PD flags)
-   *   rx[1] = D[11:4]  (upper 8 bits of DAC register)
-   *   rx[2] = D[3:0] in bits [7:4]  (lower 4 bits, left-aligned)
-   * Reconstruct: (rx[1] << 4) | (rx[2] >> 4)
-   */
-  if (HAL_I2C_Master_Receive(&hi2c1, MCP4725_ADDR, rx, 3, 10) != HAL_OK)
-    return 0xFFFFU;  /* I2C error sentinel */
-  return (uint16_t)(((uint16_t)rx[1] << 4) | (rx[2] >> 4));
 }
 
 static HAL_StatusTypeDef clock_try_hse30_pll72_usb48(void)
@@ -211,6 +177,20 @@ static HAL_StatusTypeDef clock_try_hsi_pll48_usb48(void)
   return HAL_OK;
 }
 
+/* ---- Load channel helpers ---- */
+static void chan_apply(uint8_t ch)
+{
+  if (ch >= 4U) return;
+  /* GPIO LOW = PNP ON = load active; GPIO HIGH = PNP OFF = no load */
+  HAL_GPIO_WritePin(chan_port[ch], chan_pin[ch],
+                    chan_enabled[ch] ? GPIO_PIN_RESET : GPIO_PIN_SET);
+}
+
+static void chan_apply_all(void)
+{
+  for (uint8_t i = 0; i < 4; i++) chan_apply(i);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -253,11 +233,14 @@ int main(void)
   MX_TIM17_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-  dac_write_raw(DAC_HALF_SCALE);   /* write half-scale (2048 / 0x800) to DAC at startup */
-  hi2c1.ErrorCode;
-  hi2c1.State;
   HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buf, 5);
+
+  chan_apply_all();  /* turn on all 4 load channels at startup */
+
+  /* Start fan PWM at 100% duty cycle (max speed, always on) */
+  __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, 1919U);
+  HAL_TIM_PWM_Start(&htim17, TIM_CHANNEL_1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -265,6 +248,73 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+    /* ---- Process incoming USB command ---- */
+    if (cmd_ready_flag)
+    {
+      const char *cmd = (const char *)cmd_ready;
+
+      if (cmd[0] == 'E' || cmd[0] == 'e')
+      {
+        /* "E <0/1>"  — enable (1) or disable (0) ALL load channels */
+        const char *p = cmd + 1;
+        while (*p == ' ') p++;
+        uint8_t en = (*p == '1') ? 1U : 0U;
+        for (uint8_t i = 0; i < 4; i++) chan_enabled[i] = en;
+        chan_apply_all();
+
+        int n = snprintf(report_buf, sizeof(report_buf),
+            "OK EN=%u CH1=%u CH2=%u CH3=%u CH4=%u\r\n",
+            (unsigned)en,
+            (unsigned)chan_enabled[0], (unsigned)chan_enabled[1],
+            (unsigned)chan_enabled[2], (unsigned)chan_enabled[3]);
+        if (n > 0 && usb_is_configured() && CDC_IsReady_FS())
+          (void)CDC_Transmit_FS((uint8_t *)report_buf, (uint16_t)n);
+      }
+      else if (cmd[0] == 'S' || cmd[0] == 's')
+      {
+        /* "S"  — status query: immediate telemetry snapshot */
+        uint32_t s1_mv = ADC_RAW_TO_MV(adc_dma_buf[0]);
+        uint32_t s2_mv = ADC_RAW_TO_MV(adc_dma_buf[1]);
+        uint32_t s3_mv = ADC_RAW_TO_MV(adc_dma_buf[2]);
+        uint32_t s4_mv = ADC_RAW_TO_MV(adc_dma_buf[3]);
+
+        int n = snprintf(report_buf, sizeof(report_buf),
+            "S1=%lu S2=%lu S3=%lu S4=%lu CH1=%u CH2=%u CH3=%u CH4=%u\r\n",
+            (unsigned long)s1_mv, (unsigned long)s2_mv,
+            (unsigned long)s3_mv, (unsigned long)s4_mv,
+            (unsigned)chan_enabled[0], (unsigned)chan_enabled[1],
+            (unsigned)chan_enabled[2], (unsigned)chan_enabled[3]);
+        if (n > 0 && usb_is_configured() && CDC_IsReady_FS())
+          (void)CDC_Transmit_FS((uint8_t *)report_buf, (uint16_t)n);
+      }
+      else if (cmd[0] == 'L' || cmd[0] == 'l')
+      {
+        /* "L <1-4> <0/1>"  — toggle individual load channel */
+        const char *p = cmd + 1;
+        while (*p == ' ') p++;
+        uint8_t ch_num = (*p >= '1' && *p <= '4') ? (*p - '1') : 0xFFU;
+        p++;
+        while (*p == ' ') p++;
+        uint8_t state = (*p == '1') ? 1U : 0U;
+
+        if (ch_num < 4U) {
+          chan_enabled[ch_num] = state;
+          chan_apply(ch_num);
+
+          int n = snprintf(report_buf, sizeof(report_buf),
+              "OK CH%u=%u CH1=%u CH2=%u CH3=%u CH4=%u\r\n",
+              (unsigned)(ch_num + 1), (unsigned)state,
+              (unsigned)chan_enabled[0], (unsigned)chan_enabled[1],
+              (unsigned)chan_enabled[2], (unsigned)chan_enabled[3]);
+          if (n > 0 && usb_is_configured() && CDC_IsReady_FS())
+            (void)CDC_Transmit_FS((uint8_t *)report_buf, (uint16_t)n);
+        }
+      }
+
+      cmd_ready_flag = 0;
+    }
+
     if (usb_is_configured() && CDC_IsReady_FS())
     {
       uint32_t now = HAL_GetTick();
@@ -272,12 +322,10 @@ int main(void)
       if (!banner_sent)
       {
         int n = snprintf(report_buf, sizeof(report_buf),
-            "Electronic Load Telemetry -- 1 s reports\r\n"
-            "DAC setpoint: 0x%03X = %lu mV (Vref=%u mV)\r\n"
-            "Columns: DAC_set | DAC_rb | VSENSE | S1 | S2 | S3 | S4  (all mV)\r\n",
-            (unsigned)DAC_HALF_SCALE,
-            (unsigned long)DAC_CODE_TO_MV(DAC_HALF_SCALE),
-            (unsigned)DAC_VREF_MV);
+            "\r\nElectronic Load Telemetry\r\n"
+            "CH1=%u CH2=%u CH3=%u CH4=%u\r\n\r\n",
+            (unsigned)chan_enabled[0], (unsigned)chan_enabled[1],
+            (unsigned)chan_enabled[2], (unsigned)chan_enabled[3]);
         (void)CDC_Transmit_FS((uint8_t *)report_buf, (uint16_t)n);
         banner_sent = 1U;
         last_report_tick_ms = now;
@@ -286,34 +334,18 @@ int main(void)
       {
         last_report_tick_ms = now;
 
-        /* DAC readback over I2C */
-        uint16_t dac_rb = dac_read_raw();
-        uint32_t dac_rb_mv = (dac_rb == 0xFFFFU) ? 0xFFFFFFFFUL
-                                                  : DAC_CODE_TO_MV(dac_rb);
+        /* ADC snapshot — shunt readings (1 mΩ, no sense amp) */
+        uint32_t s1_mv = ADC_RAW_TO_MV(adc_dma_buf[0]);
+        uint32_t s2_mv = ADC_RAW_TO_MV(adc_dma_buf[1]);
+        uint32_t s3_mv = ADC_RAW_TO_MV(adc_dma_buf[2]);
+        uint32_t s4_mv = ADC_RAW_TO_MV(adc_dma_buf[3]);
 
-        /* ADC snapshot (DMA keeps buffer current) */
-        uint32_t s1_mv     = ADC_RAW_TO_MV(adc_dma_buf[0]);
-        uint32_t s2_mv     = ADC_RAW_TO_MV(adc_dma_buf[1]);
-        uint32_t s3_mv     = ADC_RAW_TO_MV(adc_dma_buf[2]);
-        uint32_t s4_mv     = ADC_RAW_TO_MV(adc_dma_buf[3]);
-        uint32_t vsense_mv = VSENSE_RAW_TO_MV(adc_dma_buf[4]);
-
-        int n;
-        if (dac_rb == 0xFFFFU)
-          n = snprintf(report_buf, sizeof(report_buf),
-              "DAC_set=%lumV DAC_rb=I2C_ERR | VSENSE=%lumV | S1=%lumV S2=%lumV S3=%lumV S4=%lumV\r\n",
-              (unsigned long)DAC_CODE_TO_MV(DAC_HALF_SCALE),
-              (unsigned long)vsense_mv,
-              (unsigned long)s1_mv, (unsigned long)s2_mv,
-              (unsigned long)s3_mv, (unsigned long)s4_mv);
-        else
-          n = snprintf(report_buf, sizeof(report_buf),
-              "DAC_set=%lumV DAC_rb=%lumV | VSENSE=%lumV | S1=%lumV S2=%lumV S3=%lumV S4=%lumV\r\n",
-              (unsigned long)DAC_CODE_TO_MV(DAC_HALF_SCALE),
-              (unsigned long)dac_rb_mv,
-              (unsigned long)vsense_mv,
-              (unsigned long)s1_mv, (unsigned long)s2_mv,
-              (unsigned long)s3_mv, (unsigned long)s4_mv);
+        int n = snprintf(report_buf, sizeof(report_buf),
+            "S1=%lu S2=%lu S3=%lu S4=%lu CH1=%u CH2=%u CH3=%u CH4=%u\r\n",
+            (unsigned long)s1_mv, (unsigned long)s2_mv,
+            (unsigned long)s3_mv, (unsigned long)s4_mv,
+            (unsigned)chan_enabled[0], (unsigned)chan_enabled[1],
+            (unsigned)chan_enabled[2], (unsigned)chan_enabled[3]);
         if (n > 0)
           (void)CDC_Transmit_FS((uint8_t *)report_buf, (uint16_t)n);
       }
@@ -678,7 +710,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(OFF_GPIO_Port, OFF_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, OFF_Pin|LOAD_3_Pin|LOAD_1_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LOAD_2_GPIO_Port, LOAD_2_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : DEV_DET_Pin */
   GPIO_InitStruct.Pin = DEV_DET_Pin;
@@ -698,12 +733,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(ENC_SW_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : OFF_Pin */
-  GPIO_InitStruct.Pin = OFF_Pin;
+  /*Configure GPIO pins : OFF_Pin LOAD_3_Pin LOAD_1_Pin */
+  GPIO_InitStruct.Pin = OFF_Pin|LOAD_3_Pin|LOAD_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(OFF_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LOAD_2_Pin */
+  GPIO_InitStruct.Pin = LOAD_2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LOAD_2_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 2, 0);
