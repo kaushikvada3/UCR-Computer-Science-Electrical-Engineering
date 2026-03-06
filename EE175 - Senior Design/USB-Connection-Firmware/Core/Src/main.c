@@ -33,18 +33,21 @@
 #define SYS_CTRL2         0x05
 #define VC1_HI_BYTE       0x0C
 #define CC_HI_BYTE        0x32  // Current measurement high byte
-
-// BQ76930 SYS_CTRL2 bit masks
-#define SYS_CTRL2_CC_EN   0x40   // Bit 6: Coulomb counter enable
-#define SYS_CTRL2_DSG_ON  0x02   // Bit 1: Discharge FET driver enable
-#define SYS_CTRL2_CHG_ON  0x01   // Bit 0: Charge FET driver enable
-
-// BQ76930 protection register addresses
-#define PROTECT1          0x06
-#define PROTECT2          0x07
-#define PROTECT3          0x08
+#define PROTECT2          0x07  // Overcurrent trip delay & threshold
+#define ADCGAIN1          0x50
+#define ADCGAIN2          0x59
+#define ADCOFFSET         0x51
 #define OV_TRIP           0x09
 #define UV_TRIP           0x0A
+#define CELLBAL1          0x01
+#define CELLBAL2          0x02
+
+#define EVENS1             0x0A
+#define ODDS1              0x15
+#define EVENS2             0x15
+#define ODDS2              0x0A
+
+#define BAL_ALT_PERIOD_MS 5000      // 5-second alternation period
 
 // Current Shunt Parameters
 #define SHUNT_RESISTOR    0.020f  // 20mOhm shunt resistor
@@ -83,7 +86,7 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim17;
 
 /* USER CODE BEGIN PV */
-char data_buffer[512];
+char data_buffer[640];
 uint8_t bms_addr = 0;
 uint8_t use_crc = 0; // 0 = No CRC, 1 = Use CRC
 
@@ -100,6 +103,23 @@ uint8_t  fan_rpm_idx = 0;                      // Current index into averaging b
 uint8_t  fan_rpm_filled = 0;                   // 1 once buffer has been fully populated
 uint8_t  fan_auto_mode = 1;                    // 1 = auto (temp-based), 0 = manual (dashboard controls)
 uint8_t  fan_manual_duty = 0;                  // Manual duty cycle set by dashboard (0-100%)
+
+// Cell Balancing Variables
+uint8_t  bal_enabled = 0;           // 0 = off, 1 = on
+uint16_t bal_threshold_mv = 15;     // delta threshold in mV
+uint16_t bal_active_mask = 0;       // bitmask: bit 0=cell1 ... bit 9=cell10
+#define BAL_MIN_CELL_MV  2850       // no balancing below 2.85V
+#define BAL_MAX_TEMP_C   50.0f      // no balancing above 50C
+uint8_t  bal_alt_enabled = 0;       // 0 = off, 1 = alternating even/odd mode
+uint8_t  bal_alt_phase = 0;         // 0 = odd cells, 1 = even cells
+uint32_t bal_alt_last_toggle = 0;   // HAL_GetTick() of last phase switch
+
+// Charge Mode Variables
+uint8_t  charge_mode = 0;           // 0 = off (discharge mode), 1 = charge mode
+uint8_t  thermal_shutdown = 0;      // 1 = FETs disabled due to overtemp
+#define  CHARGE_BAL_THRESHOLD 3.800f // balance cells above 3.8V during charging
+#define  THERMAL_CUTOFF_C    60.0f   // disable FETs above 60C
+#define  THERMAL_RESUME_C    55.0f   // re-enable FETs below 55C
 
 // USB Command receive (from usbd_cdc_if.c)
 extern volatile uint8_t cmd_ready[];
@@ -217,19 +237,10 @@ void BQ_ReadRegs(uint8_t reg, uint8_t *data, uint16_t count) {
     if (bms_addr == 0) return;
 
     if (use_crc) {
-        // Pack [reg][CRC(addr_W, reg)] into a 16-bit memory address so
-        // HAL_I2C_Mem_Read sends both bytes before the RESTART condition.
-        // Wire format: [START][addr_W][reg][CRC][RESTART][addr_R][d1][c1][d2][c2]...[STOP]
-        uint8_t crc_input[2] = {bms_addr, reg};
-        uint8_t crc = CRC8(crc_input, 2);
-        uint16_t mem_addr = ((uint16_t)reg << 8) | crc;
-
         uint8_t rx_buffer[128];
-        HAL_I2C_Mem_Read(&hi2c1, bms_addr, mem_addr, I2C_MEMADD_SIZE_16BIT,
-                         rx_buffer, count * 2, 100);
-
-        for(int i = 0; i < count; i++) {
-            data[i] = rx_buffer[i * 2];  // Data bytes at even indices, CRC at odd
+        HAL_I2C_Mem_Read(&hi2c1, bms_addr, reg, I2C_MEMADD_SIZE_8BIT, rx_buffer, count * 2, 100);
+        for(int i=0; i<count; i++) {
+            data[i] = rx_buffer[i*2];
         }
     } else {
         HAL_I2C_Mem_Read(&hi2c1, bms_addr, reg, I2C_MEMADD_SIZE_8BIT, data, count, 100);
@@ -256,53 +267,58 @@ float BQ_ReadCurrent(void) {
 
 void BQ_Init(void) {
     if (bms_addr == 0) return;
+    BQ_WriteReg(SYS_STAT, 0xFF);
+    BQ_WriteReg(SYS_CTRL1, 0x10);
+    BQ_WriteReg(SYS_CTRL2, 0xC0); // 0x40 if you want to re-enable OV, UV, OCD, & SCD delays
 
-    // Clear faults with read-back verification.
-    // The BQ769x0 is battery-powered so faults persist across STM32 resets.
-    uint8_t stat = 0;
-    for (int attempt = 0; attempt < 10; attempt++) {
-        BQ_WriteReg(SYS_STAT, 0xFF);
-        HAL_Delay(50);
-        BQ_ReadRegs(SYS_STAT, &stat, 1);
-        if ((stat & 0x1F) == 0) break;  // Fault bits [4:0] all cleared
+}
+
+// --- CELL BALANCING ---
+void BQ_UpdateBalance(float *cell_v, int cell_count, float max_temp) {
+    bal_active_mask = 0;
+
+    if (!bal_enabled) {
+        BQ_WriteReg(CELLBAL1, 0x00);
+        BQ_WriteReg(CELLBAL2, 0x00);
+        return;
     }
 
-    // --- Configure protection thresholds BEFORE enabling FETs ---
-    // 10S Li-ion pack, 20mOhm shunt, <1A max discharge
-    //
-    // PROTECT1: RSNS=0, SCD_DELAY=400us, SCD_THRESH=100mV (5A)
-    //   Bits: [RSNS=0][00][SCD_DLY=11][SCD_THR=111] = 0x1F
-    BQ_WriteReg(PROTECT1, 0x1F);
-    HAL_Delay(10);
+    // Find minimum cell voltage
+    float v_min = cell_v[0];
+    for (int i = 1; i < cell_count; i++) {
+        if (cell_v[i] < v_min) v_min = cell_v[i];
+    }
 
-    // PROTECT2: OCD_DELAY=1280ms, OCD_THRESH=50mV (2.5A)
-    //   Bits: [0][OCD_DLY=111][OCD_THR=1111] = 0x7F
-    BQ_WriteReg(PROTECT2, 0x7F);
-    HAL_Delay(10);
+    // Safety: abort if lowest cell below minimum or temperature too high
+    float v_min_mv = v_min * 1000.0f;
+    if (v_min_mv < (float)BAL_MIN_CELL_MV || max_temp > BAL_MAX_TEMP_C) {
+        BQ_WriteReg(CELLBAL1, 0x00);
+        BQ_WriteReg(CELLBAL2, 0x00);
+        return;
+    }
 
-    // PROTECT3: OV_DELAY=8s, UV_DELAY=16s (max delays for noise immunity)
-    //   Bits: [00][OV_DLY=11][UV_DLY=11][00] = 0x3C
-    BQ_WriteReg(PROTECT3, 0x3C);
-    HAL_Delay(10);
+    float threshold_v = (float)bal_threshold_mv / 1000.0f;
+    uint8_t cellbal1 = 0;  // bits [4:0] for cells 1-5
+    uint8_t cellbal2 = 0;  // bits [4:0] for cells 6-10
 
-    // OV_TRIP: ~4.30V per cell (with typical GAIN=382uV/LSB)
-    BQ_WriteReg(OV_TRIP, 0xB0);
-    HAL_Delay(10);
+    for (int i = 0; i < cell_count; i++) {
+        if ((cell_v[i] - v_min) > threshold_v) {
+            bal_active_mask |= (1 << i);
+            if (i < 5) {
+                cellbal1 |= (1 << i);
+            } else {
+                cellbal2 |= (1 << (i - 5));
+            }
+        }
+    }
 
-    // UV_TRIP: ~2.40V per cell (safe cutoff, well below your 3.0V operating point)
-    BQ_WriteReg(UV_TRIP, 0x62);
-    HAL_Delay(10);
-
-    // Enable ADC and discharge FET
-    BQ_WriteReg(SYS_CTRL1, 0x10);
-    HAL_Delay(10);
-    BQ_WriteReg(SYS_CTRL2, SYS_CTRL2_CC_EN | SYS_CTRL2_DSG_ON);
-    HAL_Delay(10);
+    BQ_WriteReg(CELLBAL1, cellbal1);
+    BQ_WriteReg(CELLBAL2, cellbal2);
 }
 
 // --- SCANNER ---
 void Discover_BMS(void) {
-    HAL_StatusTypeDef res;
+	HAL_StatusTypeDef res;
 
     res = HAL_I2C_IsDeviceReady(&hi2c1, 0x08 << 1, 2, 10);
     if (res == HAL_OK) {
@@ -314,7 +330,7 @@ void Discover_BMS(void) {
     res = HAL_I2C_IsDeviceReady(&hi2c1, 0x18 << 1, 2, 10);
     if (res == HAL_OK) {
         bms_addr = 0x18 << 1;
-        use_crc = 1;  // Address 0x18 always requires CRC on BQ769x0
+        use_crc = 0;
         return;
     }
     bms_addr = 0;
@@ -393,6 +409,7 @@ int main(void)
       BQ_Init();
       HAL_Delay(100);
   }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -417,6 +434,22 @@ int main(void)
         cmd_ready_flag = 0;
     }
 
+    uint8_t faultStatus[1] = {0};
+    BQ_ReadRegs(SYS_STAT, faultStatus, 1);
+
+	uint8_t loadPresent[1] = {0};
+	BQ_ReadRegs(SYS_CTRL1, loadPresent, 1);
+	loadPresent[0] = loadPresent[0] & 0x80;
+
+	// --- -1. SET OVERVOLTAGE & UNDERVOLTAGE TRIP TRESHOLDS ---
+	BQ_WriteReg(OV_TRIP, 0x8E); // 3.8V is 0x6D Set to 4V (0x8E) see p. 22 in ds
+	BQ_WriteReg(UV_TRIP, 0xB9); // Set to 2.7V
+
+	// --- 0. SET OVERCURRENT TRIP DELAY & THRESHOLD ---
+	BQ_WriteReg(PROTECT2, 0x03); // 8 ms delay & 17mV across shunt
+
+	// --- 0.5 FET CONTROL (moved after temp reads for thermal safety) ---
+
     // --- 1. READ BMS CELL VOLTAGES ---
     uint8_t raw[20] = {0};
     BQ_ReadRegs(VC1_HI_BYTE, raw, 20);
@@ -427,38 +460,28 @@ int main(void)
         v[i] = adc * 382.0f / 1000000.0f;
     }
 
-    // --- 2. READ CURRENT AND STATUS FROM BQ76930 ---
+    // --- 2. READ CURRENT FROM BQ76930 ---
     float current = BQ_ReadCurrent();
 
-    // Read SYS_STAT then immediately clear latched bits so next read shows only NEW faults
-    uint8_t sys_stat = 0;
-    BQ_ReadRegs(SYS_STAT, &sys_stat, 1);
-    if (sys_stat & 0x3F) {  // Any fault/status bits set (not CC_READY or DEVICE_XREADY)
-        BQ_WriteReg(SYS_STAT, sys_stat & 0x3F);  // Clear only the bits that were set
-    }
-
-    if (v[0] < 0.1f) {
-        if (use_crc == 0) {
-            use_crc = 1;
-            BQ_Init();
-        } else {
-             int len = snprintf(data_buffer, sizeof(data_buffer),
-                 "ADDR: 0x%02X (CRC ON) | V=0.000 | SYS_STAT=0x%02X [%s%s%s%s%s]\r\n",
-                 bms_addr, sys_stat,
-                 (sys_stat & 0x10) ? "UV " : "",
-                 (sys_stat & 0x08) ? "OV " : "",
-                 (sys_stat & 0x04) ? "SCD " : "",
-                 (sys_stat & 0x02) ? "OCD " : "",
-                 (sys_stat & 0x01) ? "XREADY " : "");
-             CDC_Transmit_FS((uint8_t*)data_buffer, len);
-
-             // Clear faults and re-enable discharge
-             BQ_WriteReg(SYS_STAT, 0xFF);
-             BQ_WriteReg(SYS_CTRL2, SYS_CTRL2_CC_EN | SYS_CTRL2_DSG_ON);
+    // CRC detection: only switch if ALL cells read zero
+    {
+        uint8_t all_zero = 1;
+        for (int i = 0; i < 10; i++) {
+            if (v[i] > 0.1f) { all_zero = 0; break; }
         }
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
-        HAL_Delay(500);
-        continue;
+        if (all_zero) {
+            if (use_crc == 0) {
+                use_crc = 1;
+                BQ_Init();
+            } else {
+                int len = snprintf(data_buffer, sizeof(data_buffer),
+                    "ADDR: 0x%02X (CRC ON) | V=0.000 (Check Voltages)\r\n", bms_addr);
+                CDC_Transmit_FS((uint8_t*)data_buffer, len);
+            }
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
+            HAL_Delay(500);
+            continue;
+        }
     }
 
     // --- 3. READ STM32 THERMISTORS & CONVERT TO TEMPERATURE ---
@@ -481,6 +504,151 @@ int main(void)
         t_celsius[i] = voltage_to_temperature(t_voltage[i]);
     }
 
+    // --- 3.5 THERMAL SAFETY & FET CONTROL ---
+    {
+        // Find max valid temperature
+        float max_valid_temp = -300.0f;
+        for (int i = 0; i < 10; i++) {
+            if (t_celsius[i] > -100.0f && t_celsius[i] < 200.0f && t_celsius[i] > max_valid_temp) {
+                max_valid_temp = t_celsius[i];
+            }
+        }
+
+        if (max_valid_temp > THERMAL_CUTOFF_C) {
+            // OVERTEMP: disable both FETs immediately
+            thermal_shutdown = 1;
+            BQ_WriteReg(SYS_CTRL2, 0xC0);
+            BQ_WriteReg(CELLBAL1, 0x00);
+            BQ_WriteReg(CELLBAL2, 0x00);
+            bal_active_mask = 0;
+        } else if (thermal_shutdown && max_valid_temp < THERMAL_RESUME_C && max_valid_temp > -100.0f) {
+            // Temp dropped below resume threshold — clear shutdown
+            thermal_shutdown = 0;
+        }
+
+        if (!thermal_shutdown) {
+            if (charge_mode) {
+                BQ_WriteReg(SYS_CTRL2, 0xC1); // charge ON, discharge OFF
+            } else {
+                BQ_WriteReg(SYS_CTRL2, 0xC2); // discharge ON, charge OFF
+            }
+        }
+    }
+
+    // --- 3.6 CELL BALANCING ---
+    static uint32_t last_balance_eval = 0;
+    if ((HAL_GetTick() - last_balance_eval) >= 5000) {
+        last_balance_eval = HAL_GetTick();
+
+        bal_active_mask = 0;
+        if (thermal_shutdown) {
+            // No balancing during thermal shutdown
+            BQ_WriteReg(CELLBAL1, 0x00);
+            BQ_WriteReg(CELLBAL2, 0x00);
+        } else if (charge_mode) {
+            // CHARGE MODE: balance cells above 3.8V with smart even/odd alternation
+            uint8_t cellbal1 = 0, cellbal2 = 0;
+            uint16_t need_bal = 0;  // bitmask of cells needing balance
+            for (int i = 0; i < 10; i++) {
+                if (v[i] > CHARGE_BAL_THRESHOLD) {
+                    need_bal |= (1 << i);
+                    if (i < 5) cellbal1 |= (1 << i);
+                    else cellbal2 |= (1 << (i - 5));
+                }
+            }
+
+            if (need_bal == 0) {
+                // No cells above 3.8V — nothing to balance
+                BQ_WriteReg(CELLBAL1, 0x00);
+                BQ_WriteReg(CELLBAL2, 0x00);
+            } else {
+                // Check if we have both even and odd cells needing balance
+                uint8_t has_odd  = (need_bal & 0x0155) ? 1 : 0; // bits 0,2,4,6,8
+                uint8_t has_even = (need_bal & 0x02AA) ? 1 : 0; // bits 1,3,5,7,9
+
+                if (has_odd && has_even) {
+                    // Mixed: alternate every 5 seconds
+                    if ((HAL_GetTick() - bal_alt_last_toggle) >= BAL_ALT_PERIOD_MS) {
+                        bal_alt_phase ^= 1;
+                        bal_alt_last_toggle = HAL_GetTick();
+                    }
+                    if (bal_alt_phase == 0) {
+                        cellbal1 &= ODDS1;
+                        cellbal2 &= ODDS2;
+                    } else {
+                        cellbal1 &= EVENS1;
+                        cellbal2 &= EVENS2;
+                    }
+                } else if (has_odd && !has_even) {
+                    // Only odd — balance directly, but prep phase for when evens appear
+                    cellbal1 &= ODDS1;
+                    cellbal2 &= ODDS2;
+                    bal_alt_phase = 1;  // next mixed transition starts with evens
+                    bal_alt_last_toggle = HAL_GetTick();
+                } else {
+                    // Only even — balance directly
+                    cellbal1 &= EVENS1;
+                    cellbal2 &= EVENS2;
+                    bal_alt_phase = 0;  // next mixed transition starts with odds
+                    bal_alt_last_toggle = HAL_GetTick();
+                }
+
+                // Update active mask
+                bal_active_mask = 0;
+                for (int i = 0; i < 5; i++) {
+                    if (cellbal1 & (1 << i)) bal_active_mask |= (1 << i);
+                    if (cellbal2 & (1 << i)) bal_active_mask |= (1 << (i + 5));
+                }
+
+                BQ_WriteReg(CELLBAL1, cellbal1);
+                BQ_WriteReg(CELLBAL2, cellbal2);
+            }
+        } else if (bal_enabled && bal_alt_enabled) {
+            // BALANCE CELLS MODE: threshold + alternating even/odd
+            if ((HAL_GetTick() - bal_alt_last_toggle) >= BAL_ALT_PERIOD_MS) {
+                bal_alt_phase ^= 1;
+                bal_alt_last_toggle = HAL_GetTick();
+            }
+
+            float v_min = 99.0f;
+            for (int i = 0; i < 10; i++) {
+                if (v[i] > 0.5f && v[i] < v_min) v_min = v[i];
+            }
+
+            float threshold_v = (float)bal_threshold_mv / 1000.0f;
+            uint8_t cellbal1 = 0, cellbal2 = 0;
+            if (v_min < 98.0f) {
+                for (int i = 0; i < 10; i++) {
+                    if (v[i] < 0.5f) continue;
+                    if ((v[i] - v_min) > threshold_v) {
+                        if (i < 5) cellbal1 |= (1 << i);
+                        else cellbal2 |= (1 << (i - 5));
+                    }
+                }
+            }
+
+            if (bal_alt_phase == 0) {
+                cellbal1 &= ODDS1;
+                cellbal2 &= ODDS2;
+            } else {
+                cellbal1 &= EVENS1;
+                cellbal2 &= EVENS2;
+            }
+
+            bal_active_mask = 0;
+            for (int i = 0; i < 5; i++) {
+                if (cellbal1 & (1 << i)) bal_active_mask |= (1 << i);
+                if (cellbal2 & (1 << i)) bal_active_mask |= (1 << (i + 5));
+            }
+
+            BQ_WriteReg(CELLBAL1, cellbal1);
+            BQ_WriteReg(CELLBAL2, cellbal2);
+        } else {
+            BQ_WriteReg(CELLBAL1, 0x00);
+            BQ_WriteReg(CELLBAL2, 0x00);
+        }
+    }
+
     // --- 4. FAN CONTROL (Auto or Manual) ---
     uint8_t effective_duty;
     if (fan_auto_mode) {
@@ -491,15 +659,15 @@ int main(void)
         }
 
         // Temperature -> Duty mapping:
-        //   <= 30C  -> 0% (fan off, cells are cool)
-        //   30-50C  -> linear ramp 20%-100%
-        //   >= 50C  -> 100% (full blast)
-        if (max_temp <= 30.0f) {
+        //   <= 25C  -> 0% (fan off, cells are cool)
+        //   25-45C  -> linear ramp 20%-100%
+        //   >= 45C  -> 100% (full blast)
+        if (max_temp <= 25.0f) {
             effective_duty = 0;
-        } else if (max_temp >= 50.0f) {
+        } else if (max_temp >= 45.0f) {
             effective_duty = 100;
         } else {
-            effective_duty = (uint8_t)(20 + (max_temp - 30.0f) * 80.0f / 20.0f);
+            effective_duty = (uint8_t)(20 + (max_temp - 25.0f) * 80.0f / 20.0f);
         }
     } else {
         // Manual mode: use duty set by dashboard
@@ -518,24 +686,18 @@ int main(void)
         "Voltages ->  C1: %.3f,  C2: %.3f,  C3: %.3f,  C4: %.3f,  C5: %.3f,  C6: %.3f,  C7: %.3f,  C8: %.3f,  C9: %.3f,  C10: %.3f\r\n"
         "Temperatures -> T1: %.1f,  T2: %.1f,  T3: %.1f,  T4: %.1f,  T5: %.1f,  T6: %.1f,  T7: %.1f,  T8: %.1f,  T9: %.1f,  T10: %.1f\r\n"
         "Current ->  %.3f A\r\n"
-        "SYS_STAT -> 0x%02X [%s%s%s%s%s%s%s%s]\r\n"
         "Fan ->  %lu RPM\r\n"
-        "fan_auto:%d fan_duty:%d\r\n\r\n",
+        "fan_auto:%d fan_duty:%d\r\n"
+    	"SYS_STAT:%x Load Present:%x\r\n"
+        "bal_en:%d bal_thresh:%d bal_mask:%d bal_alt:%d charge:%d\r\n\r\n",
         v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9],
         t_celsius[0], t_celsius[1], t_celsius[2], t_celsius[3], t_celsius[4],
         t_celsius[5], t_celsius[6], t_celsius[7], t_celsius[8], t_celsius[9],
         current,
-        sys_stat,
-        (sys_stat & 0x80) ? "CC_READY " : "",
-        (sys_stat & 0x40) ? "DEVICE_XREADY " : "",
-        (sys_stat & 0x20) ? "OVRD_ALERT " : "",
-        (sys_stat & 0x10) ? "UV " : "",
-        (sys_stat & 0x08) ? "OV " : "",
-        (sys_stat & 0x04) ? "SCD " : "",
-        (sys_stat & 0x02) ? "OCD " : "",
-        (sys_stat & 0x01) ? "XREADY " : "",
         fan_rpm,
-        fan_auto_mode, (int)effective_duty);
+        fan_auto_mode, (int)effective_duty,
+        faultStatus[0], loadPresent[0],
+        (int)bal_enabled, (int)bal_threshold_mv, (int)bal_active_mask, (int)bal_alt_enabled, (int)charge_mode);
     CDC_Transmit_FS((uint8_t*)data_buffer, len);
 
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
@@ -1065,10 +1227,68 @@ void Process_USB_Command(const char *cmd) {
         return;
     }
 
-    // BMS:RESET — clear all faults and re-enable discharge
-    if (strcmp(cmd, "BMS:RESET") == 0) {
-        BQ_WriteReg(SYS_STAT, 0xFF);  // Clear all fault flags
-        BQ_WriteReg(SYS_CTRL2, SYS_CTRL2_CC_EN | SYS_CTRL2_DSG_ON);  // Re-enable discharge
+    // BMS:CLEAR_FAULTS — write 0x7F to SYS_STAT to clear fault bits [6:0], preserve bit 7
+    if (strcmp(cmd, "BMS:CLEAR_FAULTS") == 0) {
+        BQ_WriteReg(SYS_STAT, 0x7F);
+        return;
+    }
+
+    // BMS:BAL:OFF — disable all cell balancing
+    if (strcmp(cmd, "BMS:BAL:OFF") == 0) {
+        bal_enabled = 0;
+        bal_alt_enabled = 0;
+        bal_active_mask = 0;
+        BQ_WriteReg(CELLBAL1, 0x00);
+        BQ_WriteReg(CELLBAL2, 0x00);
+        return;
+    }
+
+    // BMS:BAL:ALT:ON — enable alternating even/odd cell balancing
+    if (strcmp(cmd, "BMS:BAL:ALT:ON") == 0) {
+        bal_enabled = 1;
+        bal_alt_enabled = 1;
+        bal_alt_phase = 0;
+        bal_alt_last_toggle = HAL_GetTick();
+        return;
+    }
+
+    // BMS:BAL:ALT:OFF — disable alternating cell balancing
+    if (strcmp(cmd, "BMS:BAL:ALT:OFF") == 0) {
+        bal_alt_enabled = 0;
+        bal_enabled = 0;
+        bal_active_mask = 0;
+        BQ_WriteReg(CELLBAL1, 0x00);
+        BQ_WriteReg(CELLBAL2, 0x00);
+        return;
+    }
+
+    // BMS:BAL:THRESH:XX — set balance threshold in mV (5-100)
+    if (strncmp(cmd, "BMS:BAL:THRESH:", 15) == 0) {
+        int thresh = atoi(cmd + 15);
+        if (thresh >= 5 && thresh <= 100) {
+            bal_threshold_mv = (uint16_t)thresh;
+        }
+        return;
+    }
+
+    // BMS:CHARGE:ON — enable charge mode (charge FET on, discharge FET off)
+    if (strcmp(cmd, "BMS:CHARGE:ON") == 0) {
+        charge_mode = 1;
+        thermal_shutdown = 0;
+        // Disable manual balancing when entering charge mode
+        bal_enabled = 0;
+        bal_alt_enabled = 0;
+        return;
+    }
+
+    // BMS:CHARGE:OFF — disable charge mode (back to discharge mode)
+    if (strcmp(cmd, "BMS:CHARGE:OFF") == 0) {
+        charge_mode = 0;
+        thermal_shutdown = 0;
+        bal_active_mask = 0;
+        BQ_WriteReg(CELLBAL1, 0x00);
+        BQ_WriteReg(CELLBAL2, 0x00);
+        BQ_WriteReg(SYS_CTRL2, 0xC0); // both FETs off until next loop sets correct mode
         return;
     }
 }

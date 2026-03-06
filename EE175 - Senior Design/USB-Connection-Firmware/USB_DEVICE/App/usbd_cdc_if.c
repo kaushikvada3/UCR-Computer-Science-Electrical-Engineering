@@ -276,8 +276,9 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
                   cmd_ready[j] = cmd_buffer[j];
               }
               cmd_ready_flag = 1;
-              cmd_index = 0;
           }
+          // Always reset index on newline to prevent buffer corruption
+          cmd_index = 0;
       } else {
           if (cmd_index < CMD_BUF_SIZE - 1) {
               cmd_buffer[cmd_index++] = ch;
