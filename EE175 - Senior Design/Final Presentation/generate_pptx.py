@@ -4,47 +4,43 @@ from pptx import Presentation
 from pptx.util import Inches
 import os
 import sys
+from pathlib import Path
 
 async def generate_pptx(html_path, output_pptx):
-    # Ensure correct path format for Windows
-    file_url = f"file:///{html_path.replace(chr(92), '/')}"
+    file_url = Path(html_path).resolve().as_uri()
     
     print(f"Loading {file_url}...")
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        # Large viewport to ensure all slides are rendered properly.
-        # It's a grid, so let's make it tall to prevent any scrolling issues.
         page = await browser.new_page(viewport={'width': 1400, 'height': 8500})
         await page.goto(file_url, wait_until="networkidle")
         
-        # Wait a second to allow fonts and gradients to settle
         await page.wait_for_timeout(2000)
         
         prs = Presentation()
-        # Set slide size to match 1280x720 aspect ratio (16:9)
         prs.slide_width = Inches(13.3333333333)
         prs.slide_height = Inches(7.5)
         
-        # Blank slide layout is index 6
         blank_slide_layout = prs.slide_layouts[6]
-        
-        for i in range(1, 11):
-            slide_elem = await page.query_selector(f"#slide{i}")
-            if slide_elem:
-                print(f"Capturing slide {i}...")
-                screenshot_path = f"slide_{i}.png"
-                # The slide elements are 1280x720
-                await slide_elem.screenshot(path=screenshot_path)
-                
-                # Add to PPTX
-                slide = prs.slides.add_slide(blank_slide_layout)
-                slide.shapes.add_picture(screenshot_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
-                
-                # Cleanup screenshot
-                os.remove(screenshot_path)
-            else:
-                print(f"Slide {i} not found.")
+
+        slide_elements = await page.query_selector_all(".slide")
+        print(f"Found {len(slide_elements)} slides.")
+
+        for index, slide_elem in enumerate(slide_elements, start=1):
+            print(f"Capturing slide {index}...")
+            screenshot_path = f"slide_{index}.png"
+            await slide_elem.screenshot(path=screenshot_path)
+
+            slide = prs.slides.add_slide(blank_slide_layout)
+            slide.shapes.add_picture(
+                screenshot_path,
+                0,
+                0,
+                width=prs.slide_width,
+                height=prs.slide_height,
+            )
+            os.remove(screenshot_path)
         
         await browser.close()
         

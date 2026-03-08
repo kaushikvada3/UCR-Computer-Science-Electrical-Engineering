@@ -1,810 +1,2174 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BMS Final Design Presentation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Added 'Outfit' for premium, modern headers -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;500;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     <style>
-/* 1. THE SETUP & PREMIUM BACKGROUND */
-* {
-    box-sizing: border-box;
-}
+        :root {
+            --bg-start: #1a0507;
+            --bg-mid: #430a09;
+            --bg-end: #0a0d14;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-strong: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.14);
+            --glass-soft: rgba(255, 255, 255, 0.05);
+            --text-primary: #f7f8fb;
+            --text-secondary: rgba(255, 255, 255, 0.76);
+            --text-muted: rgba(255, 255, 255, 0.52);
+            --accent: #0a84ff;
+            --accent-soft: rgba(10, 132, 255, 0.18);
+            --success: #30d158;
+            --warning: #ffd60a;
+            --danger: #ff453a;
+            --shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+        }
 
-body {
-    background-color: #050505; /* Darker, richer base */
-    display: grid;
-    gap: 40px;
-    grid-template-columns: 1fr;
-    margin: 0;
-    min-height: 100vh;
-    padding: 40px 0;
-    place-items: center;
-}
+        * {
+            box-sizing: border-box;
+        }
 
-.slide-container {
-    align-items: flex-start;
-    /* Richer gradient base */
-    background: linear-gradient(135deg, #2a0b0d 0%, #0a0203 100%);
-    border-radius: 20px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.1);
-    display: flex;
-    flex-direction: column;
-    font-family: 'Inter', sans-serif;
-    gap: 40px;
-    height: 720px;
-    justify-content: center;
-    overflow: hidden;
-    padding: 60px;
-    position: relative;
-    width: 1280px;
-}
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            gap: 32px;
+            padding: 32px 0;
+            background:
+                radial-gradient(circle at 15% 15%, rgba(10, 132, 255, 0.18), transparent 26%),
+                radial-gradient(circle at 85% 20%, rgba(255, 69, 58, 0.18), transparent 30%),
+                linear-gradient(135deg, #030405 0%, #0f1118 100%);
+            color: var(--text-primary);
+            font-family: "Inter", sans-serif;
+        }
 
-/* Premium Tech Grid Overlay */
-.slide-container::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-image: 
-        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 40px 40px;
-    z-index: 0;
-    pointer-events: none;
-}
+        .slide {
+            position: relative;
+            width: 1600px;
+            height: 900px;
+            padding: 50px 60px;
+            border-radius: 26px;
+            overflow: hidden;
+            background:
+                linear-gradient(135deg, rgba(114, 23, 14, 0.95) 0%, rgba(92, 12, 11, 0.92) 42%, rgba(8, 11, 19, 0.95) 100%);
+            box-shadow: var(--shadow);
+            isolation: isolate;
+        }
 
-.slide-container > * {
-    position: relative;
-    z-index: 2;
-}
+        .slide::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 34px 34px;
+            opacity: 0.45;
+            pointer-events: none;
+            z-index: -2;
+        }
 
-/* Ambient Lighting Orbs for Depth */
-.ambient-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(100px);
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0.6;
-}
-.glow-red {
-    top: -20%; left: -10%;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
-}
-.glow-blue {
-    bottom: -20%; right: -10%;
-    width: 700px; height: 700px;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
-}
+        .slide::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.10), transparent 23%),
+                radial-gradient(circle at 82% 16%, rgba(10, 132, 255, 0.18), transparent 24%),
+                radial-gradient(circle at 64% 82%, rgba(255, 69, 58, 0.18), transparent 28%);
+            pointer-events: none;
+            z-index: -1;
+        }
 
-/* 2. CONSISTENT TYPOGRAPHY */
-h1, h2, h3, h4 {
-    font-family: 'Outfit', sans-serif; /* Premium header font */
-    color: #ffffff;
-    margin: 0;
-}
+        .chrome {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
 
-.slide-container p, .slide-container li, .slide-container td {
-    color: #a1aaa3; /* Softer, more premium text color */
-    font-weight: 400;
-    font-size: 20px;
-    line-height: 1.6;
-}
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
 
-.slide-container .slide-title {
-    font-size: 52px;
-    font-weight: 800;
-    letter-spacing: -1px;
-    margin-bottom: 10px;
-    width: 100%;
-    /* Subtle text gradient for standard titles */
-    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+        .brand-mark {
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
 
-.slide-container h3 {
-    font-size: 28px;
-    font-weight: 600;
-    margin-bottom: 15px;
-    color: #ffffff;
-}
+        .brand-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
 
-/* --- HERO SLIDE (TITLE SLIDE) SPECIFICS --- */
-.hero-inner {
-    align-items: center;
-    text-align: center;
-    justify-content: center;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 100%;
-}
+        .brand-copy span:first-child {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.24em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
 
-.hero-badge {
-    color: #3b82f6;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    background: rgba(59, 130, 246, 0.1);
-    padding: 8px 20px;
-    border-radius: 100px;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    margin-bottom: 10px;
-}
+        .brand-copy span:last-child {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
 
-.hero-title {
-    font-size: 84px;
-    font-weight: 900;
-    line-height: 1.05;
-    letter-spacing: -2px;
-    /* High-end metallic gradient */
-    background: linear-gradient(to right bottom, #ffffff 30%, #8cb5ff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0px 10px 30px rgba(59, 130, 246, 0.2);
-    margin-bottom: 10px;
-}
+        .content {
+            height: calc(100% - 72px);
+            padding-top: 24px;
+            display: flex;
+            flex-direction: column;
+        }
 
-.hero-divider {
-    height: 1px;
-    width: 200px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    margin: 10px 0;
-}
+        .hero-grid,
+        .two-col,
+        .three-col {
+            display: grid;
+            gap: 22px;
+        }
 
-.hero-metadata {
-    display: flex;
-    gap: 40px;
-    margin-bottom: 30px;
-}
+        .hero-grid {
+            grid-template-columns: 1.05fr 0.95fr;
+            height: 100%;
+        }
 
-.meta-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
+        .two-col {
+            grid-template-columns: 1fr 1fr;
+        }
 
-.meta-label {
-    font-size: 12px;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-weight: 600;
-}
+        .three-col {
+            grid-template-columns: repeat(3, 1fr);
+        }
 
-.meta-value {
-    font-size: 22px;
-    color: #e5e7eb;
-    font-weight: 500;
-}
+        .eyebrow {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.62);
+            margin: 0 0 14px;
+        }
 
-.team-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    margin-top: 20px;
-}
+        h1,
+        h2,
+        h3,
+        h4 {
+            margin: 0;
+            font-family: "Outfit", sans-serif;
+            color: var(--text-primary);
+        }
 
-.team-label {
-    font-size: 14px;
-    color: #9ca3af;
-    font-weight: 500;
-}
+        h1 {
+            font-size: 70px;
+            line-height: 0.98;
+            letter-spacing: -0.05em;
+        }
 
-.team-badges {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
+        h2 {
+            font-size: 44px;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            margin-bottom: 12px;
+        }
 
-.badge {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 10px 24px;
-    border-radius: 100px;
-    font-size: 16px;
-    color: #f3f4f6;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-}
+        h3 {
+            font-size: 24px;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+        }
 
-/* 3. LAYOUT DEFINITIONS (Other Slides) */
-.two-column {
-    align-items: flex-start;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 60px;
-    width: 100%;
-}
+        h4 {
+            font-size: 18px;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
 
-.two-column.tiled > div {
-    background-color: rgba(255, 255, 255, 0.02);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    padding: 40px;
-}
+        p,
+        li,
+        td,
+        th {
+            font-size: 17px;
+            line-height: 1.45;
+            color: var(--text-secondary);
+        }
 
-.two-column ul {
-    list-style: none;
-    padding-left: 0;
-}
+        p {
+            margin: 0;
+        }
 
-.two-column li {
-    margin-bottom: 20px;
-    position: relative;
-    padding-left: 24px;
-}
+        ul {
+            margin: 0;
+            padding-left: 18px;
+        }
 
-.two-column li::before {
-    content: '→';
-    position: absolute;
-    left: 0;
-    color: #3b82f6;
-    font-weight: bold;
-}
+        li+li {
+            margin-top: 9px;
+        }
 
-.image-wrapper {
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    height: 400px;
-    overflow: hidden;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
+        .glass {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 26px;
+            backdrop-filter: blur(22px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 18px 36px rgba(0, 0, 0, 0.18);
+        }
 
-.image-wrapper img {
-    height: 100%;
-    object-fit: cover;
-    width: 100%;
-}
+        .panel {
+            padding: 22px 24px;
+        }
 
-.two-column .image-wrapper img {
-    object-fit: contain;
-}
+        .panel-tight {
+            padding: 16px 18px;
+        }
 
-.tiled-content {
-    align-items: stretch;
-    display: flex;
-    gap: 40px;
-    justify-content: center;
-    width: 100%;
-}
+        .hero-copy {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 18px;
+        }
 
-.tile {
-    background-color: rgba(255, 255, 255, 0.02);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    padding: 40px 30px;
-}
+        .lead {
+            font-size: 22px;
+            line-height: 1.4;
+            color: rgba(255, 255, 255, 0.84);
+            max-width: 620px;
+        }
 
-.tile .icon {
-    align-items: center;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border-radius: 16px;
-    color: #ffffff;
-    display: flex;
-    font-size: 28px;
-    height: 60px;
-    justify-content: center;
-    margin-bottom: 24px;
-    width: 60px;
-    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
-    border: 1px solid rgba(255,255,255,0.2);
-}
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
 
-.bullet-list ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
+        .meta-card {
+            padding: 16px 18px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
 
-.bullet-list li {
-    background-color: rgba(255, 255, 255, 0.02);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 25px 25px 25px 70px;
-    position: relative;
-}
+        .meta-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.54);
+            margin-bottom: 8px;
+        }
 
-.bullet-list i {
-    color: #3b82f6;
-    font-size: 24px;
-    left: 25px;
-    position: absolute;
-    top: 28px;
-}
+        .meta-value {
+            display: block;
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+        }
 
-.bullet-list li strong {
-    color: #ffffff;
-    font-weight: 600;
-    display: block;
-    margin-bottom: 4px;
-    font-size: 20px;
-}
+        .hero-members {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
 
-/* Table Layout */
-.table-layout {
-    width: 100%;
-    background-color: rgba(255, 255, 255, 0.02);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    overflow: hidden;
-}
+        .chip {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 14px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.92);
+        }
 
-.table-layout table {
-    border-collapse: collapse;
-    width: 100%;
-}
+        .hero-visual {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
+            min-height: 0;
+        }
 
-.table-layout th, .table-layout td {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 20px 30px;
-    text-align: left;
-}
+        .hero-shell {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-direction: column;
+            padding: 44px;
+        }
 
-.table-layout th {
-    background-color: rgba(0, 0, 0, 0.3);
-    color: #ffffff;
-    font-weight: 600;
-    font-family: 'Outfit', sans-serif;
-}
+        .hero-device {
+            width: 100%;
+            display: flex;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            min-height: 0;
+        }
 
-/* Math/Formula Container */
-.formula-container {
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 20px;
-    display: flex;
-    justify-content: center;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
-}
+        .hero-device model-viewer {
+            width: 100%;
+            height: 100%;
+            max-width: 620px;
+            filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.5));
+            animation: floatImage 6s ease-in-out infinite;
+        }
 
-math {
-    display: math;
-    font-size: 32px;
-    color: #93c5fd;
-}
+        .hero-model {
+            min-height: 430px;
+            max-width: 540px;
+        }
 
-/* Premium Top Bar */
-.gui-top-bar {
-    position: absolute;
-    top: 30px;
-    left: 60px;
-    right: 60px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 20px;
-}
+        @keyframes floatImage {
+            0% {
+                transform: translateY(0px);
+            }
 
-.gui-top-bar::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; width: 100%; height: 1px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.2) 0%, transparent 100%);
-}
+            50% {
+                transform: translateY(-15px);
+            }
 
-.gui-logo {
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    color: #9ca3af;
-    text-transform: uppercase;
-}
+            100% {
+                transform: translateY(0px);
+            }
+        }
 
-.gui-pill {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: #fff;
-    padding: 6px 20px;
-    border-radius: 100px;
-    font-size: 14px;
-    font-weight: 700;
-    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-    border: 1px solid rgba(255,255,255,0.2);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+        .hero-footer {
+            width: 100%;
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 18px;
+        }
 
-.slide-container-inner {
-    width: 100%;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    margin-top: 60px; 
-}
+        .hero-footer strong {
+            display: block;
+            font-size: 34px;
+            line-height: 1;
+            color: white;
+            margin-top: 8px;
+        }
+
+        .subhead {
+            max-width: 760px;
+            margin-bottom: 18px;
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .card-grid-2,
+        .card-grid-3,
+        .card-grid-4 {
+            display: grid;
+            gap: 16px;
+        }
+
+        .card-grid-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .card-grid-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .card-grid-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .info-card,
+        .kpi,
+        .component-card,
+        .member-card,
+        .test-card {
+            padding: 18px 20px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            min-height: 0;
+        }
+
+        .info-card h4,
+        .kpi h4,
+        .component-card h4,
+        .member-card h4,
+        .test-card h4 {
+            margin-bottom: 10px;
+        }
+
+        .kpi-number {
+            display: block;
+            margin: 10px 0 8px;
+            font-size: 34px;
+            line-height: 1;
+            font-weight: 800;
+            color: white;
+        }
+
+        .kpi .status-line {
+            margin-top: 12px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .status-pill.success {
+            background: rgba(48, 209, 88, 0.16);
+            color: #d1fadf;
+            border: 1px solid rgba(48, 209, 88, 0.28);
+        }
+
+        .status-pill.warning {
+            background: rgba(255, 214, 10, 0.14);
+            color: #fff3b0;
+            border: 1px solid rgba(255, 214, 10, 0.24);
+        }
+
+        .status-pill.info {
+            background: rgba(10, 132, 255, 0.16);
+            color: #dbeafe;
+            border: 1px solid rgba(10, 132, 255, 0.30);
+        }
+
+        .feature-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .feature {
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.045);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .feature strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: white;
+            letter-spacing: 0.01em;
+        }
+
+        .visual-stack {
+            display: grid;
+            gap: 16px;
+            min-height: 0;
+        }
+
+        .figure-card {
+            position: relative;
+            padding: 14px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            overflow: hidden;
+        }
+
+        .figure-card.figure-model {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .figure-card.figure-model .caption {
+            margin-top: 0;
+        }
+
+        .figure-card img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 18px;
+            background: rgba(0, 0, 0, 0.18);
+        }
+
+        .figure-tall {
+            height: 372px;
+        }
+
+        .figure-wide {
+            height: 252px;
+        }
+
+        .figure-card.figure-model.figure-wide {
+            height: 302px;
+        }
+
+        .figure-medium {
+            height: 206px;
+        }
+
+        .figure-short {
+            height: 154px;
+        }
+
+        .caption {
+            margin-top: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.56);
+        }
+
+        .model-stage {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            border-radius: 18px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.08), transparent 38%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .model-stage model-viewer,
+        .model-viewer {
+            width: 100%;
+            height: 100%;
+            outline: none;
+            background-color: transparent;
+            --poster-color: transparent;
+        }
+
+        .model-viewer::part(default-progress-bar),
+        .model-viewer::part(default-progress-mask),
+        .model-viewer::part(default-ar-button) {
+            display: none;
+        }
+
+        .spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .spec-table th,
+        .spec-table td {
+            text-align: left;
+            vertical-align: top;
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .spec-table td {
+            font-size: 15px;
+            line-height: 1.35;
+        }
+
+        .spec-table th {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.62);
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .spec-table td strong {
+            color: white;
+        }
+
+        .triptych {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            min-height: 0;
+        }
+
+        .triptych .figure-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .triptych .figure-card img {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .callout-strip {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        .callout {
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .callout strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: white;
+        }
+
+        .flow-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            height: 100%;
+        }
+
+        .flow-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 18px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .flow-node {
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .flow-node strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 15px;
+            color: white;
+        }
+
+        .flow-node.core {
+            background: linear-gradient(180deg, rgba(10, 132, 255, 0.22), rgba(10, 132, 255, 0.10));
+            border-color: rgba(10, 132, 255, 0.34);
+        }
+
+        .flow-arrow {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.54);
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .challenge-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .challenge-card {
+            padding: 18px 20px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.11);
+        }
+
+        .challenge-card .tagline {
+            display: inline-block;
+            margin-bottom: 10px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 69, 58, 0.16);
+            border: 1px solid rgba(255, 69, 58, 0.26);
+            color: #ffe1de;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .challenge-card strong {
+            color: white;
+        }
+
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            height: 100%;
+        }
+
+        .component-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .component-figure {
+            height: 158px;
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .component-figure img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .owner {
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.10);
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.60);
+        }
+
+        .member-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 10px;
+        }
+
+        .member-role {
+            display: inline-block;
+            margin-bottom: 12px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(10, 132, 255, 0.16);
+            border: 1px solid rgba(10, 132, 255, 0.26);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #dbeafe;
+        }
+
+        .member-card ul {
+            padding-left: 17px;
+        }
+
+        .constraint-grid {
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            gap: 18px;
+            flex: 1;
+        }
+
+        .standards-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .standard-pill {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.045);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .standard-pill strong {
+            color: white;
+        }
+
+        .test-layout {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .test-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .video-slide {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .video-stage {
+            position: relative;
+            flex: 1;
+            padding: 18px;
+            border-radius: 28px;
+            overflow: hidden;
+            background:
+                linear-gradient(180deg, rgba(7, 10, 18, 0.50) 0%, rgba(7, 10, 18, 0.72) 100%),
+                url("../Weekly Reports/Feburary 15th 2026/2026-02-15_21-16-33.png") center/cover no-repeat;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .video-drop {
+            position: absolute;
+            inset: 58px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            text-align: center;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.09);
+            border: 2px dashed rgba(255, 255, 255, 0.28);
+            backdrop-filter: blur(16px);
+        }
+
+        .video-drop strong {
+            font-size: 34px;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: white;
+        }
+
+        .play-icon {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.92), rgba(85, 158, 255, 0.92));
+            box-shadow: 0 18px 36px rgba(10, 132, 255, 0.28);
+        }
+
+        .play-icon::before {
+            content: "";
+            margin-left: 6px;
+            border-left: 24px solid white;
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+        }
+
+        .demo-notes {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .summary-layout {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 18px;
+            flex: 1;
+        }
+
+        .summary-stack {
+            display: grid;
+            gap: 14px;
+        }
+
+        .big-quote {
+            font-size: 31px;
+            line-height: 1.15;
+            letter-spacing: -0.04em;
+            color: white;
+        }
+
+        .footnote {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.52);
+        }
+
+        #slide1 h1 {
+            font-size: 64px;
+        }
+
+        #slide1 .hero-copy {
+            gap: 14px;
+        }
+
+        #slide1 .lead {
+            font-size: 18px;
+            line-height: 1.36;
+        }
+
+        #slide1 .meta-grid {
+            gap: 10px;
+        }
+
+        #slide1 .meta-card {
+            padding: 13px 14px;
+        }
+
+        #slide1 .meta-value {
+            font-size: 16px;
+            line-height: 1.2;
+        }
+
+        #slide1 .chip {
+            padding: 9px 12px;
+            font-size: 13px;
+        }
+
+        #slide1 .hero-footer strong {
+            font-size: 28px;
+        }
+
+        #slide1 .hero-footer {
+            bottom: 52px;
+        }
+
+        #slide1 .hero-device {
+            inset: 54px 52px 152px;
+        }
+
+        #slide6 .subhead {
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.32;
+        }
+
+        #slide6 .flow-grid {
+            gap: 14px;
+        }
+
+        #slide6 .flow-column {
+            gap: 6px;
+            padding: 14px;
+        }
+
+        #slide6 .flow-column h3 {
+            font-size: 18px;
+        }
+
+        #slide6 .flow-node {
+            padding: 10px 12px;
+        }
+
+        #slide6 .flow-node strong {
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        #slide6 .flow-node,
+        #slide6 .flow-node p {
+            font-size: 15px;
+            line-height: 1.22;
+        }
+
+        #slide6 .flow-arrow {
+            font-size: 15px;
+        }
+
+        /* ----- PREMIUM ENHANCEMENTS ----- */
+        @keyframes bgShift {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        body {
+            overflow: hidden !important;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: block !important;
+            background:
+                radial-gradient(circle at 15% 15%, rgba(10, 132, 255, 0.25), transparent 40%),
+                radial-gradient(circle at 85% 20%, rgba(255, 69, 58, 0.20), transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(147, 197, 253, 0.15), transparent 40%),
+                linear-gradient(135deg, #030405 0%, #0a0d14 100%) !important;
+            background-size: 200% 200% !important;
+            animation: bgShift 15s ease infinite alternate;
+        }
+
+        .slide {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) scale(calc(var(--slide-scale, 1) * 0.95));
+            opacity: 0;
+            visibility: hidden;
+            transition: transform 0.8s cubic-bezier(0.2, 1, 0.3, 1),
+                opacity 0.8s cubic-bezier(0.2, 1, 0.3, 1),
+                visibility 0.8s;
+            z-index: 0;
+            margin: 0 !important;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(var(--slide-scale, 1));
+            z-index: 10;
+        }
+
+        .slide.prev {
+            transform: translate(-50%, -150%) scale(calc(var(--slide-scale, 1) * 0.85));
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .slide.next {
+            transform: translate(-50%, 150%) scale(calc(var(--slide-scale, 1) * 0.85));
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .info-card,
+        .kpi,
+        .figure-card,
+        .meta-card,
+        .callout,
+        .challenge-card,
+        .component-card,
+        .member-card,
+        .flow-node {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+        }
+
+        .info-card:hover,
+        .kpi:hover,
+        .figure-card:hover,
+        .meta-card:hover,
+        .callout:hover,
+        .challenge-card:hover,
+        .component-card:hover,
+        .member-card:hover,
+        .flow-node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 20px rgba(10, 132, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .video-drop {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .video-drop:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .play-icon {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+        }
+
+        .video-drop:hover .play-icon {
+            transform: scale(1.15);
+            box-shadow: 0 0 50px rgba(10, 132, 255, 0.8);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide.active h1,
+        .slide.active h2,
+        .slide.active .eyebrow,
+        .slide.active .lead,
+        .slide.active .subhead,
+        .slide.active .chrome {
+            opacity: 0;
+            animation: fadeUp 0.8s cubic-bezier(0.2, 1, 0.3, 1) forwards;
+        }
+
+        .slide.active .chrome {
+            animation-delay: 0.1s;
+        }
+
+        .slide.active h1,
+        .slide.active h2 {
+            animation-delay: 0.2s;
+        }
+
+        .slide.active .eyebrow {
+            animation-delay: 0.15s;
+        }
+
+        .slide.active .lead,
+        .slide.active .subhead {
+            animation-delay: 0.25s;
+        }
+
+        .slide.active .meta-grid,
+        .slide.active .card-grid-2,
+        .slide.active .card-grid-3,
+        .slide.active .card-grid-4,
+        .slide.active .component-grid,
+        .slide.active .member-grid,
+        .slide.active .challenge-grid,
+        .slide.active .visual-stack,
+        .slide.active .hero-visual,
+        .slide.active .two-col,
+        .slide.active .three-col,
+        .slide.active .constraint-grid,
+        .slide.active .summary-layout,
+        .slide.active .test-layout {
+            opacity: 0;
+            animation: fadeUp 0.8s cubic-bezier(0.2, 1, 0.3, 1) forwards;
+            animation-delay: 0.35s;
+        }
+
+        @keyframes drawLine {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide.active .flow-node,
+        .slide.active .flow-arrow {
+            opacity: 0;
+            animation: drawLine 0.5s forwards;
+        }
+
+        .slide.active .flow-column:nth-child(1) .flow-node:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+
+        .slide.active .flow-column:nth-child(1) .flow-arrow:nth-child(3) {
+            animation-delay: 0.5s;
+        }
+
+        .slide.active .flow-column:nth-child(1) .flow-node:nth-child(4) {
+            animation-delay: 0.6s;
+        }
+
+        .slide.active .flow-column:nth-child(1) .flow-arrow:nth-child(5) {
+            animation-delay: 0.7s;
+        }
+
+        .slide.active .flow-column:nth-child(1) .flow-node:nth-child(6) {
+            animation-delay: 0.8s;
+        }
+
+        .slide.active .flow-column:nth-child(1) .flow-arrow:nth-child(7) {
+            animation-delay: 0.9s;
+        }
+
+        .slide.active .flow-column:nth-child(1) .flow-node:nth-child(8) {
+            animation-delay: 1.0s;
+        }
+
+        .slide.active .flow-column:nth-child(2) .flow-node:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .slide.active .flow-column:nth-child(2) .flow-arrow:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        .slide.active .flow-column:nth-child(2) .flow-node:nth-child(4) {
+            animation-delay: 0.7s;
+        }
+
+        .slide.active .flow-column:nth-child(2) .flow-arrow:nth-child(5) {
+            animation-delay: 0.8s;
+        }
+
+        .slide.active .flow-column:nth-child(2) .flow-node:nth-child(6) {
+            animation-delay: 0.9s;
+        }
+
+        .slide.active .flow-column:nth-child(2) .flow-arrow:nth-child(7) {
+            animation-delay: 1.0s;
+        }
+
+        .slide.active .flow-column:nth-child(2) .flow-node:nth-child(8) {
+            animation-delay: 1.1s;
+        }
+
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 40px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+            font-size: 20px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(10, 132, 255, 0.4);
+            border-color: rgba(10, 132, 255, 0.8);
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(10, 132, 255, 0.4);
+        }
+
+        .nav-progress {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, rgba(10, 132, 255, 1) 0%, rgba(48, 209, 88, 1) 100%);
+            z-index: 100;
+            transition: width 0.3s ease;
+        }
+
+        .nav-indicator {
+            position: fixed;
+            bottom: 40px;
+            left: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 0.1em;
+            z-index: 100;
+            font-family: 'Inter', sans-serif;
+        }
     </style>
 </head>
+
 <body>
 
-<!-- SLIDE 1: PREMIUM HERO -->
-<div class="slide-container" id="slide1">
-    <div class="ambient-glow glow-red"></div>
-    <div class="ambient-glow glow-blue"></div>
-    
-    <div class="gui-top-bar">
-        <div class="gui-logo">UCR EV LAB</div>
-        <div class="gui-pill"><i class="fa-solid fa-bolt"></i> BMS</div>
-    </div>
-    
-    <div class="slide-container-inner hero-inner">
-        <div class="hero-badge">EE175AB Final Design Report</div>
-        <h1 class="hero-title">Battery Management <br>& Communication System</h1>
-        
-        <div class="hero-divider"></div>
-        
-        <div class="hero-metadata">
-            <div class="meta-item">
-                <span class="meta-label">Presentation Date</span>
-                <span class="meta-value">March 7, 2026</span>
+    <section class="slide" id="slide1">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">UCR BCOE</div>
+                <div class="brand-copy">
+                    <span>EE175 Senior Design</span>
+                    <span>Battery Management and Communication System</span>
+                </div>
             </div>
-            <div class="meta-item">
-                <span class="meta-label">Total Artifacts</span>
-                <span class="meta-value">4,506 Files</span>
-            </div>
+            <div class="tab">E-Load</div>
         </div>
-        
-        <div class="team-section">
-            <span class="team-label">Engineering Project Team</span>
-            <div class="team-badges">
-                <div class="badge">Kaushik Vada</div>
-                <div class="badge">Christian Kim</div>
-                <div class="badge">Connor Stewart</div>
-                <div class="badge">Nick Poon</div>
-            </div>
         </div>
-    </div>
-</div>
-
-<!-- SLIDE 2 -->
-<div class="slide-container" id="slide2">
-    <div class="ambient-glow glow-blue" style="opacity: 0.3; bottom: auto; top: -20%;"></div>
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 1.1</div>
-        <div class="gui-pill">Overview</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Executive Summary</h2>
-        <div class="content-area">
-            <div class="two-column">
+        <div class="content hero-grid">
+            <div class="hero-copy">
+                <p class="eyebrow">Final Design Presentation</p>
+                <h1>Battery Management<br>and Communication System</h1>
+                <p class="lead">A complete 10s1p lithium-ion battery instrumentation, control, and visualization
+                    platform combining BQ76930-based monitoring, STM32 embedded firmware, an operator dashboard, and an
+                    expansion path toward NVIDIA Jetson AI analytics.</p>
                 <div>
-                    <p style="margin-bottom: 25px;">This project delivers a complete Battery Management and Communication System (BMS) for a 10s1p lithium-ion battery pack. The system combines:</p>
+                    <p class="eyebrow" style="margin-bottom:10px;">Group Members</p>
+                    <div class="hero-members">
+                        <span class="chip">Kaushik Vada</span>
+                        <span class="chip">Christian Kim</span>
+                        <span class="chip">Nick Poon</span>
+                        <span class="chip">Connor Stewart</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual glass">
+                <div class="hero-shell">
+                    <div class="hero-device">
+                        <model-viewer class="model-viewer hero-model" src="BMS.glb" auto-rotate camera-controls
+                            disable-pan disable-zoom interaction-prompt="none" shadow-intensity="1"
+                            camera-orbit="28deg 72deg 96%"></model-viewer>
+                    </div>
+                    <div class="hero-footer">
+                        <div>
+                            <p class="eyebrow" style="margin-bottom:0;">Project State</p>
+                            <strong>Integrated BMS + Dashboard</strong>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide2">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 2</div>
+                <div class="brand-copy">
+                    <span>Concept and Application</span>
+                    <span>What we designed and where it applies</span>
+                </div>
+            </div>
+            <div class="tab">Applications</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Concept and Application of the Design</h2>
+            <p class="subhead">The design is a split-domain battery management and communication system: the battery
+                pack, sensing hardware, cooling, and protection stay in the power domain while the STM32 and desktop
+                dashboard create a safe host-facing control and visualization layer.</p>
+            <div class="two-col" style="flex:1;">
+                <div class="visual-stack">
+                    <div class="figure-card figure-wide figure-model">
+                        <div class="model-stage">
+                            <model-viewer class="model-viewer" src="BMS.glb" auto-rotate camera-controls disable-pan
+                                disable-zoom interaction-prompt="none" shadow-intensity="1"
+                                camera-orbit="24deg 74deg 86%"></model-viewer>
+                        </div>
+                        <div class="caption">Final BMS enclosure render (interactive)</div>
+                    </div>
+                    <div class="card-grid-2">
+                        <div class="info-card">
+                            <h4>What We Designed</h4>
+                            <p>10s1p lithium-ion pack monitoring, current sensing, thermal measurement, active fan
+                                cooling, cell balancing, USB telemetry, and a premium operator dashboard.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>Technical Principles</h4>
+                            <p>BQ76930 cell supervision, 20 mOhm shunt current sensing, 10K NTC thermistor conversion,
+                                PWM fan control, structured USB CDC telemetry, and GUI command bridging.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="visual-stack">
+                    <div class="figure-card figure-wide figure-model">
+                        <div class="model-stage">
+                            <model-viewer class="model-viewer" src="E-Load.glb" auto-rotate camera-controls disable-pan
+                                disable-zoom interaction-prompt="none" shadow-intensity="1"
+                                camera-orbit="18deg 78deg 88%"></model-viewer>
+                        </div>
+                        <div class="caption">Battery pack and enclosure test hardware (interactive)</div>
+                    </div>
+                    <div class="feature-list">
+                        <div class="feature">
+                            <strong>Intended Applications</strong>
+                            Laboratory battery characterization, educational embedded controls experiments,
+                            charger/e-load integration, and future AI-assisted battery health estimation on Jetson.
+                        </div>
+                        <div class="feature">
+                            <strong>Relevant EE Subjects</strong>
+                            Power electronics, embedded systems, sensors and instrumentation, PCB design, controls,
+                            communication interfaces, and hardware-software co-design.
+                        </div>
+                        <div class="feature">
+                            <strong>Why the Architecture Matters</strong>
+                            The split battery/host design improves observability, reduces fault propagation risk, and
+                            lets firmware and GUI be tested independently during bring-up.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide3">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 3</div>
+                <div class="brand-copy">
+                    <span>Technical Design Objectives</span>
+                    <span>Specific and measurable targets</span>
+                </div>
+            </div>
+            <div class="tab">Metrics</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Technical Design Objectives</h2>
+            <p class="subhead">The project requirements were translated into explicit numerical targets taken from the
+                design report, weekly validation updates, and the implemented firmware/dashboard code.</p>
+            <div class="card-grid-3" style="flex:1;">
+                <div class="kpi">
+                    <h4>Battery Coverage</h4>
+                    <span class="kpi-number">10s1p</span>
+                    <p>Monitor all 10 series cell voltages, 10 NTC channels, pack current, and fan telemetry in one
+                        operator view.</p>
+                    <div class="status-line"><span class="status-pill success">Implemented coverage</span></div>
+                </div>
+                <div class="kpi">
+                    <h4>Pack Electrical Target</h4>
+                    <span class="kpi-number">36 V / 4.2 Ah</span>
+                    <p>Support the Molicel P42A pack context with approximately 151.2 Wh nominal energy and cell-level
+                        visibility.</p>
+                    <div class="status-line"><span class="status-pill info">Pack specification</span></div>
+                </div>
+                <div class="kpi">
+                    <h4>Current Resolution</h4>
+                    <span class="kpi-number">0.422 mA/LSB</span>
+                    <p>Use BQ76930 coulomb-counter current data with a 20 mOhm shunt conversion path for pack current
+                        estimation.</p>
+                    <div class="status-line"><span class="status-pill success">Implemented conversion</span></div>
+                </div>
+                <div class="kpi">
+                    <h4>Safety Response Window</h4>
+                    <span class="kpi-number">10-100 ms</span>
+                    <p>Run thermal and overcurrent monitoring on a fast safety timescale, with slower 1-10 s balancing
+                        management.</p>
+                    <div class="status-line"><span class="status-pill info">Firmware architecture target</span></div>
+                </div>
+                <div class="kpi">
+                    <h4>Cooling Control</h4>
+                    <span class="kpi-number">1 kHz PWM</span>
+                    <p>Support 0-100% fan duty cycle, 2 deg C hysteresis, 4-sample RPM averaging, and 2 s stall/timeout
+                        detection.</p>
+                    <div class="status-line"><span class="status-pill success">Bench-implemented</span></div>
+                </div>
+                <div class="kpi">
+                    <h4>Host Interface</h4>
+                    <span class="kpi-number">115200 baud</span>
+                    <p>Stream USB CDC telemetry with robust GUI command delivery using QWebChannel plus a 50 ms fallback
+                        command poll.</p>
+                    <div class="status-line"><span class="status-pill success">Integrated path</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide4">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 4</div>
+                <div class="brand-copy">
+                    <span>High-Level Design</span>
+                    <span>System block diagram and domain partitioning</span>
+                </div>
+            </div>
+            <div class="tab">SBD</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Final High-Level Design</h2>
+            <p class="subhead">The final architecture organizes the system into the battery unit, isolated
+                sensing/control electronics, bench support hardware, and the operator station. This keeps the
+                high-energy pack interactions separate from the USB-connected host interface.</p>
+            <div class="figure-card"
+                style="flex:1;padding:18px 18px 12px; display:flex; flex-direction:column; min-height:0;">
+                <img src="system_block_diagram.png" alt="System block diagram"
+                    style="flex:1; min-height:0; object-fit:contain;">
+                <div class="caption">System block diagram showing battery unit, monitoring electronics, bench support,
+                    and operator station</div>
+            </div>
+            <div class="callout-strip">
+                <div class="callout">
+                    <strong>Battery Domain</strong>
+                    10s1p pack, thermistors, fan, balancing, current path, and protection hardware.
+                </div>
+                <div class="callout">
+                    <strong>Control Domain</strong>
+                    STM32F303RC, ADC acquisition, BQ76930 I2C communication, PWM control, USB CDC telemetry.
+                </div>
+                <div class="callout">
+                    <strong>Host Domain</strong>
+                    PyQt6 dashboard, parser/bridge layer, command surface GUI, and future Jetson AI pipeline.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide5">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 5</div>
+                <div class="brand-copy">
+                    <span>Low-Level Electrical Design</span>
+                    <span>Final implementation schematics</span>
+                </div>
+            </div>
+            <div class="tab">Hardware</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Final Low-Level Design: Electrical Implementation</h2>
+            <p class="subhead">Three representative schematic pages show the core low-level implementation: BQ76930
+                front-end sensing and FET control, the STM32F3 interface hub, and the dedicated fan-control/tachometer
+                wiring.</p>
+            <div class="triptych" style="flex:1;">
+                <div class="figure-card">
+                    <img src="bms_schematic_bq76930.png" alt="BQ76930 schematic">
+                    <div class="caption">BQ76930 front-end: cell taps, shunt current path, charge/discharge FET control
+                    </div>
+                </div>
+                <div class="figure-card">
+                    <img src="bms_schematic_stm32.png" alt="STM32 schematic">
+                    <div class="caption">STM32F303RC: thermistor inputs, BMS comms, watchdog, LEDs, USB and debug I/O
+                    </div>
+                </div>
+                <div class="figure-card">
+                    <img src="bms_schematic_fan.png" alt="Fan control schematic">
+                    <div class="caption">Fan control sheet: PWM enable, tach feedback, connector routing, and power
+                        interface</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide6">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 6</div>
+                <div class="brand-copy">
+                    <span>Low-Level Software Design</span>
+                    <span>Program flow-charts for firmware and dashboard</span>
+                </div>
+            </div>
+            <div class="tab">GUI Flow</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Final Low-Level Design: Program Flow-Charts</h2>
+            <p class="subhead">No flowchart asset existed in the repo, so the implementation flow below was built
+                directly from the firmware source, parser logic, and GUI launcher behavior.</p>
+            <div class="flow-grid" style="flex:1;">
+                <div class="flow-column">
+                    <h3>Firmware Runtime Flow</h3>
+                    <div class="flow-node core">
+                        <strong>1. Boot and bring-up</strong>
+                        Initialize clocks, ADCs, I2C, timers, USB CDC, GPIO, and tach capture hardware.
+                    </div>
+                    <div class="flow-arrow">&darr;</div>
+                    <div class="flow-node">
+                        <strong>2. BMS interface detection</strong>
+                        Probe BQ76930 at 0x08 and 0x18, then auto-detect whether CRC is required.
+                    </div>
+                    <div class="flow-arrow">&darr;</div>
+                    <div class="flow-node">
+                        <strong>3. Sensor acquisition</strong>
+                        Sample 10 thermistor channels, read cell voltages/current, convert ADC data with Beta-model NTC
+                        math.
+                    </div>
+                    <div class="flow-arrow">&darr;</div>
+                    <div class="flow-node">
+                        <strong>4. Control, protection, and telemetry</strong>
+                        Execute fan auto/manual logic, balancing thresholds, SYS_STAT checks, fault/status handling, and
+                        stream structured USB telemetry plus command responses.
+                    </div>
+                </div>
+                <div class="flow-column">
+                    <h3>Desktop Dashboard Flow</h3>
+                    <div class="flow-node core">
+                        <strong>1. Launcher startup</strong>
+                        PyQt6 starts the WebEngine UI, initializes the bridge, and loads the command-surface frontend.
+                    </div>
+                    <div class="flow-arrow">&darr;</div>
+                    <div class="flow-node">
+                        <strong>2. Serial connection layer</strong>
+                        Auto-detect or select the USB CDC port and connect at 115200 baud.
+                    </div>
+                    <div class="flow-arrow">&darr;</div>
+                    <div class="flow-node">
+                        <strong>3. Parsing and frame assembly</strong>
+                        Accept JSON and raw text telemetry, use regex token extraction, and finalize multiline frames
+                        after a 0.30 s timeout.
+                    </div>
+                    <div class="flow-arrow">&darr;</div>
+                    <div class="flow-node">
+                        <strong>4. State normalization and GUI update</strong>
+                        Map thermistors to cells, preserve fan state across partial frames, refresh the widgets/3D
+                        scene, and return commands by QWebChannel or the 50 ms polled fallback.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide7">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 7</div>
+                <div class="brand-copy">
+                    <span>Technical Challenges</span>
+                    <span>Difficult problems, fixes, and workarounds</span>
+                </div>
+            </div>
+            <div class="tab">Solutions</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Technical Challenges</h2>
+            <p class="subhead">The hardest issues were not just coding problems; they were integration problems across
+                analog sensing, firmware timing, serial framing, and mechanical packaging.</p>
+            <div class="challenge-grid" style="flex:1;">
+                <div class="challenge-card">
+                    <span class="tagline">Signal stability</span>
+                    <h4>High-impedance thermistor readings were noisy</h4>
+                    <p><strong>Problem:</strong> Faster ADC settings produced inconsistent NTC values on the thermistor
+                        network.</p>
+                    <p><strong>Solution:</strong> Increased thermistor channel sampling to
+                        <strong>ADC_SAMPLETIME_601CYCLES_5</strong> and used a Beta-model conversion pipeline.
+                    </p>
+                    <p><strong>Workaround:</strong> Full sensor calibration against a reference thermometer is still a
+                        next-step item.</p>
+                </div>
+                <div class="challenge-card">
+                    <span class="tagline">Firmware integration</span>
+                    <h4>PWM fan control required missing HAL timer pieces</h4>
+                    <p><strong>Problem:</strong> TIM support needed additional HAL TIM/TIM-extended driver integration
+                        before PWM would link and run correctly.</p>
+                    <p><strong>Solution:</strong> Added the missing timer drivers and tuned the output to <strong>1 kHz
+                            PWM</strong> with <strong>2 deg C hysteresis</strong>.</p>
+                    <p><strong>Workaround:</strong> RPM estimation falls back from duty cycle when tach pulses time out.
+                    </p>
+                </div>
+                <div class="challenge-card">
+                    <span class="tagline">Protocol robustness</span>
+                    <h4>Mixed serial formats broke clean frame reconstruction</h4>
+                    <p><strong>Problem:</strong> The firmware emitted JSON, indexed tokens, and human-readable status
+                        lines during bring-up, which caused partial reads and parser corruption.</p>
+                    <p><strong>Solution:</strong> Built a regex-based parser with multiline frame assembly, persistent
+                        fan state merging, and a <strong>0.30 s</strong> timeout-based finalize path.</p>
+                    <p><strong>Workaround:</strong> The GUI keeps simulation mode available when hardware is absent.</p>
+                </div>
+                <div class="challenge-card">
+                    <span class="tagline">Mechanical packaging</span>
+                    <h4>Compact enclosure packaging fought airflow and fit</h4>
+                    <p><strong>Problem:</strong> Early 3D printed parts had tolerance issues and the packaging needed to
+                        support cells, wiring, ports, and airflow inside a compact footprint.</p>
+                    <p><strong>Solution:</strong> Repeated CAD revisions and prints tightened fit, improved internal
+                        routing, and preserved fan airflow.</p>
+                    <p><strong>Workaround:</strong> Harness engineering and full production-ready enclosure optimization
+                        remain refinement areas.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide8">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 8</div>
+                <div class="brand-copy">
+                    <span>Major Components</span>
+                    <span>Main subsystems and implementation ownership</span>
+                </div>
+            </div>
+            <div class="tab">Implementation</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Major Components of the Design and Implementation</h2>
+            <p class="subhead">Each subsystem combines hardware, firmware, and integration work. The owners below show
+                the primary implementation leadership for each major block.</p>
+            <div class="component-grid" style="flex:1;">
+                <div class="component-card">
+                    <div class="component-figure">
+                        <img src="E-Load Image.png" alt="Battery pack">
+                    </div>
+                    <h4>Battery Pack and Harness</h4>
+                    <p>10s1p cell holder, pack physical setup, enclosure fit-up, and harness routing required for
+                        sensing, charging, and cooling integration.</p>
+                    <div class="owner">Owners: Nick, Christian</div>
+                </div>
+                <div class="component-card">
+                    <div class="component-figure">
+                        <img src="BMS_Image.png" alt="BMS enclosure">
+                    </div>
+                    <h4>BMS Hardware Stack</h4>
+                    <p>BMS schematic, PCB/layout path, BQ76930 monitoring front-end, protection interfaces, and
+                        emulation/validation hardware.</p>
+                    <div class="owner">Owners: Connor, Nick</div>
+                </div>
+                <div class="component-card">
+                    <div class="component-figure">
+                        <img src="firmware.png" alt="Firmware development">
+                    </div>
+                    <h4>Embedded Control Firmware</h4>
+                    <p>STM32F303RC bring-up, ADC thermistor conversion, BQ current sensing, fan control, USB CDC
+                        communication, and command handling.</p>
+                    <div class="owner">Owners: Kaushik, Connor</div>
+                </div>
+                <div class="component-card">
+                    <div class="component-figure">
+                        <img src="GUI_Dashboard.png" alt="Dashboard UI">
+                    </div>
+                    <h4>Operator Dashboard</h4>
+                    <p>PyQt6 launcher, parser, QWebChannel bridge, polished command-surface GUI, packaging, updater
+                        flow, and Jetson-facing data path.</p>
+                    <div class="owner">Owners: Kaushik, Christian</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide9">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 9</div>
+                <div class="brand-copy">
+                    <span>Team Contributions</span>
+                    <span>Explicit member-by-member ownership</span>
+                </div>
+            </div>
+            <div class="tab">Ownership</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Who Contributed to What</h2>
+            <p class="subhead">The final design was integrated as one system, but subsystem leadership was distributed
+                across the team as follows.</p>
+            <div class="member-grid" style="flex:1;">
+                <div class="member-card">
+                    <span class="member-role">Kaushik</span>
+                    <h4>Dashboard and System Integration</h4>
                     <ul>
-                        <li>High-voltage battery sensing and protection.</li>
-                        <li>An isolated embedded control and communication layer.</li>
-                        <li>A desktop dashboard for real-time monitoring, command/control, and firmware update support.</li>
-                    </ul>
-                    <p style="margin-top: 25px;">The architecture is intentionally split between a battery domain and a host-computer domain to improve safety and reduce fault propagation risk.</p>
-                </div>
-                <div>
-                    <div class="image-wrapper">
-                        <img src="http://googleusercontent.com/image_collection/image_retrieval/4058437450043754291" alt="Lithium Ion Battery Prototype">
-                    </div>
-                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Fig 1: 10s1p Lithium-Ion Prototype Context</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- SLIDE 3 -->
-<div class="slide-container" id="slide3">
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 1.2</div>
-        <div class="gui-pill">Context</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Purpose & Application Context</h2>
-        <p style="margin-bottom: 40px;">The design targets battery-powered engineering prototypes where safe operation, observability, and controlled interfacing with a development computer are required.</p>
-        <div class="content-area">
-            <div class="tiled-content">
-                <div class="tile">
-                    <div class="icon"><i class="fa-solid fa-flask"></i></div>
-                    <h3>Lab Characterization</h3>
-                    <p>Designed for robust laboratory battery characterization, providing safe boundaries and precise telemetry capture.</p>
-                </div>
-                <div class="tile">
-                    <div class="icon"><i class="fa-solid fa-graduation-cap"></i></div>
-                    <h3>Educational Research</h3>
-                    <p>Facilitates educational power electronics and controls experiments with clear visibility into system states.</p>
-                </div>
-                <div class="tile">
-                    <div class="icon"><i class="fa-solid fa-brain"></i></div>
-                    <h3>AI/ML Integration</h3>
-                    <p>Lays the groundwork for future integration with AI/ML-based state estimation pipelines using pack-level telemetry.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- SLIDE 4 -->
-<div class="slide-container" id="slide4">
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 4.1</div>
-        <div class="gui-pill">Architecture</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">High-Level Architecture</h2>
-        <div class="content-area">
-            <div class="two-column">
-                <div>
-                    <p>The implementation strategy separated development into parallel tracks:</p>
-                    <ul style="margin-top: 20px;">
-                        <li><strong>Hardware + Firmware Track:</strong> MCU interfaces, BMS monitor communication, thermal sensing, fan control.</li>
-                        <li><strong>Desktop Software Track:</strong> Serial ingestion, parsing, UI rendering, and command channel.</li>
-                        <li><strong>Documentation Track:</strong> Weekly technical reports, firmware architecture notes, and evolving project detail documents.</li>
+                        <li>Dashboard and GUI design/implementation</li>
+                        <li>CAD and enclosure refinement</li>
+                        <li>Firmware integration and telemetry path work</li>
+                        <li>NVIDIA Jetson AI model pipeline direction</li>
                     </ul>
                 </div>
-                <div>
-                    <div class="image-wrapper">
-                        <img src="http://googleusercontent.com/image_collection/image_retrieval/5987536337873337836" alt="System Block Diagram Architecture">
-                    </div>
-                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Fig 2: Senior Design Block Diagram</p>
+                <div class="member-card">
+                    <span class="member-role">Christian</span>
+                    <h4>E-Load and Bench Validation</h4>
+                    <ul>
+                        <li>E-Load development</li>
+                        <li>Testing and debugging support</li>
+                        <li>NVIDIA Jetson AI model contribution</li>
+                        <li>Battery charger and pack/enclosure harness setup</li>
+                    </ul>
+                </div>
+                <div class="member-card">
+                    <span class="member-role">Nick</span>
+                    <h4>PCB and Validation Hardware</h4>
+                    <ul>
+                        <li>BMS layout and PCB design</li>
+                        <li>E-Load validation</li>
+                        <li>BMS validation</li>
+                        <li>Battery charger and battery-cell harness engineering</li>
+                    </ul>
+                </div>
+                <div class="member-card">
+                    <span class="member-role">Connor</span>
+                    <h4>Architecture and Schematic Direction</h4>
+                    <ul>
+                        <li>Overall planning and system planning</li>
+                        <li>BMS schematic development</li>
+                        <li>Emulation board design</li>
+                        <li>Firmware assistance and architecture support</li>
+                    </ul>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </section>
 
-<!-- SLIDE 5 -->
-<div class="slide-container" id="slide5">
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 2</div>
-        <div class="gui-pill">Theory</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Theoretical Basis: Sensing</h2>
-        <div class="content-area">
-            <div class="two-column tiled">
-                <div>
-                    <h3>Current Measurement</h3>
-                    <p>Pack current is estimated through a shunt resistor and coulomb-counter readout path. The conversion formula derives from BQ76930 voltage-per-LSB and a 20 mΩ shunt.</p>
-                    <div class="formula-container">
-                        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
-                            <msub><mi>I</mi><mrow><mi>p</mi><mi>a</mi><mi>c</mi><mi>k</mi></mrow></msub>
-                            <mo>=</mo>
-                            <msub><mi>N</mi><mrow><mi>L</mi><mi>S</mi><mi>B</mi></mrow></msub>
-                            <mo>&#215;</mo>
-                            <msub><mi>I</mi><mrow><mi>L</mi><mi>S</mi><mi>B</mi></mrow></msub>
-                        </math>
-                    </div>
-                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; font-family: monospace;">Where I_LSB = 0.000422 A/LSB</p>
+    <section class="slide" id="slide10">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 10</div>
+                <div class="brand-copy">
+                    <span>Design Considerations</span>
+                    <span>Constraints, tradeoffs, and standards</span>
                 </div>
-                <div>
-                    <h3>Thermistor Temperature</h3>
-                    <p>Temperature conversion uses a Beta-model NTC equation with parameters R0 = 10 kΩ at 25°C, β = 3950, and a divider supply near 3.3V.</p>
-                    <div class="formula-container">
-                        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
-                            <mfrac><mn>1</mn><mi>T</mi></mfrac>
-                            <mo>=</mo>
-                            <mfrac><mn>1</mn><msub><mi>T</mi><mn>0</mn></msub></mfrac>
-                            <mo>+</mo>
-                            <mfrac><mn>1</mn><mi>&#946;</mi></mfrac>
-                            <mi>ln</mi>
-                            <mfenced><mfrac><mi>R</mi><msub><mi>R</mi><mn>0</mn></msub></mfrac></mfenced>
-                        </math>
+            </div>
+            <div class="tab">Standards</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Design Considerations</h2>
+            <p class="subhead">The final system reflects real engineering constraints, not just ideal features. Every
+                subsystem was shaped by schedule, thermal behavior, packaging limits, cost, and the communication
+                standards the project could reliably support this quarter.</p>
+            <div class="constraint-grid">
+                <div class="summary-stack">
+                    <div class="info-card">
+                        <h4>Time and Integration Risk</h4>
+                        <p>The team chose tolerant serial framing, simulation mode, and staged hardware/software
+                            bring-up so dashboard work could continue even when physical hardware was unavailable.</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Power, Thermal, and Safety Tradeoffs</h4>
+                        <p>Cooling and protection had to work without overcomplicating the first integrated build. This
+                            drove the 1 kHz PWM fan path, simple breakpoint auto-curve, 2 deg C hysteresis, and clear
+                            fault observability before more advanced control.</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>Size, Weight, and Cost</h4>
+                        <p>The enclosure needed to stay compact while preserving airflow, battery-holder geometry,
+                            wiring access, and USB connectivity. Reusing STM32Cube/HAL, USB CDC, and 3D-printed
+                            mechanical revisions kept the build practical within budget and time.</p>
+                    </div>
+                </div>
+                <div class="panel glass">
+                    <h3>Industry Standards and Interfaces Used</h3>
+                    <div class="standards-list">
+                        <div class="standard-pill">
+                            <strong>USB 2.0 CDC</strong>
+                            <span>Host telemetry and command interface</span>
+                        </div>
+                        <div class="standard-pill">
+                            <strong>I2C</strong>
+                            <span>BQ76930 communication and RTC-style peripheral planning</span>
+                        </div>
+                        <div class="standard-pill">
+                            <strong>ADC + NTC sensing</strong>
+                            <span>10K Beta-model thermistor measurement path</span>
+                        </div>
+                        <div class="standard-pill">
+                            <strong>PWM + Tach capture</strong>
+                            <span>Fan duty-cycle actuation and RPM feedback</span>
+                        </div>
+                        <div class="standard-pill">
+                            <strong>JSON / tokenized telemetry</strong>
+                            <span>Structured frontend state reconstruction during bring-up</span>
+                        </div>
+                        <div class="standard-pill">
+                            <strong>QWebChannel</strong>
+                            <span>Browser-to-Python bridge inside the packaged desktop app</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </section>
 
-<!-- SLIDE 6 -->
-<div class="slide-container" id="slide6">
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 3</div>
-        <div class="gui-pill">Specifications</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Design Specifications</h2>
-        <div class="content-area">
-            <div class="table-layout">
-                <table>
+    <section class="slide" id="slide11">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 11</div>
+                <div class="brand-copy">
+                    <span>Test Report</span>
+                    <span>Repo-backed quantitative verification</span>
+                </div>
+            </div>
+            <div class="tab">Results</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Test Report</h2>
+            <p class="subhead">Because this slide is intentionally limited to repo-backed evidence, the table below
+                reports implemented and validated behaviors from the report, weekly milestones, and firmware/dashboard
+                source rather than invented bench numbers.</p>
+            <div class="test-layout">
+                <table class="spec-table">
                     <thead>
                         <tr>
-                            <th>Specification Category</th>
-                            <th>Target / Requirement</th>
+                            <th>Test Item</th>
+                            <th>Original Objective</th>
+                            <th>Observed / Implemented Result</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>Cell Configuration</strong></td>
-                            <td>10s1p lithium-ion (Molicel P42A context)</td>
+                            <td><strong>Cell and thermal visibility</strong></td>
+                            <td>Show all 10 cells and 10 thermistor channels</td>
+                            <td>10 cell voltages plus thermistor mapping to the GUI are implemented</td>
+                            <td><span class="status-pill success">Met</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Electrical Ratings</strong></td>
-                            <td>Nominal pack voltage ~36V, Capacity 4.2 Ah</td>
+                            <td><strong>USB host link</strong></td>
+                            <td>Reliable host communication at 115200 baud</td>
+                            <td>USB CDC plus GUI serial connect flow defaults to 115200</td>
+                            <td><span class="status-pill success">Met</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Monitoring Scope</strong></td>
-                            <td>10 cell voltages captured; 10 NTC channels sampled via STM32 ADC</td>
+                            <td><strong>Fan control loop</strong></td>
+                            <td>Auto/manual cooling with measurable RPM</td>
+                            <td>1 kHz PWM, 0-100% duty, 2 deg C hysteresis, 2 s RPM timeout, 4-sample average</td>
+                            <td><span class="status-pill success">Met</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Host Interface</strong></td>
-                            <td>USB-C/USB CDC serial telemetry at 115200 baud</td>
+                            <td><strong>Current sensing</strong></td>
+                            <td>Convert BQ current registers into pack current</td>
+                            <td>20 mOhm shunt conversion implemented at 0.422 mA/LSB</td>
+                            <td><span class="status-pill success">Met</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Fan Control & Output</strong></td>
-                            <td>PWM control (auto/manual modes), telemetry includes Duty & RPM</td>
+                            <td><strong>Parser resilience</strong></td>
+                            <td>Handle mixed telemetry formats without dropping frames</td>
+                            <td>Regex/token parser, JSON handling, and 0.30 s multiline finalize path are implemented
+                            </td>
+                            <td><span class="status-pill success">Met</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Safety & Reliability</strong></td>
-                            <td>OV/UV/current/thermal observability, galvanic isolation boundary</td>
+                            <td><strong>Calibration completeness</strong></td>
+                            <td>Close the loop with calibrated live hardware data</td>
+                            <td>Integration and calibration are identified next steps in the repo</td>
+                            <td><span class="status-pill warning">Partial</span></td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- SLIDE 7 -->
-<div class="slide-container" id="slide7">
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 5.1</div>
-        <div class="gui-pill">Firmware</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Embedded Firmware</h2>
-        <div class="content-area">
-            <div class="two-column tiled">
-                <div>
-                    <h3>STM32F303 MCU Platform</h3>
-                    <ul>
-                        <li><strong>I2C Integration:</strong> Used for seamless BQ76930 communication. Auto-detects BMS addresses (0x08/0x18).</li>
-                        <li><strong>ADC Channels:</strong> Configured for NTC sensing with long sample times for higher-impedance networks.</li>
-                        <li><strong>USB Device CDC:</strong> Robust interface set up for host communications and telemetry streaming.</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3>Control & Diagnostics</h3>
-                    <ul>
-                        <li><strong>Battery IC Wrappers:</strong> Register read/write wrappers implemented for SYS_STAT, control, and protection.</li>
-                        <li><strong>Fan Control:</strong> PWM duty mapping to timer settings. Tachometer capture for RPM calculation.</li>
-                        <li><strong>Fault Logic:</strong> Explicit fault code branches for hardware errors and short/open circuit conditions.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- SLIDE 8 -->
-<div class="slide-container" id="slide8">
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 5.2</div>
-        <div class="gui-pill">Software</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Desktop Dashboard Stack</h2>
-        <div class="content-area">
-            <div class="two-column">
-                <div>
-                    <p style="margin-bottom: 20px;">The desktop dashboard provides real-time monitoring and command interfacing.</p>
-                    <ul>
-                        <li><strong>Launcher Layer:</strong> PyQt6 windowing with embedded WebEngine frontend and QWebChannel bridge.</li>
-                        <li><strong>Serial Parsing:</strong> Robust parsing of line-oriented telemetry using regex. Reconstructs frames from mixed streams.</li>
-                        <li><strong>Frontend UI:</strong> HTML/CSS/JS stack rendering live battery and thermal states.</li>
-                        <li><strong>Packaging:</strong> Dependency manifests and PyInstaller spec for Windows, macOS, and Linux.</li>
-                    </ul>
-                </div>
-                <div>
-                    <div class="image-wrapper">
-                        <img src="http://googleusercontent.com/image_collection/image_retrieval/4899696295544498087" alt="Software Dashboard Interface">
+                <div class="test-grid">
+                    <div class="test-card">
+                        <h4>Validation Strategy</h4>
+                        <p>Module-level firmware checks, parser-level serial reconstruction tests, GUI integration
+                            verification, and staged bench testing.</p>
                     </div>
-                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Fig 3: Desktop UI & Visualization</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- SLIDE 9 -->
-<div class="slide-container" id="slide9">
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 6</div>
-        <div class="gui-pill">Verification</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Validation Status</h2>
-        <p style="margin-bottom: 30px;">Validation executed via staged testing: module-level checks, parser checks, GUI integration, and end-to-end bench tests.</p>
-        <div class="content-area">
-            <div class="bullet-list">
-                <ul>
-                    <li>
-                        <i class="fa-solid fa-check-circle"></i>
-                        <strong>BQ Address Detection</strong>
-                        Correctly locks to valid address using dual-address probe.
-                    </li>
-                    <li>
-                        <i class="fa-solid fa-check-circle"></i>
-                        <strong>CRC Compatibility</strong>
-                        Correct read/write framing with/without CRC dynamically.
-                    </li>
-                    <li>
-                        <i class="fa-solid fa-check-circle"></i>
-                        <strong>NTC Conversion Path</strong>
-                        Stable conversion under intended long ADC sample timing.
-                    </li>
-                    <li>
-                        <i class="fa-solid fa-check-circle"></i>
-                        <strong>Fan PWM & RPM</strong>
-                        Duty updates reflected in behavior; RPM accurately filtered.
-                    </li>
-                    <li>
-                        <i class="fa-solid fa-check-circle"></i>
-                        <strong>Serial Parser Resilience</strong>
-                        Successfully reconstructs frames from mixed format lines.
-                    </li>
-                    <li>
-                        <i class="fa-solid fa-check-circle"></i>
-                        <strong>Command Reliability</strong>
-                        Commands reach firmware via bridge + polling queue.
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- SLIDE 10 -->
-<div class="slide-container" id="slide10">
-    <div class="ambient-glow glow-red" style="opacity: 0.3; bottom: -20%; top: auto;"></div>
-    <div class="gui-top-bar">
-        <div class="gui-logo">Section 7</div>
-        <div class="gui-pill">Conclusion</div>
-    </div>
-    <div class="slide-container-inner">
-        <h2 class="slide-title">Future Roadmap & Conclusion</h2>
-        <div class="content-area">
-            <div class="two-column tiled">
-                <div>
-                    <h3>Future Enhancements</h3>
-                    <ul>
-                        <li><strong>Firmware:</strong> Stronger packet framing (length + CRC), explicit state machine enums, calibration storage.</li>
-                        <li><strong>Control:</strong> Refined thermal derating, SOC/SOH estimation, hardened trip pathways.</li>
-                        <li><strong>Desktop UX:</strong> Persistent session logging (CSV/JSON), trend charts for voltage sag, explicit alert panes.</li>
-                    </ul>
-                </div>
-                <div style="display: flex; flex-direction: column; justify-content: center;">
-                    <h3>Project Conclusion</h3>
-                    <p>This EE175 project demonstrates a complete cross-domain engineering design: battery pack instrumentation, embedded control, host communication, and operator-facing visualization.</p>
-                    <div style="margin-top: 30px; padding: 25px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                        <h4 style="color: #60a5fa; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Repository Audit</h4>
-                        <p style="margin: 0; font-size: 18px; color: #f3f4f6;">The artifact manifest confirms <strong>4,506 total artifacts</strong> generated across firmware source, dashboard assets, PDFs, and CAD models.</p>
+                    <div class="test-card">
+                        <h4>How Close to Spec?</h4>
+                        <p>The communication, telemetry, fan control, and monitoring objectives are implemented. The
+                            remaining gap is calibration and larger-scale live hardware test evidence, not basic
+                            architectural completeness.</p>
+                    </div>
+                    <div class="test-card">
+                        <h4>Key Quantitative Anchors</h4>
+                        <p>10 cells, 10 NTCs, 115200 baud, 1 kHz PWM, 2 deg C hysteresis, 0.422 mA/LSB, 2 s RPM timeout,
+                            50 ms command fallback.</p>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </section>
 
+    <section class="slide" id="slide12">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 12</div>
+                <div class="brand-copy">
+                    <span>Demo</span>
+                    <span>Video placeholder for the final PowerPoint</span>
+                </div>
+            </div>
+            <div class="tab">Video</div>
+        </div>
+        </div>
+        <div class="content video-slide">
+            <h2>Demo Video Placeholder</h2>
+            <p class="subhead">This slide is intentionally designed as a clean drop zone so the final PowerPoint can
+                receive the recorded demo clip after export.</p>
+            <div class="video-stage">
+                <div class="video-drop">
+                    <div class="play-icon"></div>
+                    <strong>Insert final demo video here</strong>
+                    <p>Recommended clip sequence: connect to USB CDC, stream live telemetry, toggle fan control, show
+                        pack status, and demonstrate E-Load / command-surface interaction.</p>
+                </div>
+            </div>
+            <div class="demo-notes">
+                <div class="callout">
+                    <strong>Scene 1</strong>
+                    Dashboard boot and serial connection
+                </div>
+                <div class="callout">
+                    <strong>Scene 2</strong>
+                    Live cell, current, and temperature telemetry
+                </div>
+                <div class="callout">
+                    <strong>Scene 3</strong>
+                    Fan auto/manual control and status updates
+                </div>
+                <div class="callout">
+                    <strong>Scene 4</strong>
+                    E-Load or charger interaction and overall system response
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide13">
+        <div class="chrome">
+            <div class="brand">
+                <div class="brand-mark">Slide 13</div>
+                <div class="brand-copy">
+                    <span>Summary</span>
+                    <span>Final takeaways and next steps</span>
+                </div>
+            </div>
+            <div class="tab">Next Phase</div>
+        </div>
+        </div>
+        <div class="content">
+            <h2>Summary</h2>
+            <div class="summary-layout">
+                <div class="summary-stack">
+                    <div class="panel glass">
+                        <p class="big-quote">The project delivered a real cross-domain engineering system, not a
+                            disconnected prototype: battery monitoring, embedded control, host communication, operator
+                            visualization, and a clear path toward AI-assisted analytics.</p>
+                    </div>
+                    <div class="card-grid-3">
+                        <div class="info-card">
+                            <h4>What Was Achieved</h4>
+                            <p>Integrated BQ76930 sensing, STM32 control, USB telemetry, a premium dashboard, and a
+                                validated mechanical/electrical architecture.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>What Is Strongest</h4>
+                            <p>The system-level integration story: cell visibility, current measurement, thermal
+                                control, parser robustness, and GUI usability all exist in one design.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>What Comes Next</h4>
+                            <p>Final calibration, fuller charger/e-load validation, stronger fault handling, richer
+                                logging/trending, and Jetson-based state estimation.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="summary-stack" style="flex:1; min-height:0;">
+                    <div class="figure-card" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                        <img src="GUI_Dashboard.png" alt="Final dashboard"
+                            style="flex:1; object-fit:contain; min-height:0;">
+                        <div class="caption">Final command surface preserving the project visual language</div>
+                    </div>
+                    <div class="panel glass">
+                        <h3>Closing Takeaway</h3>
+                        <p>This EE175 design demonstrates a modular, safe, and expandable battery platform that can move
+                            from senior-design integration into a more production-style validation and analytics
+                            pipeline.</p>
+                        <p class="footnote" style="margin-top:14px;">Sources used in this deck: final report, weekly
+                            reports, firmware plans, dashboard source, schematic PDFs, and project assets from the EE175
+                            workspace.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            function updateScale() {
+                // Adjust to fit 1600x900 inside current window with generous padding so it's not too tight
+                const scale = Math.min(window.innerWidth / 1750, window.innerHeight / 1050);
+                document.documentElement.style.setProperty('--slide-scale', scale);
+            }
+
+            function centerModelViewer(viewer) {
+                if (typeof viewer.getBoundingBoxCenter !== 'function') {
+                    return;
+                }
+
+                const center = viewer.getBoundingBoxCenter();
+                viewer.cameraTarget = `${center.x.toFixed(3)}m ${center.y.toFixed(3)}m ${center.z.toFixed(3)}m`;
+            }
+
+            window.addEventListener('resize', updateScale);
+            updateScale();
+
+            document.querySelectorAll('.model-viewer').forEach((viewer) => {
+                viewer.addEventListener('load', () => centerModelViewer(viewer), { once: true });
+                if (viewer.model) {
+                    centerModelViewer(viewer);
+                }
+            });
+
+            const slides = document.querySelectorAll('.slide');
+            let currentSlide = 0;
+
+            const progress = document.createElement('div');
+            progress.className = 'nav-progress';
+            document.body.appendChild(progress);
+
+            const indicator = document.createElement('div');
+            indicator.className = 'nav-indicator';
+            document.body.appendChild(indicator);
+
+            const controls = document.createElement('div');
+            controls.className = 'nav-controls';
+
+            // SVG icons inside buttons
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'nav-btn';
+            prevBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>';
+            prevBtn.onclick = () => { currentSlide = Math.max(0, currentSlide - 1); updateSlides(); };
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'nav-btn';
+            nextBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+            nextBtn.onclick = () => { currentSlide = Math.min(slides.length - 1, currentSlide + 1); updateSlides(); };
+
+            controls.appendChild(prevBtn);
+            controls.appendChild(nextBtn);
+            document.body.appendChild(controls);
+
+            function updateSlides() {
+                slides.forEach((slide, index) => {
+                    slide.classList.remove('active', 'prev', 'next');
+                    if (index === currentSlide) {
+                        slide.classList.add('active');
+                    } else if (index < currentSlide) {
+                        slide.classList.add('prev');
+                    } else {
+                        slide.classList.add('next');
+                    }
+                });
+
+                const pct = ((currentSlide + 1) / slides.length) * 100;
+                progress.style.width = pct + '%';
+                indicator.innerText = `${currentSlide + 1} / ${slides.length}`;
+
+                prevBtn.style.opacity = currentSlide === 0 ? '0.3' : '1';
+                nextBtn.style.opacity = currentSlide === slides.length - 1 ? '0.3' : '1';
+                prevBtn.style.pointerEvents = currentSlide === 0 ? 'none' : 'auto';
+                nextBtn.style.pointerEvents = currentSlide === slides.length - 1 ? 'none' : 'auto';
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+                    currentSlide = Math.min(slides.length - 1, currentSlide + 1);
+                    updateSlides();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    currentSlide = Math.max(0, currentSlide - 1);
+                    updateSlides();
+                    e.preventDefault();
+                }
+            });
+
+            let isScrolling = false;
+            document.addEventListener('wheel', (e) => {
+                if (isScrolling) return;
+                isScrolling = true;
+                setTimeout(() => isScrolling = false, 800);
+                if (e.deltaY > 30) {
+                    currentSlide = Math.min(slides.length - 1, currentSlide + 1);
+                    updateSlides();
+                } else if (e.deltaY < -30) {
+                    currentSlide = Math.max(0, currentSlide - 1);
+                    updateSlides();
+                }
+            }, { passive: false });
+
+            updateSlides();
+        });
+    </script>
 </body>
+
 </html>
-```
