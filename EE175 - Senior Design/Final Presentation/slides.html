@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMS Final Design Presentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Added 'Outfit' for premium, modern headers -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+/* 1. THE SETUP & PREMIUM BACKGROUND */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #050505; /* Darker, richer base */
+    display: grid;
+    gap: 40px;
+    grid-template-columns: 1fr;
+    margin: 0;
+    min-height: 100vh;
+    padding: 40px 0;
+    place-items: center;
+}
+
+.slide-container {
+    align-items: flex-start;
+    /* Richer gradient base */
+    background: linear-gradient(135deg, #2a0b0d 0%, #0a0203 100%);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', sans-serif;
+    gap: 40px;
+    height: 720px;
+    justify-content: center;
+    overflow: hidden;
+    padding: 60px;
+    position: relative;
+    width: 1280px;
+}
+
+/* Premium Tech Grid Overlay */
+.slide-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.slide-container > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* Ambient Lighting Orbs for Depth */
+.ambient-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.6;
+}
+.glow-red {
+    top: -20%; left: -10%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
+}
+.glow-blue {
+    bottom: -20%; right: -10%;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+}
+
+/* 2. CONSISTENT TYPOGRAPHY */
+h1, h2, h3, h4 {
+    font-family: 'Outfit', sans-serif; /* Premium header font */
+    color: #ffffff;
+    margin: 0;
+}
+
+.slide-container p, .slide-container li, .slide-container td {
+    color: #a1aaa3; /* Softer, more premium text color */
+    font-weight: 400;
+    font-size: 20px;
+    line-height: 1.6;
+}
+
+.slide-container .slide-title {
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+    width: 100%;
+    /* Subtle text gradient for standard titles */
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.slide-container h3 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+/* --- HERO SLIDE (TITLE SLIDE) SPECIFICS --- */
+.hero-inner {
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.hero-badge {
+    color: #3b82f6;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 8px 20px;
+    border-radius: 100px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    margin-bottom: 10px;
+}
+
+.hero-title {
+    font-size: 84px;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    /* High-end metallic gradient */
+    background: linear-gradient(to right bottom, #ffffff 30%, #8cb5ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0px 10px 30px rgba(59, 130, 246, 0.2);
+    margin-bottom: 10px;
+}
+
+.hero-divider {
+    height: 1px;
+    width: 200px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    margin: 10px 0;
+}
+
+.hero-metadata {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 30px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.meta-label {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
+.meta-value {
+    font-size: 22px;
+    color: #e5e7eb;
+    font-weight: 500;
+}
+
+.team-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.team-label {
+    font-size: 14px;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.team-badges {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.badge {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 24px;
+    border-radius: 100px;
+    font-size: 16px;
+    color: #f3f4f6;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+/* 3. LAYOUT DEFINITIONS (Other Slides) */
+.two-column {
+    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    width: 100%;
+}
+
+.two-column.tiled > div {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    padding: 40px;
+}
+
+.two-column ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.two-column li {
+    margin-bottom: 20px;
+    position: relative;
+    padding-left: 24px;
+}
+
+.two-column li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: #3b82f6;
+    font-weight: bold;
+}
+
+.image-wrapper {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    height: 400px;
+    overflow: hidden;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.image-wrapper img {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.two-column .image-wrapper img {
+    object-fit: contain;
+}
+
+.tiled-content {
+    align-items: stretch;
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    width: 100%;
+}
+
+.tile {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 40px 30px;
+}
+
+.tile .icon {
+    align-items: center;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 16px;
+    color: #ffffff;
+    display: flex;
+    font-size: 28px;
+    height: 60px;
+    justify-content: center;
+    margin-bottom: 24px;
+    width: 60px;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.bullet-list ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.bullet-list li {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 25px 25px 25px 70px;
+    position: relative;
+}
+
+.bullet-list i {
+    color: #3b82f6;
+    font-size: 24px;
+    left: 25px;
+    position: absolute;
+    top: 28px;
+}
+
+.bullet-list li strong {
+    color: #ffffff;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 20px;
+}
+
+/* Table Layout */
+.table-layout {
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+}
+
+.table-layout table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.table-layout th, .table-layout td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 20px 30px;
+    text-align: left;
+}
+
+.table-layout th {
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Math/Formula Container */
+.formula-container {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+}
+
+math {
+    display: math;
+    font-size: 32px;
+    color: #93c5fd;
+}
+
+/* Premium Top Bar */
+.gui-top-bar {
+    position: absolute;
+    top: 30px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+}
+
+.gui-top-bar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; width: 100%; height: 1px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+}
+
+.gui-logo {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.gui-pill {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+    padding: 6px 20px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.slide-container-inner {
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 60px; 
+}
+    </style>
+</head>
+<body>
+
+<!-- SLIDE 1: PREMIUM HERO -->
+<div class="slide-container" id="slide1">
+    <div class="ambient-glow glow-red"></div>
+    <div class="ambient-glow glow-blue"></div>
+    
+    <div class="gui-top-bar">
+        <div class="gui-logo">UCR EV LAB</div>
+        <div class="gui-pill"><i class="fa-solid fa-bolt"></i> BMS</div>
+    </div>
+    
+    <div class="slide-container-inner hero-inner">
+        <div class="hero-badge">EE175AB Final Design Report</div>
+        <h1 class="hero-title">Battery Management <br>& Communication System</h1>
+        
+        <div class="hero-divider"></div>
+        
+        <div class="hero-metadata">
+            <div class="meta-item">
+                <span class="meta-label">Presentation Date</span>
+                <span class="meta-value">March 7, 2026</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Total Artifacts</span>
+                <span class="meta-value">4,506 Files</span>
+            </div>
+        </div>
+        
+        <div class="team-section">
+            <span class="team-label">Engineering Project Team</span>
+            <div class="team-badges">
+                <div class="badge">Kaushik Vada</div>
+                <div class="badge">Christian Kim</div>
+                <div class="badge">Connor Stewart</div>
+                <div class="badge">Nick Poon</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 2 -->
+<div class="slide-container" id="slide2">
+    <div class="ambient-glow glow-blue" style="opacity: 0.3; bottom: auto; top: -20%;"></div>
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 1.1</div>
+        <div class="gui-pill">Overview</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Executive Summary</h2>
+        <div class="content-area">
+            <div class="two-column">
+                <div>
+                    <p style="margin-bottom: 25px;">This project delivers a complete Battery Management and Communication System (BMS) for a 10s1p lithium-ion battery pack. The system combines:</p>
+                    <ul>
+                        <li>High-voltage battery sensing and protection.</li>
+                        <li>An isolated embedded control and communication layer.</li>
+                        <li>A desktop dashboard for real-time monitoring, command/control, and firmware update support.</li>
+                    </ul>
+                    <p style="margin-top: 25px;">The architecture is intentionally split between a battery domain and a host-computer domain to improve safety and reduce fault propagation risk.</p>
+                </div>
+                <div>
+                    <div class="image-wrapper">
+                        <img src="http://googleusercontent.com/image_collection/image_retrieval/4058437450043754291" alt="Lithium Ion Battery Prototype">
+                    </div>
+                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Fig 1: 10s1p Lithium-Ion Prototype Context</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 3 -->
+<div class="slide-container" id="slide3">
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 1.2</div>
+        <div class="gui-pill">Context</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Purpose & Application Context</h2>
+        <p style="margin-bottom: 40px;">The design targets battery-powered engineering prototypes where safe operation, observability, and controlled interfacing with a development computer are required.</p>
+        <div class="content-area">
+            <div class="tiled-content">
+                <div class="tile">
+                    <div class="icon"><i class="fa-solid fa-flask"></i></div>
+                    <h3>Lab Characterization</h3>
+                    <p>Designed for robust laboratory battery characterization, providing safe boundaries and precise telemetry capture.</p>
+                </div>
+                <div class="tile">
+                    <div class="icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <h3>Educational Research</h3>
+                    <p>Facilitates educational power electronics and controls experiments with clear visibility into system states.</p>
+                </div>
+                <div class="tile">
+                    <div class="icon"><i class="fa-solid fa-brain"></i></div>
+                    <h3>AI/ML Integration</h3>
+                    <p>Lays the groundwork for future integration with AI/ML-based state estimation pipelines using pack-level telemetry.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 4 -->
+<div class="slide-container" id="slide4">
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 4.1</div>
+        <div class="gui-pill">Architecture</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">High-Level Architecture</h2>
+        <div class="content-area">
+            <div class="two-column">
+                <div>
+                    <p>The implementation strategy separated development into parallel tracks:</p>
+                    <ul style="margin-top: 20px;">
+                        <li><strong>Hardware + Firmware Track:</strong> MCU interfaces, BMS monitor communication, thermal sensing, fan control.</li>
+                        <li><strong>Desktop Software Track:</strong> Serial ingestion, parsing, UI rendering, and command channel.</li>
+                        <li><strong>Documentation Track:</strong> Weekly technical reports, firmware architecture notes, and evolving project detail documents.</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="image-wrapper">
+                        <img src="http://googleusercontent.com/image_collection/image_retrieval/5987536337873337836" alt="System Block Diagram Architecture">
+                    </div>
+                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Fig 2: Senior Design Block Diagram</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 5 -->
+<div class="slide-container" id="slide5">
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 2</div>
+        <div class="gui-pill">Theory</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Theoretical Basis: Sensing</h2>
+        <div class="content-area">
+            <div class="two-column tiled">
+                <div>
+                    <h3>Current Measurement</h3>
+                    <p>Pack current is estimated through a shunt resistor and coulomb-counter readout path. The conversion formula derives from BQ76930 voltage-per-LSB and a 20 mΩ shunt.</p>
+                    <div class="formula-container">
+                        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+                            <msub><mi>I</mi><mrow><mi>p</mi><mi>a</mi><mi>c</mi><mi>k</mi></mrow></msub>
+                            <mo>=</mo>
+                            <msub><mi>N</mi><mrow><mi>L</mi><mi>S</mi><mi>B</mi></mrow></msub>
+                            <mo>&#215;</mo>
+                            <msub><mi>I</mi><mrow><mi>L</mi><mi>S</mi><mi>B</mi></mrow></msub>
+                        </math>
+                    </div>
+                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; font-family: monospace;">Where I_LSB = 0.000422 A/LSB</p>
+                </div>
+                <div>
+                    <h3>Thermistor Temperature</h3>
+                    <p>Temperature conversion uses a Beta-model NTC equation with parameters R0 = 10 kΩ at 25°C, β = 3950, and a divider supply near 3.3V.</p>
+                    <div class="formula-container">
+                        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+                            <mfrac><mn>1</mn><mi>T</mi></mfrac>
+                            <mo>=</mo>
+                            <mfrac><mn>1</mn><msub><mi>T</mi><mn>0</mn></msub></mfrac>
+                            <mo>+</mo>
+                            <mfrac><mn>1</mn><mi>&#946;</mi></mfrac>
+                            <mi>ln</mi>
+                            <mfenced><mfrac><mi>R</mi><msub><mi>R</mi><mn>0</mn></msub></mfrac></mfenced>
+                        </math>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 6 -->
+<div class="slide-container" id="slide6">
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 3</div>
+        <div class="gui-pill">Specifications</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Design Specifications</h2>
+        <div class="content-area">
+            <div class="table-layout">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Specification Category</th>
+                            <th>Target / Requirement</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Cell Configuration</strong></td>
+                            <td>10s1p lithium-ion (Molicel P42A context)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Electrical Ratings</strong></td>
+                            <td>Nominal pack voltage ~36V, Capacity 4.2 Ah</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Monitoring Scope</strong></td>
+                            <td>10 cell voltages captured; 10 NTC channels sampled via STM32 ADC</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Host Interface</strong></td>
+                            <td>USB-C/USB CDC serial telemetry at 115200 baud</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fan Control & Output</strong></td>
+                            <td>PWM control (auto/manual modes), telemetry includes Duty & RPM</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Safety & Reliability</strong></td>
+                            <td>OV/UV/current/thermal observability, galvanic isolation boundary</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 7 -->
+<div class="slide-container" id="slide7">
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 5.1</div>
+        <div class="gui-pill">Firmware</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Embedded Firmware</h2>
+        <div class="content-area">
+            <div class="two-column tiled">
+                <div>
+                    <h3>STM32F303 MCU Platform</h3>
+                    <ul>
+                        <li><strong>I2C Integration:</strong> Used for seamless BQ76930 communication. Auto-detects BMS addresses (0x08/0x18).</li>
+                        <li><strong>ADC Channels:</strong> Configured for NTC sensing with long sample times for higher-impedance networks.</li>
+                        <li><strong>USB Device CDC:</strong> Robust interface set up for host communications and telemetry streaming.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Control & Diagnostics</h3>
+                    <ul>
+                        <li><strong>Battery IC Wrappers:</strong> Register read/write wrappers implemented for SYS_STAT, control, and protection.</li>
+                        <li><strong>Fan Control:</strong> PWM duty mapping to timer settings. Tachometer capture for RPM calculation.</li>
+                        <li><strong>Fault Logic:</strong> Explicit fault code branches for hardware errors and short/open circuit conditions.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 8 -->
+<div class="slide-container" id="slide8">
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 5.2</div>
+        <div class="gui-pill">Software</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Desktop Dashboard Stack</h2>
+        <div class="content-area">
+            <div class="two-column">
+                <div>
+                    <p style="margin-bottom: 20px;">The desktop dashboard provides real-time monitoring and command interfacing.</p>
+                    <ul>
+                        <li><strong>Launcher Layer:</strong> PyQt6 windowing with embedded WebEngine frontend and QWebChannel bridge.</li>
+                        <li><strong>Serial Parsing:</strong> Robust parsing of line-oriented telemetry using regex. Reconstructs frames from mixed streams.</li>
+                        <li><strong>Frontend UI:</strong> HTML/CSS/JS stack rendering live battery and thermal states.</li>
+                        <li><strong>Packaging:</strong> Dependency manifests and PyInstaller spec for Windows, macOS, and Linux.</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="image-wrapper">
+                        <img src="http://googleusercontent.com/image_collection/image_retrieval/4899696295544498087" alt="Software Dashboard Interface">
+                    </div>
+                    <p style="text-align: center; margin-top: 15px; font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Fig 3: Desktop UI & Visualization</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 9 -->
+<div class="slide-container" id="slide9">
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 6</div>
+        <div class="gui-pill">Verification</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Validation Status</h2>
+        <p style="margin-bottom: 30px;">Validation executed via staged testing: module-level checks, parser checks, GUI integration, and end-to-end bench tests.</p>
+        <div class="content-area">
+            <div class="bullet-list">
+                <ul>
+                    <li>
+                        <i class="fa-solid fa-check-circle"></i>
+                        <strong>BQ Address Detection</strong>
+                        Correctly locks to valid address using dual-address probe.
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-check-circle"></i>
+                        <strong>CRC Compatibility</strong>
+                        Correct read/write framing with/without CRC dynamically.
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-check-circle"></i>
+                        <strong>NTC Conversion Path</strong>
+                        Stable conversion under intended long ADC sample timing.
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-check-circle"></i>
+                        <strong>Fan PWM & RPM</strong>
+                        Duty updates reflected in behavior; RPM accurately filtered.
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-check-circle"></i>
+                        <strong>Serial Parser Resilience</strong>
+                        Successfully reconstructs frames from mixed format lines.
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-check-circle"></i>
+                        <strong>Command Reliability</strong>
+                        Commands reach firmware via bridge + polling queue.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 10 -->
+<div class="slide-container" id="slide10">
+    <div class="ambient-glow glow-red" style="opacity: 0.3; bottom: -20%; top: auto;"></div>
+    <div class="gui-top-bar">
+        <div class="gui-logo">Section 7</div>
+        <div class="gui-pill">Conclusion</div>
+    </div>
+    <div class="slide-container-inner">
+        <h2 class="slide-title">Future Roadmap & Conclusion</h2>
+        <div class="content-area">
+            <div class="two-column tiled">
+                <div>
+                    <h3>Future Enhancements</h3>
+                    <ul>
+                        <li><strong>Firmware:</strong> Stronger packet framing (length + CRC), explicit state machine enums, calibration storage.</li>
+                        <li><strong>Control:</strong> Refined thermal derating, SOC/SOH estimation, hardened trip pathways.</li>
+                        <li><strong>Desktop UX:</strong> Persistent session logging (CSV/JSON), trend charts for voltage sag, explicit alert panes.</li>
+                    </ul>
+                </div>
+                <div style="display: flex; flex-direction: column; justify-content: center;">
+                    <h3>Project Conclusion</h3>
+                    <p>This EE175 project demonstrates a complete cross-domain engineering design: battery pack instrumentation, embedded control, host communication, and operator-facing visualization.</p>
+                    <div style="margin-top: 30px; padding: 25px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                        <h4 style="color: #60a5fa; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Repository Audit</h4>
+                        <p style="margin: 0; font-size: 18px; color: #f3f4f6;">The artifact manifest confirms <strong>4,506 total artifacts</strong> generated across firmware source, dashboard assets, PDFs, and CAD models.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+```

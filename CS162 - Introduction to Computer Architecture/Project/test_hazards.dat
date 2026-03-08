@@ -1,0 +1,16 @@
+% Test: Data hazards and out-of-order execution
+% Initializes F0=10, F2=20.
+% fmul takes 4 cycles, fadd takes 3 cycles.
+% fadd should complete before fmul despite being issued after.
+% addi and add should also complete early.
+0, 10
+8, 20
+
+fld F0, 0(R0)
+fld F2, 8(R0)
+fmul F4, F0, F2
+fadd F6, F0, F2
+addi R1, R0, 10
+add R2, R1, R1
+fsd F6, 16(R0)
+fsd F4, 24(R0)

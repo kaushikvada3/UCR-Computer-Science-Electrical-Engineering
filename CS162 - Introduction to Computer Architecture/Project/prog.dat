@@ -1,0 +1,9 @@
+%comment lines start with % or #
+%memory initialization: address, value
+0, 111
+8, 14
+
+% Instructions follow (labels optional)
+addi R1, R0, 24
+loop: fld F0, 0(R1)
+bne R1, R0, loop
