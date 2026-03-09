@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: bms-collaborative-deck
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm --prefix server install && npm --prefix app install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PERSIST_ROOT
+        value: /opt/render/project/src/server/persist
+    disk:
+      name: bms-collab-persist
+      mountPath: /opt/render/project/src/server/persist
+      sizeGB: 5
