@@ -1314,9 +1314,7 @@
             <div class="hero-copy">
                 <p class="eyebrow">Final Design Presentation</p>
                 <h1>Battery Management<br>and Communication System</h1>
-                <p class="lead">A complete 10s1p lithium-ion battery instrumentation, control, and visualization
-                    platform combining BQ76930-based monitoring, STM32 embedded firmware, an operator dashboard, and an
-                    expansion path toward NVIDIA Jetson AI analytics.</p>
+                <p class="lead"><ul><li>10s1p Li-ion instrumentation & control</li><li>BQ76930 monitoring & STM32 firmware</li><li>Operator dashboard</li><li>NVIDIA Jetson AI expansion path</li></ul></p>
                 <div>
                     <p class="eyebrow" style="margin-bottom:10px;">Group Members</p>
                     <div class="hero-members">
@@ -1362,9 +1360,7 @@
         </div>
         <div class="content">
             <h2>Concept and Application of the Design</h2>
-            <p class="subhead">The design is a split-domain battery management and communication system: the battery
-                pack, sensing hardware, cooling, and protection stay in the power domain while the STM32 and desktop
-                dashboard create a safe host-facing control and visualization layer.</p>
+            <p class="subhead"><ul><li>Split-domain architecture for safety</li><li>Power Domain: Battery, sensing, cooling, protection</li><li>Host Domain: STM32 control and desktop UI</li></ul></p>
             <div class="two-col" style="flex:1;">
                 <div class="visual-stack">
                     <div class="figure-card figure-wide figure-model">
@@ -1378,13 +1374,11 @@
                     <div class="card-grid-2">
                         <div class="info-card">
                             <h4>What We Designed</h4>
-                            <p>10s1p lithium-ion pack monitoring, current sensing, thermal measurement, active fan
-                                cooling, cell balancing, USB telemetry, and a premium operator dashboard.</p>
+                            <p><ul><li>10s1p Li-ion monitoring</li><li>Current & thermal sensing</li><li>Active cooling & balancing</li><li>Operator dashboard</li></ul></p>
                         </div>
                         <div class="info-card">
                             <h4>Technical Principles</h4>
-                            <p>BQ76930 cell supervision, 20 mOhm shunt current sensing, 10K NTC thermistor conversion,
-                                PWM fan control, structured USB CDC telemetry, and GUI command bridging.</p>
+                            <p><ul><li>BQ76930 cell supervision</li><li>20mΩ shunt & 10K NTC sensing</li><li>PWM fan control</li><li>USB CDC telemetry</li></ul></p>
                         </div>
                     </div>
                 </div>
@@ -1400,18 +1394,15 @@
                     <div class="feature-list">
                         <div class="feature">
                             <strong>Intended Applications</strong>
-                            Laboratory battery characterization, educational embedded controls experiments,
-                            charger/e-load integration, and future AI-assisted battery health estimation on Jetson.
+                            <ul><li>Lab battery characterization</li><li>Embedded controls experiments</li><li>AI battery health estimation on Jetson</li></ul>
                         </div>
                         <div class="feature">
                             <strong>Relevant EE Subjects</strong>
-                            Power electronics, embedded systems, sensors and instrumentation, PCB design, controls,
-                            communication interfaces, and hardware-software co-design.
+                            <ul><li>Power electronics & embedded systems</li><li>PCB design & controls</li><li>Hardware-software co-design</li></ul>
                         </div>
                         <div class="feature">
                             <strong>Why the Architecture Matters</strong>
-                            The split battery/host design improves observability, reduces fault propagation risk, and
-                            lets firmware and GUI be tested independently during bring-up.
+                            <ul><li>Improves observability</li><li>Reduces fault propagation risk</li><li>Enables independent testing during bring-up</li></ul>
                         </div>
                     </div>
                 </div>
@@ -1433,49 +1424,42 @@
         </div>
         <div class="content">
             <h2>Technical Design Objectives</h2>
-            <p class="subhead">The project requirements were translated into explicit numerical targets taken from the
-                design report, weekly validation updates, and the implemented firmware/dashboard code.</p>
+            <p class="subhead">Translating project requirements into explicit numerical targets from the design report and firmware code.</p>
             <div class="card-grid-3" style="flex:1;">
                 <div class="kpi">
                     <h4>Battery Coverage</h4>
                     <span class="kpi-number">10s1p</span>
-                    <p>Monitor all 10 series cell voltages, 10 NTC channels, pack current, and fan telemetry in one
-                        operator view.</p>
+                    <p>Monitor 10 cell voltages, 10 NTCs, pack current, and fan telemetry.</p>
                     <div class="status-line"><span class="status-pill success">Implemented coverage</span></div>
                 </div>
                 <div class="kpi">
                     <h4>Pack Electrical Target</h4>
                     <span class="kpi-number">36 V / 4.2 Ah</span>
-                    <p>Support the Molicel P42A pack context with approximately 151.2 Wh nominal energy and cell-level
-                        visibility.</p>
+                    <p>Support Molicel P42A pack (151.2 Wh nominal) with cell-level visibility.</p>
                     <div class="status-line"><span class="status-pill info">Pack specification</span></div>
                 </div>
                 <div class="kpi">
                     <h4>Current Resolution</h4>
                     <span class="kpi-number">0.422 mA/LSB</span>
-                    <p>Use BQ76930 coulomb-counter current data with a 20 mOhm shunt conversion path for pack current
-                        estimation.</p>
+                    <p>BQ76930 coulomb-counter + 20mΩ shunt for pack current estimation.</p>
                     <div class="status-line"><span class="status-pill success">Implemented conversion</span></div>
                 </div>
                 <div class="kpi">
                     <h4>Safety Response Window</h4>
                     <span class="kpi-number">10-100 ms</span>
-                    <p>Run thermal and overcurrent monitoring on a fast safety timescale, with slower 1-10 s balancing
-                        management.</p>
+                    <p>Fast thermal/overcurrent monitoring; slower 1-10s balancing.</p>
                     <div class="status-line"><span class="status-pill info">Firmware architecture target</span></div>
                 </div>
                 <div class="kpi">
                     <h4>Cooling Control</h4>
                     <span class="kpi-number">1 kHz PWM</span>
-                    <p>Support 0-100% fan duty cycle, 2 deg C hysteresis, 4-sample RPM averaging, and 2 s stall/timeout
-                        detection.</p>
+                    <p>0-100% duty, 2°C hysteresis, 4-sample RPM avg, 2s stall detection.</p>
                     <div class="status-line"><span class="status-pill success">Bench-implemented</span></div>
                 </div>
                 <div class="kpi">
                     <h4>Host Interface</h4>
                     <span class="kpi-number">115200 baud</span>
-                    <p>Stream USB CDC telemetry with robust GUI command delivery using QWebChannel plus a 50 ms fallback
-                        command poll.</p>
+                    <p>USB CDC telemetry, QWebChannel command delivery, 50ms polling.</p>
                     <div class="status-line"><span class="status-pill success">Integrated path</span></div>
                 </div>
             </div>
@@ -1496,9 +1480,7 @@
         </div>
         <div class="content">
             <h2>Final High-Level Design</h2>
-            <p class="subhead">The final architecture organizes the system into the battery unit, isolated
-                sensing/control electronics, bench support hardware, and the operator station. This keeps the
-                high-energy pack interactions separate from the USB-connected host interface.</p>
+            <p class="subhead"><ul><li>System partitioned into battery unit, control electronics, and operator station</li><li>Isolates high-energy pack from USB host interface</li></ul></p>
             <div class="figure-card"
                 style="flex:1;padding:18px 18px 12px; display:flex; flex-direction:column; min-height:0;">
                 <img src="system_block_diagram.png" alt="System block diagram"
@@ -1509,15 +1491,15 @@
             <div class="callout-strip">
                 <div class="callout">
                     <strong>Battery Domain</strong>
-                    10s1p pack, thermistors, fan, balancing, current path, and protection hardware.
+                    10s1p pack, thermistors, fan, balancing, protection hardware.
                 </div>
                 <div class="callout">
                     <strong>Control Domain</strong>
-                    STM32F303RC, ADC acquisition, BQ76930 I2C communication, PWM control, USB CDC telemetry.
+                    STM32F303, ADCs, BQ76930 I2C, PWM, USB CDC.
                 </div>
                 <div class="callout">
                     <strong>Host Domain</strong>
-                    PyQt6 dashboard, parser/bridge layer, command surface GUI, and future Jetson AI pipeline.
+                    PyQt6 dashboard, command GUI, Jetson AI pipeline.
                 </div>
             </div>
         </div>
@@ -1537,9 +1519,7 @@
         </div>
         <div class="content">
             <h2>Final Low-Level Design: Electrical Implementation</h2>
-            <p class="subhead">Three representative schematic pages show the core low-level implementation: BQ76930
-                front-end sensing and FET control, the STM32F3 interface hub, and the dedicated fan-control/tachometer
-                wiring.</p>
+            <p class="subhead">Core low-level implementation across three main schematic pages.</p>
             <div class="triptych" style="flex:1;">
                 <div class="figure-card">
                     <img src="bms_schematic_bq76930.png" alt="BQ76930 schematic">
@@ -1574,55 +1554,50 @@
         </div>
         <div class="content">
             <h2>Final Low-Level Design: Program Flow-Charts</h2>
-            <p class="subhead">No flowchart asset existed in the repo, so the implementation flow below was built
-                directly from the firmware source, parser logic, and GUI launcher behavior.</p>
+            <p class="subhead">Implementation flow logic synthesized directly from firmware and dashboard operations.</p>
             <div class="flow-grid" style="flex:1;">
                 <div class="flow-column">
                     <h3>Firmware Runtime Flow</h3>
                     <div class="flow-node core">
                         <strong>1. Boot and bring-up</strong>
-                        Initialize clocks, ADCs, I2C, timers, USB CDC, GPIO, and tach capture hardware.
+                        Init clocks, ADCs, I2C, timers, USB, GPIO.
                     </div>
                     <div class="flow-arrow">&darr;</div>
                     <div class="flow-node">
                         <strong>2. BMS interface detection</strong>
-                        Probe BQ76930 at 0x08 and 0x18, then auto-detect whether CRC is required.
+                        Probe BQ76930, auto-detect CRC.
                     </div>
                     <div class="flow-arrow">&darr;</div>
                     <div class="flow-node">
                         <strong>3. Sensor acquisition</strong>
-                        Sample 10 thermistor channels, read cell voltages/current, convert ADC data with Beta-model NTC
-                        math.
+                        Sample 10 NTCs, cell voltage/current, apply Beta-model math.
                     </div>
                     <div class="flow-arrow">&darr;</div>
                     <div class="flow-node">
                         <strong>4. Control, protection, and telemetry</strong>
-                        Execute fan auto/manual logic, balancing thresholds, SYS_STAT checks, fault/status handling, and
-                        stream structured USB telemetry plus command responses.
+                        Run fan logic, balancing, checks, stream USB telemetry.
                     </div>
                 </div>
                 <div class="flow-column">
                     <h3>Desktop Dashboard Flow</h3>
                     <div class="flow-node core">
                         <strong>1. Launcher startup</strong>
-                        PyQt6 starts the WebEngine UI, initializes the bridge, and loads the command-surface frontend.
+                        Start PyQt6 WebEngine, init bridge, load UI.
                     </div>
                     <div class="flow-arrow">&darr;</div>
                     <div class="flow-node">
                         <strong>2. Serial connection layer</strong>
-                        Auto-detect or select the USB CDC port and connect at 115200 baud.
+                        Auto-detect USB CDC at 115200 baud.
                     </div>
                     <div class="flow-arrow">&darr;</div>
                     <div class="flow-node">
                         <strong>3. Parsing and frame assembly</strong>
-                        Accept JSON and raw text telemetry, use regex token extraction, and finalize multiline frames
-                        after a 0.30 s timeout.
+                        Extract JSON/text telemetry, assemble frames.
                     </div>
                     <div class="flow-arrow">&darr;</div>
                     <div class="flow-node">
                         <strong>4. State normalization and GUI update</strong>
-                        Map thermistors to cells, preserve fan state across partial frames, refresh the widgets/3D
-                        scene, and return commands by QWebChannel or the 50 ms polled fallback.
+                        Update GUI widgets/3D scene, handle command return.
                     </div>
                 </div>
             </div>
@@ -1643,48 +1618,36 @@
         </div>
         <div class="content">
             <h2>Technical Challenges</h2>
-            <p class="subhead">The hardest issues were not just coding problems; they were integration problems across
-                analog sensing, firmware timing, serial framing, and mechanical packaging.</p>
+            <p class="subhead">Key integration challenges across sensing, firmware, comms, and packaging.</p>
             <div class="challenge-grid" style="flex:1;">
                 <div class="challenge-card">
                     <span class="tagline">Signal stability</span>
                     <h4>High-impedance thermistor readings were noisy</h4>
-                    <p><strong>Problem:</strong> Faster ADC settings produced inconsistent NTC values on the thermistor
-                        network.</p>
-                    <p><strong>Solution:</strong> Increased thermistor channel sampling to
-                        <strong>ADC_SAMPLETIME_601CYCLES_5</strong> and used a Beta-model conversion pipeline.
-                    </p>
-                    <p><strong>Workaround:</strong> Full sensor calibration against a reference thermometer is still a
-                        next-step item.</p>
+                    <p><strong>Problem:</strong> Noisy high-impedance NTC values at fast ADCs.</p>
+                    <p><strong>Solution:</strong> Increased sampling time, used Beta-model math.</p>
+                    <p><strong>Workaround:</strong> Next Step: Full reference thermometer calibration.</p>
                 </div>
                 <div class="challenge-card">
                     <span class="tagline">Firmware integration</span>
                     <h4>PWM fan control required missing HAL timer pieces</h4>
-                    <p><strong>Problem:</strong> TIM support needed additional HAL TIM/TIM-extended driver integration
-                        before PWM would link and run correctly.</p>
-                    <p><strong>Solution:</strong> Added the missing timer drivers and tuned the output to <strong>1 kHz
-                            PWM</strong> with <strong>2 deg C hysteresis</strong>.</p>
-                    <p><strong>Workaround:</strong> RPM estimation falls back from duty cycle when tach pulses time out.
+                    <p><strong>Problem:</strong> Missing HAL TIM drivers for PWM.</p>
+                    <p><strong>Solution:</strong> Added TIM drivers, tuned to 1 kHz PWM & 2°C hysteresis.</p>
+                    <p><strong>Workaround:</strong> RPM falls back to duty cycle on timeout.
                     </p>
                 </div>
                 <div class="challenge-card">
                     <span class="tagline">Protocol robustness</span>
                     <h4>Mixed serial formats broke clean frame reconstruction</h4>
-                    <p><strong>Problem:</strong> The firmware emitted JSON, indexed tokens, and human-readable status
-                        lines during bring-up, which caused partial reads and parser corruption.</p>
-                    <p><strong>Solution:</strong> Built a regex-based parser with multiline frame assembly, persistent
-                        fan state merging, and a <strong>0.30 s</strong> timeout-based finalize path.</p>
-                    <p><strong>Workaround:</strong> The GUI keeps simulation mode available when hardware is absent.</p>
+                    <p><strong>Problem:</strong> Mixed serial formats caused incomplete reads.</p>
+                    <p><strong>Solution:</strong> Regex parser, frame assembly, 0.3s timeout.</p>
+                    <p><strong>Workaround:</strong> Fallback: GUI simulation mode.</p>
                 </div>
                 <div class="challenge-card">
                     <span class="tagline">Mechanical packaging</span>
                     <h4>Compact enclosure packaging fought airflow and fit</h4>
-                    <p><strong>Problem:</strong> Early 3D printed parts had tolerance issues and the packaging needed to
-                        support cells, wiring, ports, and airflow inside a compact footprint.</p>
-                    <p><strong>Solution:</strong> Repeated CAD revisions and prints tightened fit, improved internal
-                        routing, and preserved fan airflow.</p>
-                    <p><strong>Workaround:</strong> Harness engineering and full production-ready enclosure optimization
-                        remain refinement areas.</p>
+                    <p><strong>Problem:</strong> Compact footprint impacted tolerances & airflow.</p>
+                    <p><strong>Solution:</strong> Iterative CAD revisions for fit & airflow.</p>
+                    <p><strong>Workaround:</strong> Next Step: Production-ready harness & enclosure refinement.</p>
                 </div>
             </div>
         </div>
@@ -1704,16 +1667,14 @@
         </div>
         <div class="content">
             <h2>Major Components of the Design and Implementation</h2>
-            <p class="subhead">Each subsystem combines hardware, firmware, and integration work. The owners below show
-                the primary implementation leadership for each major block.</p>
+            <p class="subhead">Primary implementation ownership per subsystem.</p>
             <div class="component-grid" style="flex:1;">
                 <div class="component-card">
                     <div class="component-figure">
                         <img src="E-Load Image.png" alt="Battery pack">
                     </div>
                     <h4>Battery Pack and Harness</h4>
-                    <p>10s1p cell holder, pack physical setup, enclosure fit-up, and harness routing required for
-                        sensing, charging, and cooling integration.</p>
+                    <p><ul><li>10s1p cell holder</li><li>Enclosure fit-up</li><li>Harness routing</li></ul></p>
                     <div class="owner">Owners: Nick, Christian</div>
                 </div>
                 <div class="component-card">
@@ -1721,8 +1682,7 @@
                         <img src="BMS_Image.png" alt="BMS enclosure">
                     </div>
                     <h4>BMS Hardware Stack</h4>
-                    <p>BMS schematic, PCB/layout path, BQ76930 monitoring front-end, protection interfaces, and
-                        emulation/validation hardware.</p>
+                    <p><ul><li>BMS schematic/layout</li><li>BQ76930 monitoring</li><li>Protection interfaces</li></ul></p>
                     <div class="owner">Owners: Connor, Nick</div>
                 </div>
                 <div class="component-card">
@@ -1730,8 +1690,7 @@
                         <img src="firmware.png" alt="Firmware development">
                     </div>
                     <h4>Embedded Control Firmware</h4>
-                    <p>STM32F303RC bring-up, ADC thermistor conversion, BQ current sensing, fan control, USB CDC
-                        communication, and command handling.</p>
+                    <p><ul><li>STM32F303RC bring-up</li><li>ADC & sensing integration</li><li>Fan & USB CDC control</li></ul></p>
                     <div class="owner">Owners: Kaushik, Connor</div>
                 </div>
                 <div class="component-card">
@@ -1739,8 +1698,7 @@
                         <img src="GUI_Dashboard.png" alt="Dashboard UI">
                     </div>
                     <h4>Operator Dashboard</h4>
-                    <p>PyQt6 launcher, parser, QWebChannel bridge, polished command-surface GUI, packaging, updater
-                        flow, and Jetson-facing data path.</p>
+                    <p><ul><li>PyQt6 launcher & bridge</li><li>Command-surface GUI</li><li>Jetson data path</li></ul></p>
                     <div class="owner">Owners: Kaushik, Christian</div>
                 </div>
             </div>
@@ -1761,8 +1719,7 @@
         </div>
         <div class="content">
             <h2>Who Contributed to What</h2>
-            <p class="subhead">The final design was integrated as one system, but subsystem leadership was distributed
-                across the team as follows.</p>
+            <p class="subhead">Subsystem leadership across the team.</p>
             <div class="member-grid" style="flex:1;">
                 <div class="member-card">
                     <span class="member-role">Kaushik</span>
@@ -1822,27 +1779,20 @@
         </div>
         <div class="content">
             <h2>Design Considerations</h2>
-            <p class="subhead">The final system reflects real engineering constraints, not just ideal features. Every
-                subsystem was shaped by schedule, thermal behavior, packaging limits, cost, and the communication
-                standards the project could reliably support this quarter.</p>
+            <p class="subhead"><ul><li>System shaped by schedule, thermal, packaging limits</li><li>Uses robust, reliable communication standards</li></ul></p>
             <div class="constraint-grid">
                 <div class="summary-stack">
                     <div class="info-card">
                         <h4>Time and Integration Risk</h4>
-                        <p>The team chose tolerant serial framing, simulation mode, and staged hardware/software
-                            bring-up so dashboard work could continue even when physical hardware was unavailable.</p>
+                        <p><ul><li>Tolerant serial framing</li><li>Simulation mode</li><li>Staged bring-up</li></ul></p>
                     </div>
                     <div class="info-card">
                         <h4>Power, Thermal, and Safety Tradeoffs</h4>
-                        <p>Cooling and protection had to work without overcomplicating the first integrated build. This
-                            drove the 1 kHz PWM fan path, simple breakpoint auto-curve, 2 deg C hysteresis, and clear
-                            fault observability before more advanced control.</p>
+                        <p><ul><li>1 kHz PWM fan path</li><li>Breakpoint auto-curve</li><li>2°C hysteresis</li><li>Clear fault observability</li></ul></p>
                     </div>
                     <div class="info-card">
                         <h4>Size, Weight, and Cost</h4>
-                        <p>The enclosure needed to stay compact while preserving airflow, battery-holder geometry,
-                            wiring access, and USB connectivity. Reusing STM32Cube/HAL, USB CDC, and 3D-printed
-                            mechanical revisions kept the build practical within budget and time.</p>
+                        <p><ul><li>Compact enclosure with optimized airflow</li><li>Reused STM32Cube/HAL & USB CDC</li><li>Iterative 3D-printed revisions</li></ul></p>
                     </div>
                 </div>
                 <div class="panel glass">
@@ -1892,9 +1842,7 @@
         </div>
         <div class="content">
             <h2>Test Report</h2>
-            <p class="subhead">Because this slide is intentionally limited to repo-backed evidence, the table below
-                reports implemented and validated behaviors from the report, weekly milestones, and firmware/dashboard
-                source rather than invented bench numbers.</p>
+            <p class="subhead">Validated behaviors based directly on repo documentation and implementation.</p>
             <div class="test-layout">
                 <table class="spec-table">
                     <thead>
@@ -1948,19 +1896,15 @@
                 <div class="test-grid">
                     <div class="test-card">
                         <h4>Validation Strategy</h4>
-                        <p>Module-level firmware checks, parser-level serial reconstruction tests, GUI integration
-                            verification, and staged bench testing.</p>
+                        <p><ul><li>Firmware checks</li><li>Serial reconstruction tests</li><li>GUI verification</li><li>Staged bench testing</li></ul></p>
                     </div>
                     <div class="test-card">
                         <h4>How Close to Spec?</h4>
-                        <p>The communication, telemetry, fan control, and monitoring objectives are implemented. The
-                            remaining gap is calibration and larger-scale live hardware test evidence, not basic
-                            architectural completeness.</p>
+                        <p><ul><li>Implemented: Comms, telemetry, fan control, monitoring.</li><li>Remaining gap: Calibration & live scale testing.</li></ul></p>
                     </div>
                     <div class="test-card">
                         <h4>Key Quantitative Anchors</h4>
-                        <p>10 cells, 10 NTCs, 115200 baud, 1 kHz PWM, 2 deg C hysteresis, 0.422 mA/LSB, 2 s RPM timeout,
-                            50 ms command fallback.</p>
+                        <p><ul><li>10 cells, 10 NTCs</li><li>115200 baud, 1 kHz PWM</li><li>2°C hysteresis, 0.422 mA/LSB</li><li>2s CMD timeout, 50ms fallback</li></ul></p>
                     </div>
                 </div>
             </div>
@@ -1981,14 +1925,12 @@
         </div>
         <div class="content video-slide">
             <h2>Demo Video Placeholder</h2>
-            <p class="subhead">This slide is intentionally designed as a clean drop zone so the final PowerPoint can
-                receive the recorded demo clip after export.</p>
+            <p class="subhead">Reserved space for the recorded demo clip.</p>
             <div class="video-stage">
                 <div class="video-drop">
                     <div class="play-icon"></div>
                     <strong>Insert final demo video here</strong>
-                    <p>Recommended clip sequence: connect to USB CDC, stream live telemetry, toggle fan control, show
-                        pack status, and demonstrate E-Load / command-surface interaction.</p>
+                    <p>Sequence: Connect USB, stream telemetry, toggle fan, show status, demo interaction.</p>
                 </div>
             </div>
             <div class="demo-notes">
@@ -2029,25 +1971,20 @@
             <div class="summary-layout">
                 <div class="summary-stack">
                     <div class="panel glass">
-                        <p class="big-quote">The project delivered a real cross-domain engineering system, not a
-                            disconnected prototype: battery monitoring, embedded control, host communication, operator
-                            visualization, and a clear path toward AI-assisted analytics.</p>
+                        <p class="big-quote">Delivered cross-domain engineering system with a path toward AI analytics.</p>
                     </div>
                     <div class="card-grid-3">
                         <div class="info-card">
                             <h4>What Was Achieved</h4>
-                            <p>Integrated BQ76930 sensing, STM32 control, USB telemetry, a premium dashboard, and a
-                                validated mechanical/electrical architecture.</p>
+                            <p><ul><li>BQ76930 sensing & STM32 control</li><li>USB telemetry & premium dashboard</li><li>Validated architecture</li></ul></p>
                         </div>
                         <div class="info-card">
                             <h4>What Is Strongest</h4>
-                            <p>The system-level integration story: cell visibility, current measurement, thermal
-                                control, parser robustness, and GUI usability all exist in one design.</p>
+                            <p><ul><li>Cell visibility & current measurement</li><li>Thermal control</li><li>Parser robustness & GUI usability</li></ul></p>
                         </div>
                         <div class="info-card">
                             <h4>What Comes Next</h4>
-                            <p>Final calibration, fuller charger/e-load validation, stronger fault handling, richer
-                                logging/trending, and Jetson-based state estimation.</p>
+                            <p><ul><li>Final calibration & closer charger validation</li><li>Fault handling & trending</li><li>Jetson-based state estimation</li></ul></p>
                         </div>
                     </div>
                 </div>
@@ -2059,9 +1996,7 @@
                     </div>
                     <div class="panel glass">
                         <h3>Closing Takeaway</h3>
-                        <p>This EE175 design demonstrates a modular, safe, and expandable battery platform that can move
-                            from senior-design integration into a more production-style validation and analytics
-                            pipeline.</p>
+                        <p>A modular, safe, expandable battery platform ready for analytics and validation.</p>
                         <p class="footnote" style="margin-top:14px;">Sources used in this deck: final report, weekly
                             reports, firmware plans, dashboard source, schematic PDFs, and project assets from the EE175
                             workspace.</p>

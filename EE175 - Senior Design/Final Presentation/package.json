@@ -1,0 +1,18 @@
+{
+  "name": "bms-collaborative-deck",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix app run dev\"",
+    "start": "node server/dist/server/src/index.js",
+    "build": "npm --prefix server run build && npm --prefix app run build",
+    "lint": "npm --prefix server run lint && npm --prefix app run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "yjs": "^13.6.29"
+  }
+}
