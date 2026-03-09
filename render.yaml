@@ -3,6 +3,7 @@ services:
     name: bms-collaborative-deck
     runtime: node
     plan: starter
+    rootDir: EE175 - Senior Design/Final Presentation
     buildCommand: npm install && npm --prefix server install && npm --prefix app install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
