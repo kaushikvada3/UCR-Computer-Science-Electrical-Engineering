@@ -1,0 +1,51 @@
+name: Deploy Final Presentation Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-final-presentation-worker.yml
+      - EE175 - Senior Design/Final Presentation/shared/**
+      - EE175 - Senior Design/Final Presentation/worker/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: final-presentation-worker
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: EE175 - Senior Design/Final Presentation/worker
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: EE175 - Senior Design/Final Presentation/worker/package-lock.json
+
+      - name: Install worker dependencies
+        run: npm ci
+
+      - name: Refresh Worker types
+        run: npm run types
+
+      - name: Validate worker types
+        run: npm run lint
+
+      - name: Deploy Cloudflare Worker
+        run: npm run deploy

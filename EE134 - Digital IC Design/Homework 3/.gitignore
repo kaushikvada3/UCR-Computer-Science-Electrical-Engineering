@@ -1,0 +1,5 @@
+.DS_Store
+ltspice_q3/sim_outputs/
+*.raw
+*.op.raw
+*.log

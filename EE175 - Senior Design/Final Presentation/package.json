@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix app run dev\"",
+    "dev:worker": "npm --prefix worker run dev",
     "start": "node server/dist/server/src/index.js",
     "build": "npm --prefix server run build && npm --prefix app run build",
-    "lint": "npm --prefix server run lint && npm --prefix app run lint"
+    "lint": "npm --prefix server run lint && npm --prefix app run lint && npm --prefix worker run lint",
+    "deploy:worker": "npm --prefix worker run deploy"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

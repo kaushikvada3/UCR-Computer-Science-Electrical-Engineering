@@ -1,0 +1,21 @@
+{
+  "name": "deck-collab-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8788",
+    "deploy": "wrangler deploy",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "lib0": "^0.2.114",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.29"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.12.0"
+  }
+}

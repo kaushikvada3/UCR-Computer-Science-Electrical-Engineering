@@ -1,1 +1,4 @@
 node_modules/
+app/public/deck-assets/
+worker/.wrangler/
+worker/.dev.vars

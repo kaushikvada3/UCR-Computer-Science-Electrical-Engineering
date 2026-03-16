@@ -219,6 +219,7 @@ function App() {
   const [bootstrap, setBootstrap] = useState<BootstrapPayload | null>(null)
   const [deck, setDeck] = useState<DeckDocument | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
+  const [connectError, setConnectError] = useState<string | null>(null)
   const [selectedSlideId, setSelectedSlideId] = useState<string>('slide-1')
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([])
   const [editingTextId, setEditingTextId] = useState<string | null>(null)
@@ -297,6 +298,7 @@ function App() {
 
   const isLockedSelection = selectedElement ? lockedByPeer.has(selectedElement.id) : false
   const canEdit = !isMobile
+  const canUpload = canEdit && Boolean(bootstrap?.uploadsEnabled)
 
   const refreshHistory = useCallback(async (deckId: string) => {
     const response = await fetch(`${getApiBaseUrl()}/api/decks/${deckId}/history`)
@@ -335,47 +337,63 @@ function App() {
     let disposed = false
 
     const connect = async () => {
-      const response = await fetch(`${getApiBaseUrl()}/api/share/${SHARE_TOKEN}/bootstrap`)
-      const payload = await response.json() as BootstrapPayload
-      if (disposed) {
-        return
-      }
-      setBootstrap(payload)
-      setCollaboratorName((current) => current || payload.collaboratorLabel)
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/api/share/${SHARE_TOKEN}/bootstrap`)
+        if (!response.ok) {
+          throw new Error(`Bootstrap failed with ${response.status}`)
+        }
+        const payload = await response.json() as BootstrapPayload
+        if (disposed) {
+          return
+        }
+        setConnectError(null)
+        setBootstrap(payload)
+        setCollaboratorName((current) => current || payload.collaboratorLabel)
 
-      const doc = new Y.Doc()
-      docRef.current = doc
-      const provider = new WebsocketProvider(`${getSocketBaseUrl()}${payload.websocketPath}`, payload.roomId, doc, {
-        connect: true,
-        params: { share: payload.shareToken },
-      })
-      providerRef.current = provider
-      localClientIdRef.current = provider.awareness.clientID
+        const doc = new Y.Doc()
+        docRef.current = doc
+        const provider = new WebsocketProvider(`${getSocketBaseUrl()}${payload.websocketPath}`, payload.roomId, doc, {
+          connect: true,
+          params: { share: payload.shareToken },
+        })
+        providerRef.current = provider
+        localClientIdRef.current = provider.awareness.clientID
 
-      undoManagerRef.current = new Y.UndoManager([doc.getArray('slides')], {
-        trackedOrigins: new Set([LOCAL_ORIGIN]),
-      })
+        undoManagerRef.current = new Y.UndoManager([doc.getArray('slides')], {
+          trackedOrigins: new Set([LOCAL_ORIGIN]),
+        })
 
-      provider.on('status', (event) => {
-        setConnectionStatus(event.status)
-      })
+        provider.on('status', (event) => {
+          setConnectionStatus(event.status)
+        })
 
-      provider.on('sync', () => {
+        provider.on('sync', () => {
+          syncDeck(doc)
+        })
+
+        doc.on('update', () => {
+          syncDeck(doc)
+        })
+
+        const awarenessChange = () => {
+          setPeers(readPeers(provider, localClientIdRef.current))
+        }
+
+        provider.awareness.on('change', awarenessChange)
+        awarenessChange()
         syncDeck(doc)
-      })
-
-      doc.on('update', () => {
-        syncDeck(doc)
-      })
-
-      const awarenessChange = () => {
-        setPeers(readPeers(provider, localClientIdRef.current))
+        await refreshHistory(payload.deckId)
+      } catch (error) {
+        if (disposed) {
+          return
+        }
+        setConnectionStatus('disconnected')
+        const target = getApiBaseUrl()
+        const detail = error instanceof Error ? error.message : 'Unknown error'
+        setConnectError(
+          `Could not reach the collaboration backend at ${target}. If this is the GitHub Pages deployment, open the site with ?api=https://your-worker.your-subdomain.workers.dev. (${detail})`,
+        )
       }
-
-      provider.awareness.on('change', awarenessChange)
-      awarenessChange()
-      syncDeck(doc)
-      await refreshHistory(payload.deckId)
     }
 
     void connect()
@@ -569,7 +587,7 @@ function App() {
   }
 
   const uploadFile = async (file: File) => {
-    if (!bootstrap) {
+    if (!bootstrap || !bootstrap.uploadsEnabled) {
       return null
     }
     const formData = new FormData()
@@ -616,6 +634,9 @@ function App() {
   }
 
   const queueUpload = (intent: UploadIntent) => {
+    if (!bootstrap?.uploadsEnabled) {
+      return
+    }
     setUploadIntent(intent)
     fileInputRef.current?.click()
   }
@@ -682,7 +703,9 @@ function App() {
       <div className="app-shell app-loading">
         <div className="loading-card">
           <div className="loading-title">Collaborative deck editor</div>
-          <div className="loading-copy">Connecting to the shared presentation…</div>
+          <div className="loading-copy">
+            {connectError ?? 'Connecting to the shared presentation…'}
+          </div>
         </div>
       </div>
     )
@@ -699,7 +722,9 @@ function App() {
           <div className={clsx('status-pill', connectionStatus)}>{connectionStatus}</div>
         </div>
         <div className="rail-copy">
-          Anyone with the share link can edit. Drag slides to reorder. Remote presence is shown in the rail and on the canvas.
+          {bootstrap.uploadsEnabled
+            ? 'Anyone with the share link can edit. Drag slides to reorder. Remote presence is shown in the rail and on the canvas.'
+            : 'Anyone with the share link can edit. Drag slides to reorder. Remote presence is shown in the rail and on the canvas. File uploads are disabled on the free GitHub Pages + Cloudflare deployment.'}
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSlideSortEnd}>
           <SortableContext items={deck.slides.map((slide) => slide.id)} strategy={verticalListSortingStrategy}>
@@ -728,10 +753,22 @@ function App() {
             <button type="button" className="toolbar-button primary" disabled={!canEdit} onClick={() => addElement('text')}>
               Add text
             </button>
-            <button type="button" className="toolbar-button" disabled={!canEdit} onClick={() => queueUpload({ kind: 'create-image' })}>
+            <button
+              type="button"
+              className="toolbar-button"
+              disabled={!canUpload}
+              title={bootstrap.uploadsEnabled ? 'Add image' : 'Uploads are disabled on the free deployment'}
+              onClick={() => queueUpload({ kind: 'create-image' })}
+            >
               Add image
             </button>
-            <button type="button" className="toolbar-button" disabled={!canEdit} onClick={() => queueUpload({ kind: 'create-model' })}>
+            <button
+              type="button"
+              className="toolbar-button"
+              disabled={!canUpload}
+              title={bootstrap.uploadsEnabled ? 'Add 3D model' : 'Uploads are disabled on the free deployment'}
+              onClick={() => queueUpload({ kind: 'create-model' })}
+            >
               Add model
             </button>
             <button type="button" className="toolbar-button" disabled={!canEdit} onClick={() => addElement('shape')}>
@@ -1351,7 +1388,8 @@ function App() {
                     <button
                       type="button"
                       className="toolbar-button full-width"
-                      disabled={!canEdit}
+                      disabled={!canUpload}
+                      title={bootstrap.uploadsEnabled ? 'Replace asset' : 'Uploads are disabled on the free deployment'}
                       onClick={() => queueUpload({ kind: isImageElement(selectedElement) ? 'replace-image' : 'replace-model', elementId: selectedElement.id })}
                     >
                       Replace asset

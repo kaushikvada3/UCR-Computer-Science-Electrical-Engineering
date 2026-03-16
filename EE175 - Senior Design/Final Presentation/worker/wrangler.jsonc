@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bms-collaborative-deck",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-08",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "DECK_ROOM",
+        "class_name": "DeckRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DeckRoom"]
+    }
+  ]
+}

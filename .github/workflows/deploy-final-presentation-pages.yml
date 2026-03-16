@@ -1,0 +1,63 @@
+name: Deploy Final Presentation Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-final-presentation-pages.yml
+      - EE175 - Senior Design/Final Presentation/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: final-presentation-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: EE175 - Senior Design/Final Presentation/app
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: EE175 - Senior Design/Final Presentation/app/package-lock.json
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build static editor
+        run: npm run build
+        env:
+          VITE_APP_BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: EE175 - Senior Design/Final Presentation/app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages site
+        id: deployment
+        uses: actions/deploy-pages@v4

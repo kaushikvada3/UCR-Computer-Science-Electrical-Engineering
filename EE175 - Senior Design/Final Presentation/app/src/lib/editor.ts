@@ -25,6 +25,7 @@ export type BootstrapPayload = {
   assetBaseUrl: string
   websocketPath: string
   collaboratorLabel: string
+  uploadsEnabled: boolean
 }
 
 export type SnapshotMeta = {
@@ -42,17 +43,135 @@ export type AwarenessUserState = {
   editingTextId: string | null
 }
 
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
+
+const normalizeBaseUrl = (value: string) => {
+  if (!value) {
+    return ''
+  }
+  return trimTrailingSlash(value)
+}
+
+const toWebsocketBase = (value: string) => {
+  if (value.startsWith('https://')) {
+    return `wss://${value.slice('https://'.length)}`
+  }
+  if (value.startsWith('http://')) {
+    return `ws://${value.slice('http://'.length)}`
+  }
+  return value
+}
+
+const readStoredValue = (key: string) => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  try {
+    const value = window.localStorage.getItem(key)
+    return value && value.trim().length > 0 ? value.trim() : null
+  } catch {
+    return null
+  }
+}
+
+const storeRuntimeValue = (key: string, value: string) => {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // Ignore storage failures in private browsing or locked-down environments.
+  }
+}
+
+const readQueryValue = (key: string) => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  const value = new URLSearchParams(window.location.search).get(key)
+  return value && value.trim().length > 0 ? value.trim() : null
+}
+
+const API_STORAGE_KEY = 'deck-api-base-url'
+const WS_STORAGE_KEY = 'deck-ws-base-url'
+
+const readConfiguredApiBaseUrl = () => {
+  const queryApi = readQueryValue('api')
+  if (queryApi) {
+    const normalized = normalizeBaseUrl(queryApi)
+    storeRuntimeValue(API_STORAGE_KEY, normalized)
+    storeRuntimeValue(WS_STORAGE_KEY, normalizeBaseUrl(toWebsocketBase(normalized)))
+    return normalized
+  }
+  const envApi = import.meta.env.VITE_DECK_API_BASE_URL?.trim()
+  if (envApi) {
+    return normalizeBaseUrl(envApi)
+  }
+  const storedApi = readStoredValue(API_STORAGE_KEY)
+  return storedApi ? normalizeBaseUrl(storedApi) : null
+}
+
+const readConfiguredSocketBaseUrl = () => {
+  const queryWs = readQueryValue('ws')
+  if (queryWs) {
+    const normalized = normalizeBaseUrl(queryWs)
+    storeRuntimeValue(WS_STORAGE_KEY, normalized)
+    return normalized
+  }
+  const queryApi = readQueryValue('api')
+  if (queryApi) {
+    return normalizeBaseUrl(toWebsocketBase(normalizeBaseUrl(queryApi)))
+  }
+  const envWs = import.meta.env.VITE_DECK_WS_BASE_URL?.trim()
+  if (envWs) {
+    return normalizeBaseUrl(envWs)
+  }
+  const envApi = import.meta.env.VITE_DECK_API_BASE_URL?.trim()
+  if (envApi) {
+    return normalizeBaseUrl(toWebsocketBase(normalizeBaseUrl(envApi)))
+  }
+  const storedWs = readStoredValue(WS_STORAGE_KEY)
+  if (storedWs) {
+    return normalizeBaseUrl(storedWs)
+  }
+  const storedApi = readStoredValue(API_STORAGE_KEY)
+  return storedApi ? normalizeBaseUrl(toWebsocketBase(normalizeBaseUrl(storedApi))) : null
+}
+
+export const getStaticAssetBaseUrl = () => {
+  const envBase = import.meta.env.VITE_DECK_STATIC_ASSET_BASE_URL?.trim()
+  if (envBase) {
+    return normalizeBaseUrl(envBase)
+  }
+  const url = new URL(import.meta.env.BASE_URL, window.location.origin)
+  return normalizeBaseUrl(new URL('deck-assets/', url).toString())
+}
+
+const resolveUrl = (base: string, value: string) => new URL(value.replace(/^\//, ''), `${normalizeBaseUrl(base)}/`).toString()
+
 export const resolveAssetUrl = (src: string, assetBaseUrl: string) => {
   if (!src) {
     return ''
   }
-  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) {
-    return src.startsWith('/') ? `${getApiBaseUrl()}${src}` : src
+  if (
+    src.startsWith('http://') ||
+    src.startsWith('https://') ||
+    src.startsWith('data:') ||
+    src.startsWith('blob:')
+  ) {
+    return src
   }
-  const base = assetBaseUrl.startsWith('http://') || assetBaseUrl.startsWith('https://')
-    ? assetBaseUrl
-    : `${getApiBaseUrl()}${assetBaseUrl}`
-  return `${base.replace(/\/$/, '')}/${src}`
+  if (src.startsWith('/')) {
+    return new URL(src, `${getApiBaseUrl()}/`).toString()
+  }
+  if (src.startsWith('uploads/') || src.startsWith('assets/uploads/')) {
+    const base = assetBaseUrl.startsWith('http://') || assetBaseUrl.startsWith('https://')
+      ? assetBaseUrl
+      : `${getApiBaseUrl()}${assetBaseUrl}`
+    return resolveUrl(base, src)
+  }
+  return resolveUrl(getStaticAssetBaseUrl(), src)
 }
 
 export const applyTextChange = (yText: Y.Text, nextValue: string) => {
@@ -347,6 +466,10 @@ export const updateTable = (doc: Y.Doc, slideId: string, elementId: string, upda
 }
 
 export const getApiBaseUrl = () => {
+  const configured = readConfiguredApiBaseUrl()
+  if (configured) {
+    return configured
+  }
   const protocol = window.location.protocol
   const host = window.location.hostname
   const port = window.location.port === '5173' ? '8787' : (window.location.port || (protocol === 'https:' ? '443' : '80'))
@@ -354,6 +477,10 @@ export const getApiBaseUrl = () => {
 }
 
 export const getSocketBaseUrl = () => {
+  const configured = readConfiguredSocketBaseUrl()
+  if (configured) {
+    return configured
+  }
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const host = window.location.hostname
   const port = window.location.port === '5173' ? '8787' : (window.location.port || (protocol === 'wss:' ? '443' : '80'))

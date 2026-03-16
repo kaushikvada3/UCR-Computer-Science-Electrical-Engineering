@@ -135,6 +135,7 @@ export const bootstrapResponse = () => ({
   assetBaseUrl: '/assets',
   websocketPath: '/collab',
   collaboratorLabel: `Editor ${Math.floor(Math.random() * 900 + 100)}`,
+  uploadsEnabled: true,
 })
 
 export const replaceWithSnapshot = (doc: any, snapshot: DeckDocument) => {
