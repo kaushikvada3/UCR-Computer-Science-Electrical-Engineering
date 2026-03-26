@@ -1,0 +1,14 @@
+0, 10
+8, 1
+16, 0
+
+# Oldest-CDB priority test:
+# The first load and the addi complete in the same cycle.
+# The load is older, so it should win the CDB first.
+fld F0, 0(R0)
+addi R1, R0, 8
+fld F2, 0(R1)
+fadd F4, F0, F2
+fsd F4, 16(R0)
+addi R2, R1, 4
+add R3, R2, R1

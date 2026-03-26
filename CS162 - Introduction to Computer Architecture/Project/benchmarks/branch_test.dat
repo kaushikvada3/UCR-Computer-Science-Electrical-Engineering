@@ -1,0 +1,19 @@
+0, 1
+8, 2
+16, 3
+24, 0
+32, 0
+40, 0
+
+# Branch and fetch-stall test:
+# Double three input values and store them into a separate output region.
+addi R1, R0, 0
+addi R2, R0, 24
+addi R3, R0, 3
+loop: fld F0, 0(R1)
+fadd F0, F0, F0
+fsd F0, 0(R2)
+addi R1, R1, 8
+addi R2, R2, 8
+addi R3, R3, -1
+bne R3, R0, loop

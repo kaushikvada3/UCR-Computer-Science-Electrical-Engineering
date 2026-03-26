@@ -1,0 +1,201 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{titlesec}
+\setlist[itemize]{nosep,leftmargin=1.5em}
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\title{Project Report: Tomasulo Functional and Timing Simulator}
+\author{Kaushik Vada}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+For this project I built a functional and timing simulator for an out-of-order processor using Tomasulo's algorithm. The processor is non-speculative and has no reorder buffer. It supports a small RISC-V-like instruction set and models reservation stations, register renaming through RS tags, functional unit latencies, CDB arbitration, and branch stalls. At the end of simulation it prints out the final register and memory state along with cycle and stall counts.
+
+The main goal was to get the timing right -- making sure instructions don't execute too early, the CDB only broadcasts once per cycle, and branch fetch stalls work correctly.
+
+\section{Architecture Modeled}
+The processor is 32-bit with separate instruction and data memory, fetch width 1, issue width 1, and a single CDB. The supported instructions are:
+
+\begin{itemize}
+\item \texttt{fld}
+\item \texttt{fsd}
+\item \texttt{add}
+\item \texttt{addi}
+\item \texttt{fadd}
+\item \texttt{fmul}
+\item \texttt{fdiv}
+\item \texttt{bne}
+\end{itemize}
+
+Functional unit configuration (from the spec):
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Unit & Latency & Reservation Stations & Supported Ops \\
+\midrule
+INT & 1 & 4 & \texttt{add}, \texttt{addi} \\
+LS & 2 & 3 & \texttt{fld}, \texttt{fsd} \\
+FPADD & 3 & 3 & \texttt{fadd} \\
+FPMUL & 4 & 2 & \texttt{fmul} \\
+FPDIV & 6 & 1 & \texttt{fdiv} \\
+BU & 1 & 1 & \texttt{bne} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The processor is non-speculative, so when a \texttt{bne} is fetched, fetch stalls immediately and nothing else is fetched until the branch resolves.
+
+\section{Simulator Organization}
+I kept everything in one Python file since that seemed easiest to submit and grade. The code is split into these pieces:
+
+\begin{itemize}
+\item \texttt{parse\_file()}: two-pass parser -- first pass collects memory inits and labels, second pass decodes each instruction now that all label addresses are known
+\item \texttt{Instruction}: stores the parsed fields for one instruction (opcode, registers, immediate, branch target, etc.)
+\item \texttt{RSEntry}: one reservation station slot -- holds Vj/Vk, Qj/Qk, issue order, execution state, and result
+\item \texttt{FunctionalUnit}: tracks what's currently executing in one pipeline (current tag and remaining cycles)
+\item \texttt{Simulator}: the main simulation class; has a method for each pipeline stage and runs the cycle loop
+\item \texttt{main()}: parses command-line args and prints the final output
+\end{itemize}
+
+Keeping parsed instructions separate from the dynamic RS state made it easier to reset and debug things.
+
+\section{Key Data Structures}
+The main data structures I used:
+
+\begin{itemize}
+\item Integer register file: \texttt{R0}--\texttt{R31}, stored as Python ints with signed 32-bit wraparound on writes
+\item FP register file: \texttt{F0}--\texttt{F31}, stored as Python floats
+\item Register status tables: one for int, one for FP -- each entry is either \texttt{None} (register has current value) or an RS tag (some instruction is still writing it)
+\item Memory: a Python dict mapping byte addresses to float values; anything not in the dict reads as 0.0
+\item Instruction list: the parsed program indexed by PC
+\item Decode queue: a list used as a FIFO with max size \texttt{NI}
+\item RS banks: a dict mapping FU type to a list of \texttt{RSEntry} objects
+\item FU states: one \texttt{FunctionalUnit} per FU class
+\item Label table: maps label strings to instruction indices
+\end{itemize}
+
+\section{Pipeline and Cycle Behavior}
+Getting the cycle ordering right was probably the trickiest part. The order within each cycle is:
+
+\begin{enumerate}[leftmargin=1.5em]
+\item Writeback and CDB broadcast
+\item Issue from decode queue into a free RS slot
+\item Fetch one new instruction
+\item Execution start (pick oldest ready instruction for each idle FU)
+\item Execution advance (tick counters, finish if done)
+\end{enumerate}
+
+The key timing rules I enforced:
+
+\begin{itemize}
+\item Fetched in cycle $N$ $\Rightarrow$ can issue no earlier than $N+1$
+\item Issued in cycle $N$ $\Rightarrow$ can start executing no earlier than $N+1$
+\item Execution done in cycle $N$ $\Rightarrow$ CDB eligible starting $N+1$
+\item CDB value captured in cycle $N$ $\Rightarrow$ can start executing no earlier than $N+1$
+\item Branch resolves in cycle $N$ $\Rightarrow$ fetch resumes in $N+1$
+\end{itemize}
+
+Without these rules you get same-cycle chaining bugs where a value completes, broadcasts, wakes a dependent, and the dependent starts executing all in one cycle, which is wrong.
+
+\section{Hazard Handling}
+\textbf{RAW hazards}: when an instruction issues, if its source register has a pending writer, I store that writer's RS tag in Qj or Qk. When the CDB broadcasts, all RS entries watching that tag capture the value and clear their Q field.
+
+\textbf{WAW hazards}: handled by the register status table. A younger write just overwrites the tag in the table. When an older instruction finishes and tries to write back, it first checks if the table still has its tag -- if not, it skips the write.
+
+\textbf{WAR hazards}: not really an issue with Tomasulo because operand values are captured at issue time, so later writes to the source register don't affect an already-issued instruction.
+
+\textbf{Structural hazards}: naturally enforced by the finite RS banks (stall if no free slot), single FU per class, and single CDB.
+
+\section{Branch Handling}
+When \texttt{bne} is fetched, I immediately set a \texttt{fetch\_stalled} flag. Nothing else gets fetched until the branch finishes executing in the BU. When it completes, I update the PC (either the target label or fall-through) and clear the stall flag, so fetch resumes the next cycle.
+
+Since nothing is ever fetched past an unresolved branch, there's no need to flush anything.
+
+\section{CDB Arbitration Policy}
+Only one instruction can broadcast per cycle. I collect all RS entries that are \texttt{waiting\_for\_cdb} and whose \texttt{completed\_cycle} is strictly less than the current cycle (so same-cycle completions have to wait). Among those, the one with the lowest issue order wins.
+
+I validated this with \texttt{hazard\_test.dat} where a load and an add finish in the same cycle -- the load (issued first) wins the bus.
+
+\section{Benchmark Methodology}
+I ran three benchmarks:
+
+\begin{itemize}
+\item \texttt{prog.dat}: the provided loop benchmark
+\item \texttt{hazard\_test.dat}: tests CDB arbitration, RAW chains, and FP load-use latency
+\item \texttt{branch\_test.dat}: tests branch stall behavior with a small loop
+\end{itemize}
+
+For the bonus, I also ran \texttt{prog.dat} with \texttt{NI=4}, \texttt{NI=16}, and all RS banks set to size 2.
+
+\section{Results for the Provided Benchmark}
+Default configuration results:
+
+\begin{itemize}
+\item Total cycles: 48
+\item Issue stall events: 6
+\end{itemize}
+
+Final memory state:
+
+\begin{itemize}
+\item \texttt{Mem[124] = 128.0}
+\item \texttt{Mem[116] = 63.0}
+\item \texttt{Mem[108] = 195.0}
+\end{itemize}
+
+These match the expected loop computation where each iteration does \texttt{memory[R2] = memory[R1] * 12 + memory[R2]}:
+
+\begin{itemize}
+\item Iteration 1: $10 \times 12 + 8 = 128$
+\item Iteration 2: $5 \times 12 + 3 = 63$
+\item Iteration 3: $14 \times 12 + 27 = 195$
+\end{itemize}
+
+\texttt{R1 = 0} and \texttt{R2 = 100} at the end, which matches the loop exit condition.
+
+\subsection*{Bonus comparison results}
+\begin{center}
+\begin{tabular}{lccp{2.8in}}
+\toprule
+Configuration & Cycles & Issue Stalls & Notes \\
+\midrule
+Default (\texttt{NI=1}, default RS) & 48 & 6 & Baseline \\
+\texttt{NI=4} & 48 & 6 & No change \\
+\texttt{NI=16} & 48 & 6 & No change \\
+All RS sizes = 2 & 48 & 8 & More RS pressure, same cycle count \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Changing NI didn't help because the bottleneck is true data dependences and branch stalls, not the decode buffer. Shrinking all RS banks to 2 caused more stalls but didn't change total cycles because the extra pressure didn't land on the critical path.
+
+\section{Discussion Peers Section}
+I didn't formally collaborate with any peers on this project, so there are no peer-sourced design changes to discuss.
+
+\section{Challenges and Debugging Notes}
+A few things that took a while to get right:
+
+\begin{itemize}
+\item Same-cycle forwarding bugs -- early versions let a value complete and immediately wake a dependent in the same cycle. Fixing this required tracking a \texttt{ready\_cycle} for each operand and checking it strictly less than the current cycle.
+\item CDB contention -- instructions that finish but don't win the CDB need to stay in their RS slot until they actually broadcast. Initially I was freeing slots too early.
+\item Memory ordering -- without a ROB there's no easy way to do memory disambiguation, so I just require all older memory ops to complete their memory phase before a younger one can start.
+\item Branch timing -- making sure fetch resumes in the cycle \textit{after} branch resolution, not the same cycle.
+\end{itemize}
+
+The \texttt{--trace} flag and \texttt{hazard\_test.dat} were really useful for catching most of these.
+
+\section{Conclusion}
+The simulator handles all 8 instructions, matches the expected output for the provided benchmark, and passes a broader set of tests covering RAW/WAW/structural hazards, CDB contention, memory ordering, and branch stalls. The bonus parameterization works from the command line without changing the source.
+
+\end{document}
