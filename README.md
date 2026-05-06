@@ -54,7 +54,8 @@ A comprehensive repository containing coursework, lecture notes, labs, and proje
   - IMDB sentiment analysis datasets
 
 #### **EE147 - GPU Programming**
-- Lecture notes on GPU computing and parallel programming
+- `Lectures/` — GPU computing and CUDA lecture materials
+- `Homework/` — CUDA programming assignments (build with `make` where `nvcc` is available)
 
 #### **EE161 - Computer Design and Architecture**
 - `Lectures/` — Architecture and design materials
