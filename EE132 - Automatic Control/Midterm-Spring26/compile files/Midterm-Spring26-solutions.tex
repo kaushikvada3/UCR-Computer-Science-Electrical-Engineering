@@ -1,0 +1,141 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\begin{document}
+
+\begin{center}
+{\Large \textbf{EE 132: Midterm}}\\[1.5em]
+{\large Kaushik Vada}\\[1em]
+{\large Spring 2026}
+\end{center}
+
+\vspace{1em}
+
+\section*{Problem 1}
+
+Taking the Laplace transform of both sides with zero initial conditions:
+\begin{align*}
+s^2 Y(s) + 2s Y(s) + 3 Y(s) &= 2s U(s) + 3 U(s) \\[1em]
+(s^2 + 2s + 3) Y(s) &= (2s + 3) U(s)
+\end{align*}
+\[
+\boxed{\frac{Y(s)}{U(s)} = \frac{2s + 3}{s^2 + 2s + 3}}
+\]
+
+\section*{Problem 2}
+
+Let $E(s) = R(s) - \frac{2}{s + 2} Y(s)$ denote the error signal. The two parallel forward paths sum to $(3 + s) E(s)$, which then passes through $\frac{1}{s + 1}$:
+\[
+Y(s) = \frac{s + 3}{s + 1} E(s) = \frac{s + 3}{s + 1} \left[ R(s) - \frac{2}{s + 2} Y(s) \right]
+\]
+Multiplying through by $(s + 1)(s + 2)$:
+\begin{align*}
+Y(s)(s + 1)(s + 2) &= (s + 3) \left[ (s + 2)R(s) - 2 Y(s) \right] \\
+Y(s) \left[ (s + 1)(s + 2) + 2(s + 3) \right] &= (s + 2)(s + 3) R(s) \\
+Y(s) \left[ s^2 + 5s + 8 \right] &= (s + 2)(s + 3) R(s)
+\end{align*}
+\[
+\boxed{T(s) = \frac{Y(s)}{R(s)} = \frac{(s + 2)(s + 3)}{s^2 + 5s + 8}}
+\]
+
+The characteristic polynomial $s^2 + 5s + 8$ has all positive coefficients, so the closed-loop system is stable. For a unit-step input $R(s) = 1/s$, the Final Value Theorem gives:
+\[
+y_{ss} = \lim_{s \to 0} s \cdot T(s) \cdot \frac{1}{s} = T(0) = \frac{(2)(3)}{8} = \frac{6}{8}
+\]
+\[
+\boxed{y_{ss} = \frac{3}{4}}
+\]
+
+\section*{Problem 3}
+
+The open-loop transfer function is $G(s) = \frac{3}{s(s + 4)}$ with unity feedback. The closed-loop transfer function is:
+\[
+T(s) = \frac{G(s)}{1 + G(s)} = \frac{3}{s^2 + 4s + 3} = \frac{3}{(s + 1)(s + 3)}
+\]
+Both poles are in the left half-plane, so the system is stable. For a unit-step input:
+\[
+Y(s) = \frac{T(s)}{s} = \frac{3}{s(s + 1)(s + 3)}
+\]
+Partial fraction decomposition:
+\[
+\frac{3}{s(s + 1)(s + 3)} = \frac{A}{s} + \frac{B}{s + 1} + \frac{C}{s + 3}
+\]
+\begin{align*}
+A &= \left. \frac{3}{(s + 1)(s + 3)} \right|_{s=0} = \frac{3}{(1)(3)} = 1 \\[1ex]
+B &= \left. \frac{3}{s(s + 3)} \right|_{s=-1} = \frac{3}{(-1)(2)} = -\frac{3}{2} \\[1ex]
+C &= \left. \frac{3}{s(s + 1)} \right|_{s=-3} = \frac{3}{(-3)(-2)} = \frac{1}{2}
+\end{align*}
+\[
+\boxed{y(t) = \left[ 1 - \frac{3}{2} e^{-t} + \frac{1}{2} e^{-3t} \right] u(t)}
+\]
+
+\section*{Problem 4}
+
+\textbf{Stability range.} The open-loop transfer function is:
+\[
+G(s) = \left( k_1 + \frac{k_2}{s} \right) \cdot \frac{1}{(s - 1)(s + 3)} = \frac{k_1s + k_2}{s(s - 1)(s + 3)}
+\]
+The closed-loop characteristic equation is $1 + G(s) = 0$, i.e.\ $s(s - 1)(s + 3) + k_1s + k_2 = 0$.
+Expanding:
+\[
+s^3 + 2s^2 + (k_1 - 3)s + k_2 = 0
+\]
+Routh array:
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{c|cc}
+$s^3$ & $1$ & $k_1 - 3$ \\
+$s^2$ & $2$ & $k_2$ \\
+$s^1$ & $\frac{2(k_1 - 3) - k_2}{2}$ & $0$ \\
+$s^0$ & $k_2$ & 
+\end{tabular}
+\end{center}
+For all first-column entries to be positive:
+\[
+\boxed{k_2 > 0 \quad \text{and} \quad 2k_1 - k_2 > 6}
+\]
+
+\textbf{System type.} The open-loop transfer function has exactly one pole at the origin, so the closed-loop system is \textbf{Type 1}.
+
+\vspace{0.5em}
+\noindent \textbf{Steady-state error}, $k_1 = 5$, $k_2 = 1$. Check stability: $k_2 = 1 > 0$ and $2(5) - 1 = 9 > 6$. The system is stable.
+\\
+For a Type 1 system with a step input, the position error constant is $K_p = \lim_{s \to 0} G(s) \to \infty$, so:
+\[
+\boxed{e_{ss} = \frac{1}{1 + K_p} = 0}
+\]
+
+\section*{Problem 5}
+
+\textbf{Closed-loop transfer function.} The open-loop gain is $G(s) = \frac{k_1}{(s + k_2)(s - 1)}$, giving:
+\[
+T(s) = \frac{k_1}{(s + k_2)(s - 1) + k_1} = \frac{k_1}{s^2 + (k_2 - 1)s + (k_1 - k_2)}
+\]
+Comparing to the standard second-order form $\frac{\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2}$:
+\[
+\omega_n^2 = k_1 - k_2, \quad 2\zeta\omega_n = k_2 - 1
+\]
+\textbf{Extract $\sigma$ from the 1\% settling time.}
+\[
+t_s = \frac{4.6}{\zeta\omega_n} = 9.2 \text{ s} \implies \zeta\omega_n = \frac{4.6}{9.2} = 0.5
+\]
+Therefore $k_2 - 1 = 2(\zeta\omega_n) = 1$, so \fbox{$k_2 = 2$}.
+
+\vspace{0.5em}
+\noindent \textbf{Extract $\omega_n$ from the rise time.}
+\[
+t_r = \frac{1.8}{\omega_n} = 1.8 \text{ s} \implies \omega_n = 1 \text{ rad/s}
+\]
+Therefore $k_1 - k_2 = \omega_n^2 = 1$, so \fbox{$k_1 = 3$}.
+
+\vspace{0.5em}
+\noindent \textbf{Verification.} With $k_1 = 3$, $k_2 = 2$:
+\[
+T(s) = \frac{3}{s^2 + s + 1}, \quad \zeta = \frac{k_2 - 1}{2\omega_n} = \frac{1}{2} = 0.5
+\]
+Both poles lie in the open left half-plane ($0 < \zeta < 1$, underdamped), confirming the system is stable and the specs are achievable.
+
+\end{document}
