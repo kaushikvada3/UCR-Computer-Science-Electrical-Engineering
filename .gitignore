@@ -11,3 +11,19 @@ build_artifacts/
 .venv/
 .venv-*/
 .export-venv/
+venv/
+
+# Local-only scratch (cleanup staging)
+.trash/
+
+# Compiled binaries and object files
+*.o
+*.out
+
+# GPU homework build artifacts (platform-specific executables)
+EE147*/Homework/**/mat-add
+EE147*/Homework/**/sgemm-tiled
+
+# Claude Code worktrees (ephemeral)
+.claude/worktrees/
+
