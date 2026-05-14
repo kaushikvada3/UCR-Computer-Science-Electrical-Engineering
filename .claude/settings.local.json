@@ -3,7 +3,13 @@
     "allow": [
       "Bash(python -c ' *)",
       "Bash(git stash *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(rm -rf \"/Users/kaushikvada/Library/Mobile Documents/com~apple~CloudDocs/Documents/Computer_Science/Github Repos/UCR-Computer-Science-Electrical-Engineering/EE147 - GPU Programming/Homework/Assignment 1/.git\")",
+      "Bash(rm -rf \"/Users/kaushikvada/Library/Mobile Documents/com~apple~CloudDocs/Documents/Computer_Science/Github Repos/UCR-Computer-Science-Electrical-Engineering/EE147 - GPU Programming/Homework/Assignment 2/.git\")",
+      "Bash(rm -rf \"/Users/kaushikvada/Library/Mobile Documents/com~apple~CloudDocs/Documents/Computer_Science/Github Repos/UCR-Computer-Science-Electrical-Engineering/EE147 - GPU Programming/Homework/Assignment 3/.git\")",
+      "Bash(git rm *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
