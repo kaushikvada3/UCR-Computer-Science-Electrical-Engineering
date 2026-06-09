@@ -1,0 +1,168 @@
+\documentclass[11pt]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!55!black,citecolor=blue!55!black,urlcolor=blue!55!black]{hyperref}
+
+% ---------- Spacing / look ----------
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+\captionsetup{font=small,labelfont=bf}
+\graphicspath{{figures/}}
+
+% ---------- Header / footer ----------
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small EE132 --- Automatic Control}
+\rhead{\small Lab 7}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% siunitx setup
+\sisetup{detect-all,per-mode=symbol}
+
+% ---------- Title ----------
+\title{\vspace{-1.0cm}\textbf{Lab 7 Report}\\[0.3em]
+\large Proportional--Velocity (PV) Position Control of the Quanser QUBE-Servo}
+\author{Kaushik Vada \and Andrew Kong \and Aren Muniz \and Daniel Lopez \and Kai Ong}
+\date{May 29, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+% ---------- Abstract ----------
+\begin{abstract}
+\noindent This lab focuses on using a proportional--velocity (PV) controller for QUBE-Servo
+position control. A Simulink model was developed and tested to evaluate the effects of
+proportional and derivative gains on system performance. Controller gains were designed
+using second-order system specifications and implemented on the servo. The resulting
+position response was analyzed to verify that the desired peak time, overshoot, and overall
+stability were achieved.
+\end{abstract}
+
+% =====================================================================
+\section{System Built}
+% =====================================================================
+The system built in this lab was a proportional--velocity (PV) position control system for
+the Quanser QUBE-Servo. The system was implemented in Simulink and consisted of a reference
+signal generator, a proportional controller, a velocity feedback path with a high-pass
+filter, and the QUBE-Servo plant. A square-wave position command was used as the reference
+input, while the measured servo position was fed back to the controller. The proportional
+gain was used to improve tracking performance, while the derivative gain provided damping
+and reduced overshoot. The completed system was tested to evaluate position-control
+performance and to verify the controller gains designed from second-order system
+specifications.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{model.jpg}
+    \caption{QUARC/Simulink PV position control model for the QUBE-Servo. The proportional
+    gain $K_p$ acts on the position error while the velocity feedback path uses a high-pass
+    filter ($15s/(s+150)$) and derivative gain $K_d$ for damping; the controller output
+    drives the motor through the HIL Write Analog block.}
+    \label{fig:model}
+\end{figure}
+
+% =====================================================================
+\section{In-Lab Exercises and Results}
+% =====================================================================
+
+\subsection{Effect of the Proportional and Derivative Gains}
+The motor voltage command and the position-tracking response were observed while sweeping
+the proportional gain $K_p$ and the derivative gain $K_d$. Figure~\ref{fig:voltage} shows
+the motor voltage for the square-wave command, and Figure~\ref{fig:position} shows the
+reference and measured position together.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{voltage.jpg}
+    \caption{Motor voltage command $V_m$ for the square-wave position reference.}
+    \label{fig:voltage}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{position.jpg}
+    \caption{Position-tracking response: the square-wave reference (yellow) and the measured
+    servo position (blue) following it.}
+    \label{fig:position}
+\end{figure}
+
+Sweeping the proportional gain produced the following observations:
+\begin{itemize}
+    \item $K_p = 1$: the amplitude is not as high --- the previous response was around
+    $2.5$, while this is around $1$.
+    \item $K_p = 2$: the output has more oscillations; at least, the smaller oscillations
+    are now larger.
+    \item $K_p = 3$: even more oscillations than when $K_p = 2$.
+    \item $K_p = 4$: even more oscillations than when $K_p = 3$.
+\end{itemize}
+As $K_p$ increases there are more oscillations, which shows that the servo is moving more
+frequently the higher the value of $K_p$. In contrast, as $K_d$ increases, the output
+result becomes more similar to the reference.
+
+\subsection{Controller Gain Design}
+Matching the QUBE-Servo closed-loop transfer function to the standard second-order form
+yields the proportional and derivative gains
+\begin{equation}
+    K_p = \frac{\tau\,\omega_n^{2}}{K},
+    \qquad
+    K_d = \frac{2\zeta\omega_n\tau - 1}{K}.
+    \label{eq:gains}
+\end{equation}
+Using the model parameters $\omega_n = 32.3$, $\zeta = 0.76$, $K = 23.2$, and
+$\tau = 0.13$,
+\begin{align}
+    K_p &= \frac{(0.13)(32.3)^{2}}{23.2} = 5.85, \\[4pt]
+    K_d &= \frac{2(0.76)(32.3)(0.13) - 1}{23.2} = 0.232 .
+\end{align}
+Therefore the designed gains are
+\begin{equation}
+    K_p = \SI{5.85}{\volt\per\radian}
+    \qquad\text{and}\qquad
+    K_d = \SI{0.232}{\volt\per(\radian\per\second)} .
+\end{equation}
+
+% =====================================================================
+\section{Analysis}
+% =====================================================================
+\textbf{Results analysis.} The PV controller successfully controlled the position of the
+QUBE-Servo and demonstrated the effects of proportional and derivative feedback on system
+performance. Increasing the proportional gain improved the speed of the response and reduced
+tracking error, but excessive proportional gain increased overshoot and oscillatory
+behavior. Increasing the derivative gain added damping to the system, reducing overshoot and
+improving stability. Using the calculated gains, the servo response closely followed the
+reference position with a fast rise time and minimal overshoot. Overall, the experimental
+results were consistent with the theoretical second-order system model and demonstrated that
+PV control can effectively improve transient response while maintaining stable operation.
+
+\textbf{Issues encountered.} None encountered.
+
+% =====================================================================
+\section{Conclusion}
+% =====================================================================
+In this lab, a proportional--velocity (PV) controller was designed and implemented to
+control the position of the QUBE-Servo system. The effects of proportional and derivative
+gains on the transient response were investigated, and controller gains were calculated
+using second-order system design specifications. Experimental testing showed that
+proportional gain increased response speed while derivative gain improved damping and
+reduced overshoot. The final controller achieved stable position tracking and demonstrated
+the effectiveness of PV control for servo position regulation. Overall, the lab provided
+practical experience in control system design, tuning, and performance analysis using a real
+electromechanical system.
+
+\end{document}

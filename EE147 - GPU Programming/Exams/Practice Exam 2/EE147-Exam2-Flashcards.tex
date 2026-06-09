@@ -1,0 +1,274 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.7in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+\setlist{nosep,leftmargin=*}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  language=C++,
+  breaklines=true,
+  morekeywords={__global__,__device__,__shared__,__syncthreads,
+    cudaMallocManaged,cudaMemPrefetchAsync,cudaMemAdvise,atomicAdd,
+    atomicAdd_system,cudaDeviceSynchronize,cudaMemcpyPeerAsync,
+    cudaSetDevice,cudaDeviceEnablePeerAccess}
+}
+
+\newcommand{\q}[1]{\par\vspace{6pt}\noindent\textbf{Q.} #1}
+\newcommand{\ans}[1]{\par\noindent\textit{A.} #1\par}
+
+\title{\vspace{-1.5em}\textbf{EE147 Exam 2 — Flashcard Drill}\\
+\large Active recall set: Lectures 8--14}
+\author{Kaushik Vada}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-3em}
+
+\paragraph{How to drill:} cover each answer with a card. Speak the answer out loud before checking. Loop the deck twice. Skip cards you nail; star ones you miss.
+
+\hrulefill
+
+\section*{Unified Memory (Lec 8)}
+
+\q{What CUDA call replaces both \texttt{malloc} and \texttt{cudaMalloc} in a UM-style program?}
+\ans{\texttt{cudaMallocManaged(\&ptr, size)}.}
+
+\q{Pre-Pascal: what triggers the data to come back to the CPU after a kernel?}
+\ans{\texttt{cudaDeviceSynchronize()} — until you call it, the CPU touching the managed pointer would segfault.}
+
+\q{Pascal+: what happens when the GPU touches a page that lives in CPU memory?}
+\ans{Page fault $\rightarrow$ driver migrates that page to GPU $\rightarrow$ the access is replayed. Migration is page-by-page on demand.}
+
+\q{Why is page-by-page demand paging slow for bulk data?}
+\ans{Each page fault has fixed overhead. A single bulk \texttt{cudaMemPrefetchAsync} or \texttt{cudaMemcpy} is much more efficient.}
+
+\q{Three \texttt{cudaMemAdvise} hint values?}
+\ans{\texttt{cudaMemAdviseSetReadMostly}, \texttt{cudaMemAdviseSetPreferredLocation}, \texttt{cudaMemAdviseSetAccessedBy}.}
+
+\q{Do \texttt{cudaMemAdvise} hints move data?}
+\ans{No. They guide future migration/mapping decisions. Only \texttt{cudaMemPrefetchAsync} actually moves data on demand.}
+
+\q{What does \texttt{cudaMemAdviseSetReadMostly} do?}
+\ans{UM keeps a read-only copy local to each processor that touches it. A write collapses all copies into one and subsequent reads re-fault and re-duplicate.}
+
+\q{Pascal+: can CPU read managed memory while a kernel is running on it?}
+\ans{Yes (page fault, then resolve). On pre-Pascal this would crash — segfault.}
+
+\q{What's special about \texttt{atomicAdd\_system}?}
+\ans{System-wide atomic — coherent across CPU and all GPUs. Direct over NVLink, software-assisted over PCIe. Pascal+ only.}
+
+\q{Can you oversubscribe GPU memory with UM on Kepler?}
+\ans{No. Oversubscription requires Pascal+. On Kepler, allocating more than GPU memory fails.}
+
+\hrulefill
+
+\section*{Matrix Multiply / Tiling (Lec 9)}
+
+\q{In a basic matmul kernel, how many global memory loads does one thread do?}
+\ans{$2 \cdot \text{Width}$ — one row of M, one column of N, both per inner-loop step.}
+
+\q{What's the compute-to-memory ratio in a tiled SGEMM with TILE\_WIDTH = 16?}
+\ans{$\sim$16 FLOPs per global memory load (per phase: 512 loads, 8192 mul/adds for a 256-thread block).}
+
+\q{TILE\_WIDTH = 32 — shared memory per block?}
+\ans{$2 \cdot 32 \cdot 32 \cdot 4 = $ \textbf{8 KB} (two tiles, each 32$\times$32 floats).}
+
+\q{On a 16 KB shared memory SM, how many tile = 32 blocks can be co-resident?}
+\ans{2 blocks (each needs 8 KB).}
+
+\q{Why two \texttt{\_\_syncthreads()} per phase in tiled SGEMM?}
+\ans{First: ensure tile is fully loaded before consumption. Second: ensure tile is fully consumed before loading the next one (otherwise a fast thread could overwrite data still in use).}
+
+\q{In the tiled kernel, what does each thread load per phase?}
+\ans{One element of the M tile and one element of the N tile — total of 2 loads.}
+
+\q{Boundary check for loading the M tile in a non-multiple-size matrix?}
+\ans{\texttt{(Row < Height) \&\& (p*TILE\_WIDTH + tx < Width)} — if true, load; else write 0.}
+
+\q{Why write 0 when out of bounds instead of skipping the load?}
+\ans{So the multiply-add becomes a no-op without breaking other threads' computations or causing branch divergence after sync.}
+
+\q{Are the three boundary tests (load M, load N, write P) the same?}
+\ans{No — they're all different. A thread that doesn't write a valid P can still participate in loading.}
+
+\hrulefill
+
+\section*{Memory Coalescing (Lec 10)}
+
+\q{Rule of thumb for an access to be coalesced?}
+\ans{The index in \texttt{A[expr]} should be \texttt{(something not involving threadIdx.x) + threadIdx.x}.}
+
+\q{In a row-major 2D array \texttt{M[i][j]}, which dimension should track \texttt{threadIdx.x} for coalesced reads?}
+\ans{The column index \texttt{j}. Consecutive threads (varying tx) then hit consecutive addresses in memory.}
+
+\q{In basic matmul, are loads of \texttt{N[k*Width + Col]} coalesced?}
+\ans{Yes — \texttt{Col} = \texttt{bx*TILE\_WIDTH + tx}, so adjacent tx $\rightarrow$ adjacent address.}
+
+\q{What is a DRAM "burst section"?}
+\ans{A contiguous range of addresses transferred together. Threads in a warp accessing one burst section = one DRAM request. Spreading across sections = multiple requests.}
+
+\q{Why does the tiled SGEMM kernel still benefit from coalescing even though it uses shared memory?}
+\ans{The \emph{loads from global into shared} are still coalesced; only the inner consumption loop reads from shared (where coalescing doesn't apply).}
+
+\q{P100 memory? V100? A100? H100?}
+\ans{P100: HBM2 732 GB/s. V100: HBM2 900 GB/s. A100: HBM2 1555 GB/s. H100: HBM3 3 TB/s.}
+
+\q{What does MIG let you do?}
+\ans{Slice a GPU into multiple independent instances, each with its own SMs, memory partition, and L2 slice — multi-tenant isolation.}
+
+\hrulefill
+
+\section*{Histogram / Atomics / Privatization (Lec 11)}
+
+\q{Sectioned vs interleaved partitioning of the input — which is coalesced?}
+\ans{Interleaved. Threads start at consecutive positions and stride together. Sectioned has thread $i$ on a distant chunk $\rightarrow$ not coalesced.}
+
+\q{Why is read-modify-write a data race?}
+\ans{Two threads can both read the old value, both increment to old+1, both write back. Only one of the increments is visible.}
+
+\q{What does \texttt{atomicAdd} return?}
+\ans{The \emph{old} value (before the add).}
+
+\q{Latency tiers for atomic ops: DRAM vs L2 vs shared?}
+\ans{DRAM: $\sim$1000+ cycles. L2: $\sim$1/10 of DRAM. Shared: very short (no off-chip traffic).}
+
+\q{Why does heavy atomic contention on one address devastate throughput?}
+\ans{All ops serialize on that location. Throughput becomes 1/(read-latency + write-latency), not bandwidth-limited.}
+
+\q{What's the core privatization idea for histogram?}
+\ans{Each block builds a private histogram in shared memory (fast atomics, low contention). At the end, atomically merge each block's private bins into the global histogram.}
+
+\q{When can you NOT use privatization?}
+\ans{When the reduction op isn't associative + commutative, or when the private structure can't fit in shared memory.}
+
+\q{What's the speedup typically reported for privatization?}
+\ans{Often $>$10$\times$.}
+
+\q{In the privatized histogram kernel, what syncs are needed?}
+\ans{One \texttt{\_\_syncthreads()} after initializing private bins, one after building the private histogram, before merging into the global one.}
+
+\hrulefill
+
+\section*{Multi-GPU (Lec 12)}
+
+\q{How do you target a specific GPU from a single CPU thread?}
+\ans{\texttt{cudaSetDevice(i)} — sets the current device. Async calls keep running on previous devices.}
+
+\q{Function to check if peer access is possible between two devices?}
+\ans{\texttt{cudaDeviceCanAccessPeer(\&result, dev\_X, dev\_Y)}.}
+
+\q{Function to enable P2P access?}
+\ans{\texttt{cudaDeviceEnablePeerAccess(peer\_device, 0)}.}
+
+\q{What's \texttt{cudaMemcpyPeerAsync}?}
+\ans{Copies bytes from one device to another. With P2P enabled: shortest PCIe path, no host staging. Without P2P: driver stages through host memory.}
+
+\q{Why two stages in the Left-Right exchange?}
+\ans{So no PCIe link carries traffic in the same direction twice at the same time — Stage 1 = all send right, Stage 2 = all send left. The 3 transfers in each stage run concurrently.}
+
+\q{Local vs remote D2H bandwidth on a dual-IOH system?}
+\ans{Local $\sim$6.3 GB/s, remote $\sim$4.3 GB/s. Remote pays one QPI hop.}
+
+\q{Why can't P2P cross IOHs on dual-IOH systems?}
+\ans{QPI between IOHs isn't compatible with PCIe P2P protocol. Copies still work but stage through host memory.}
+
+\q{How do you pin a CPU thread to the socket closest to a GPU?}
+\ans{\texttt{numactl}, \texttt{GOMP\_CPU\_AFFINITY}, \texttt{KMP\_AFFINITY}, or similar.}
+
+\hrulefill
+
+\section*{GPU Sharing / MPS (Lec 13, up to slide 25)}
+
+\q{What problem does MPS solve?}
+\ans{Without MPS, kernels from different processes serialize at context-switch boundaries on a shared GPU. With MPS, they share one context and kernels can overlap, improving utilization.}
+
+\q{What's Hyper-Q?}
+\ans{A hardware feature (Kepler+) providing 32 work queues, one per stream. Allows true 32-way kernel concurrency without inter-stream false dependencies.}
+
+\q{MPS requirements?}
+\ans{Linux. UVA. Tesla GPU with CC $\geq$ 3.5. CUDA toolkit 5.5+. Exclusive-mode applies to the MPS server, not clients.}
+
+\q{Do you need to modify your application to use MPS?}
+\ans{No. Run the MPS daemon \texttt{nvidia-cuda-mps-control -d}; processes started after that route through it automatically.}
+
+\q{When does MPS introduce false dependencies / serialization?}
+\ans{When the number of streams per MPS client exceeds the channels available (more than 2 per client). Excess streams get squeezed into the same work queue and serialize.}
+
+\q{Does MPS spread work across multiple GPUs?}
+\ans{No — the application must still handle GPU affinity itself (e.g., set \texttt{CUDA\_VISIBLE\_DEVICES} per rank).}
+
+\q{Quick setup command sequence on a single GPU?}
+\ans{\texttt{export CUDA\_VISIBLE\_DEVICES=0} ; \texttt{nvidia-smi -i 0 -c EXCLUSIVE\_PROCESS} ; \texttt{nvidia-cuda-mps-control -d}.}
+
+\hrulefill
+
+\section*{Dynamic Parallelism (Lec 14)}
+
+\q{What does Dynamic Parallelism enable?}
+\ans{A GPU kernel can launch its own child kernels — dynamically, simultaneously, and independently from the host.}
+
+\q{Minimum compute capability?}
+\ans{3.5 (Kepler GK110 and later).}
+
+\q{If 256 threads in a block all execute the launch line, how many child grids are created?}
+\ans{256. Launches are per-thread. Guard with \texttt{if (threadIdx.x == 0)} to launch once per block.}
+
+\q{Does \texttt{cudaDeviceSynchronize()} on the device synchronize only the calling thread?}
+\ans{No — it waits for all child grids launched by any thread in the block.}
+
+\q{Does \texttt{cudaDeviceSynchronize()} act as \texttt{\_\_syncthreads()}?}
+\ans{No. If you need a barrier after the children finish, you must also call \texttt{\_\_syncthreads()}.}
+
+\q{Are device-side launches synchronous?}
+\ans{No — all device-side launches and copies are async.}
+
+\q{Three problem types Dynamic Parallelism is useful for?}
+\ans{Library calls from inside kernels, data-dependent parallelism (irregular loop bounds), recursive parallel algorithms. Also batched nested parallelism and adaptive grid refinement.}
+
+\q{Can you pass a CUDA stream to a child kernel from inside a kernel?}
+\ans{No — CUDA primitives (streams, events) are per-block; can't be passed to children.}
+
+\q{Where must constants and texture/surface bindings be set?}
+\ans{From the host. ECC errors also report at host.}
+
+\q{Why does DP help an irregular workload like \texttt{for j = 1 to x[i]}?}
+\ans{The static alternatives are wasteful — either oversubscribe with the worst-case grid and waste cycles on empty cells, or serialize per row. DP lets each row spawn exactly the right child grid.}
+
+\hrulefill
+
+\section*{Mixed / cross-cutting}
+
+\q{Warp size on NVIDIA GPUs?}
+\ans{32 threads.}
+
+\q{Difference between \texttt{cudaMemcpy} (sync) and \texttt{cudaMemcpyAsync}?}
+\ans{Sync blocks until the copy completes. Async returns immediately and proceeds on the given stream. Async H2D requires pinned host memory.}
+
+\q{Why does pinned memory help bandwidth on H2D copies?}
+\ans{Pinned (page-locked) memory enables the DMA engine to copy directly without CPU-driver staging through pinned buffers.}
+
+\q{What's the maximum threads per block on modern GPUs?}
+\ans{1024.}
+
+\q{If a 2D block is $32 \times 32$, how many warps per block?}
+\ans{32 (1024 threads / 32 threads/warp).}
+
+\q{For an image of $H \times W$ with block $16\times 16$, what's the grid?}
+\ans{\texttt{gridDim.x = ceil(W/16)}, \texttt{gridDim.y = ceil(H/16)}.}
+
+\q{How does shared memory size affect occupancy?}
+\ans{It limits how many blocks can be co-resident on one SM. More shared per block $\rightarrow$ fewer blocks $\rightarrow$ less latency hiding.}
+
+\hrulefill
+
+\textit{End of deck. Loop twice; star the misses; rotate the stars.}
+
+\end{document}

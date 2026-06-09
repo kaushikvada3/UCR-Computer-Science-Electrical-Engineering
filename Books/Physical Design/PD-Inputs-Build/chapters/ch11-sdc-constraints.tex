@@ -1,0 +1,231 @@
+\chapter[The Constraints File (SDC)]{The Constraints File (SDC): Telling the Tool What ``Working'' Means}
+
+\begin{tldr}
+\begin{itemize}
+  \item \textbf{Last chapter:} LEF was the contract between the library and the placer, all physical and no time. \textbf{This chapter:} SDC is the contract between the designer and every timing-aware tool downstream, all time and no physics.
+  \item \textbf{SDC} (Synopsys Design Constraints) is a \textbf{Tcl-based contract} that tells synthesis, STA, and PD what timing, power, and area the chip must hit.
+  \item The \textbf{Big 5} commands are \texttt{create\_clock}, \texttt{set\_input\_delay}, \texttt{set\_output\_delay}, \texttt{set\_clock\_uncertainty}, and \texttt{set\_false\_path} / \texttt{set\_multicycle\_path}.
+  \item \textbf{Setup} asks ``did data arrive \emph{before} the next capture edge minus the setup window?'' \textbf{Hold} asks ``did data wait \emph{long enough past} the current edge so the previous value was safely captured?''
+  \item Slack is the headline number. Positive means met. Negative means the tool has work to do, or you have an SDC bug.
+\end{itemize}
+\end{tldr}
+
+\section*{Opening: the contract nobody reads until it breaks}
+
+A netlist by itself is silent about \textbf{when} signals should arrive. You can hand the same gate-level netlist to two engineers, give them two different SDC files, and they will ship two completely different chips. One will close at 1\,GHz; the other will look broken even though every transistor is identical. The constraints file is the difference.
+
+This chapter pulls apart the SDC \textbf{piece by piece}. We will define clocks, anchor the boundary with input and output delays, do the slack arithmetic by hand for both setup and hold, and look at where engineers most often shoot themselves in the foot. By the end the file should stop feeling like a wall of Tcl and start feeling like a small, opinionated specification.
+
+\section{What lives inside the SDC}
+
+The SDC bundles three flavors of constraint into one file. \textbf{Timing} constraints define the clocks and the I/O delays that anchor every path. \textbf{Optimization} constraints (max transition, max capacitance, max fanout, input/output load) shape how the tool buffers and sizes the design. \textbf{Power} constraints cap dynamic and leakage budgets, often paired with a SAIF switching-activity file.
+
+The lecturer is blunt about why SDC matters: it is read by \textbf{synthesis} (Design Compiler), by \textbf{STA} (PrimeTime), by \textbf{place-and-route} (ICC2 / Innovus), and by \textbf{formal} flows. Every downstream tool trusts it. If the SDC lies, every report based on it also lies.
+
+\subsection{The timing waveform: launch, capture, slack}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=0.9cm, y=0.7cm]
+  % Launch clock waveform
+  \draw[thick, cKEY] (0,3) -- (0,4) -- (1,4) -- (1,3) -- (4,3) -- (4,4) -- (5,4) -- (5,3) -- (8,3);
+  \node[left] at (0,3.5) {\small LAUNCH clk};
+  \node[above] at (0.5,4) {\scriptsize $t=0$};
+
+  % Capture clock waveform (one period later)
+  \draw[thick, cPIT] (0,1) -- (4,1) -- (4,2) -- (5,2) -- (5,1) -- (8,1);
+  \node[left] at (0,1.5) {\small CAPTURE clk};
+  \node[above] at (4.5,2) {\scriptsize $t=T$};
+
+  % Data arrival arrow
+  \draw[->, thick, cCHECK] (0.5,3) .. controls (2,0) .. (3.6,1) ;
+  \node[cCHECK] at (2.2,1.7) {\scriptsize data path $D$};
+
+  % Setup window
+  \draw[<->, cPIT!70!black] (3.6,0.3) -- (4,0.3);
+  \node[below] at (3.8,0.3) {\scriptsize $T_s$};
+
+  % Slack bracket
+  \draw[<->, thick, cTLDR] (3.0,2.6) -- (3.6,2.6);
+  \node[cTLDR, above] at (3.3,2.6) {\scriptsize slack};
+
+  \node at (4,-0.5) {\scriptsize \textbf{Setup check:} data must land before $T - T_s$};
+\end{tikzpicture}
+\caption{Setup check on a single launch/capture pair. Slack $= T + \text{skew} - D - T_s$.}
+\end{figure}
+
+The launch flop fires its Q output at $t=0$. The signal walks through some combinational cloud, taking total delay $D$. The capture flop \textbf{samples} at $t=T$, but it needs the data to be stable for a small window $T_s$ \textbf{before} that edge. Anything left over is positive slack.
+
+\begin{hook}
+\textbf{``Launch lights the fuse; capture clips the wire.''} If the fuse burns too slowly (large $D$), capture's scissors slice through a signal still in motion. Setup violations are missed deadlines.
+\end{hook}
+
+\subsection{Anchoring the boundary: input and output delay}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=1cm, y=0.8cm]
+  % Virtual external flop
+  \draw[dashed, cGUT] (-3,1) rectangle (-2,2);
+  \node at (-2.5,1.5) {\scriptsize ext FF};
+
+  % Boundary port
+  \draw[thick] (0,1.5) circle (0.15);
+  \node[above] at (0,1.7) {\scriptsize \texttt{data\_in}};
+
+  % Internal flop
+  \draw[thick, cKEY] (3,1) rectangle (4,2);
+  \node at (3.5,1.5) {\scriptsize int FF};
+
+  % Arrows
+  \draw[->, thick] (-2,1.5) -- (0,1.5);
+  \draw[->, thick] (0,1.5) -- (3,1.5);
+
+  % Brackets
+  \draw[<->, cPIT] (-2,2.4) -- (0,2.4);
+  \node[cPIT, above] at (-1,2.4) {\scriptsize \texttt{set\_input\_delay} = 2\,ns};
+
+  \draw[<->, cCHECK] (0,0.6) -- (3,0.6);
+  \node[cCHECK, below] at (1.5,0.6) {\scriptsize $T - \text{input\_delay} = 8$\,ns budget inside};
+
+  % Virtual clock pulse
+  \draw[thick, cTLDR] (-3,3.2) -- (-2.5,3.2) -- (-2.5,3.8) -- (-2,3.8) -- (-2,3.2) -- (-1,3.2);
+  \node[cTLDR, left] at (-3,3.5) {\scriptsize vclk};
+\end{tikzpicture}
+\caption{\texttt{set\_input\_delay} models the time the signal already spent outside the block before reaching the port. The internal budget is what is left of the clock period.}
+\end{figure}
+
+\textbf{Input delay} says: ``by the time the signal walks in through this port, $X$\,ns of the clock period have already been consumed upstream.'' \textbf{Output delay} says: ``after the signal walks out through that port, the downstream flop still needs $Y$\,ns to capture it.'' Both are referenced to a clock, real or virtual, so STA knows what edge to measure against.
+
+\begin{hook}
+\textbf{``Input delay is rent paid before you moved in.''} The clock period is your apartment; the upstream logic already used some of the square footage. Whatever is left is yours to optimize.
+\end{hook}
+
+\section{The Big 5 SDC commands, by example}
+
+\subsection{create\_clock and create\_generated\_clock}
+
+\begin{lstlisting}[style=eda, language=tcl, caption={Defining a primary clock and a divide-by-2 generated clock.}]
+# Primary 1 GHz clock on the CLK port
+create_clock -name CLK_SYS -period 1.0 -waveform {0 0.5} \
+    [get_ports CLK]
+
+# Divide-by-2 generated clock on an internal flop's Q
+create_generated_clock -name CLK_DIV2 -source [get_ports CLK] \
+    -divide_by 2 [get_pins clkgen/div2_reg/Q]
+\end{lstlisting}
+
+A \textbf{primary clock} declares period and waveform at a port or pin. A \textbf{generated clock} is derived from a master with a known divide, multiply, or edge relationship. If you forget to declare a generated clock, STA will silently treat that internal node as just data and your reports will be wrong.
+
+\subsection{set\_input\_delay, set\_output\_delay, virtual clocks}
+
+\begin{lstlisting}[style=eda, language=tcl, caption={Boundary I/O timing referenced to a virtual clock.}]
+# Virtual clock used only for I/O timing (no real pin)
+create_clock -name VCLK -period 1.0
+
+# Data arrives 0.3 ns after VCLK edge
+set_input_delay  0.3 -clock VCLK [get_ports data_in*]
+
+# Downstream FF needs 0.4 ns before its clock edge
+set_output_delay 0.4 -clock VCLK [get_ports data_out*]
+\end{lstlisting}
+
+\textbf{Virtual clocks} exist purely as a timing reference; no pin in the block actually toggles with them. They are the standard trick when the real launching/capturing flop lives in another block and you only want to constrain the interface.
+
+\subsection{set\_clock\_uncertainty, set\_false\_path, set\_multicycle\_path}
+
+\begin{lstlisting}[style=eda, language=tcl, caption={Margin, exceptions, and multicycle relief.}]
+# Account for jitter + a safety margin (pre-CTS uses larger value)
+set_clock_uncertainty -setup 0.08 [get_clocks CLK_SYS]
+set_clock_uncertainty -hold  0.03 [get_clocks CLK_SYS]
+
+# Async config path: ignore for timing entirely
+set_false_path -from [get_pins cfg_reg*/Q] -to [get_pins core/*/D]
+
+# Two-cycle path: data is allowed 2T to settle, hold relative to launch
+set_multicycle_path 2 -setup -from [get_pins slow_src/Q] -to [get_pins slow_dst/D]
+set_multicycle_path 1 -hold  -from [get_pins slow_src/Q] -to [get_pins slow_dst/D]
+\end{lstlisting}
+
+\textbf{Uncertainty} folds jitter, skew estimate, and pessimism into one number that is subtracted from the available period. Pre-CTS the value is large because the clock tree does not exist yet; post-CTS it shrinks. \textbf{False paths} declare ``never time this.'' \textbf{Multicycle paths} say ``this path is allowed $N$ clock periods instead of one.''
+
+\begin{gut}
+The SDC has \texttt{create\_clock -period 2.0} on \texttt{CLK} and \texttt{set\_clock\_uncertainty -setup 0.15}. What is the effective period available for data-path delay before subtracting setup time and input/output delays?
+\gutans{$T_{\text{eff}} = 2.0 - 0.15 = 1.85$\,ns. Uncertainty is consumed before any logic delay.}
+\end{gut}
+
+\begin{gut}
+Why must a generated clock be \emph{declared} even though it is physically derived from a real flop driven by a real clock?
+\gutans{Because STA needs to know the period and edge relationship so it can correctly time paths that launch on the master and capture on the generated clock (or vice versa). Without the declaration, STA treats the node as data, not as a clock, and reports nonsense.}
+\end{gut}
+
+\begin{pausebox}
+So far: SDC = Tcl contract. The Big 5 are clock, input delay, output delay, uncertainty, and exceptions. Setup is ``arrive before deadline,'' hold is ``do not change too early.'' Next we do the math.
+\end{pausebox}
+
+\begin{keyidea}
+The SDC is the \textbf{single source of truth} that converts a netlist into a timed promise: every downstream tool (synthesis, STA, PnR, signoff) measures success against the same clock periods, I/O delays, uncertainties, and exceptions you write here.
+\end{keyidea}
+
+\section{Worked example: setup slack arithmetic}
+
+A single capture-to-launch pair with: launch edge at $t=0$, period $T=1.0$\,ns, combinational delay $D=0.8$\,ns, capture clock skew $\text{skew}=+0.05$\,ns (capture clock arrives \emph{later} than launch clock, helping setup), and capture flop setup window $T_s=0.10$\,ns.
+
+\move{1} Write the setup-slack formula with numbers \emph{first}.
+\[
+\text{slack}_{\text{setup}} = T + \text{skew} - D - T_s = 1.0 + 0.05 - 0.8 - 0.10
+\]
+
+\move{2} Add the helpers, subtract the burdens.
+\[
+\text{slack}_{\text{setup}} = 1.05 - 0.90 = 0.15~\text{ns}
+\]
+
+\move{3} Positive. Setup is \textbf{met} with 150\,ps of margin.
+
+\move{4} Generalize. The setup check at any endpoint is
+\[
+\boxed{\text{slack}_{\text{setup}} = (T_{\text{capture}} - T_{\text{launch}}) + \text{skew} - D_{\text{data}} - T_s - U}
+\]
+where $U$ is clock uncertainty.
+
+Now hold. Same path, but hold time $T_h = 0.05$\,ns, and assume minimum data delay $D_{\min} = 0.20$\,ns from the same launch edge.
+
+\move{5} Hold check arithmetic:
+\[
+\text{slack}_{\text{hold}} = D_{\min} - \text{skew} - T_h = 0.20 - 0.05 - 0.05 = 0.10~\text{ns}
+\]
+Positive. Hold is also met. Note that the same skew that \emph{helped} setup \emph{hurts} hold. This is why fixing one violation often breaks the other.
+
+\move{6} Generalize:
+\[
+\boxed{\text{slack}_{\text{hold}} = D_{\min} - \text{skew} - T_h - U_{\text{hold}}}
+\]
+
+\move{7} Sanity. If skew were $+0.25$\,ns instead, hold slack would be $0.20 - 0.25 - 0.05 = -0.10$\,ns: a hold violation, even though setup got easier. Skew has opposite signs in the two equations. Memorize that.
+
+\begin{pitfall}
+The four most common SDC mistakes that get interns roasted in review:
+\begin{itemize}
+  \item \textbf{Missing generated clocks.} The divider's Q is treated as data, and downstream paths look magically clean (they are not).
+  \item \textbf{No input/output delay on boundary ports.} STA assumes 0\,ns, so the inside-the-block budget looks like a full period. Real silicon then fails.
+  \item \textbf{Wrong reference clock on \texttt{set\_input\_delay}.} You constrain against \texttt{CLK\_A} but the upstream block actually launches on \texttt{CLK\_B}. Slack numbers are fiction.
+  \item \textbf{Using \texttt{set\_false\_path} as a hammer.} Engineers slap false paths on violating endpoints to make the report green. The path is still real silicon. The chip still fails. Use false paths only for genuinely asynchronous or unrelated logic.
+\end{itemize}
+\end{pitfall}
+
+\begin{sidebar}[Sidebar: MMMC, modes, and corners]
+Real chips do not live in one SDC. \textbf{MMMC} (Multi-Mode Multi-Corner) means the design is closed across a matrix of \textbf{modes} (functional, scan-shift, scan-capture, test, low-power) and \textbf{corners} (slow-slow / fast-fast process, high/low voltage, hot/cold). Each mode often has its own SDC because scan-shift typically uses a much slower clock and a different topology than functional mode. Signoff means every \texttt{(mode, corner)} pair closes timing simultaneously. This is where SDC discipline pays for itself, because a forgotten \texttt{set\_case\_analysis} on the scan-enable can silently disable timing across half the design.
+\end{sidebar}
+
+\begin{pdnote}
+\begin{itemize}
+  \item \textbf{Arm PD intern:} you will read SDC files on day one and write SDC tweaks by week two. Reviewers will ask you to justify every false path you add. Bring evidence, not vibes.
+  \item \textbf{Generic foundry PD engineer:} MMMC closure is your full-time job. You spend more hours in PrimeTime reading SDC-driven reports than you do in the layout viewer. Tool-agnostic SDC fluency travels across Synopsys, Cadence, and Siemens flows.
+  \item \textbf{VLSI interview:} this is \textbf{the} most asked topic in PD and STA interviews. Expect ``write the setup and hold slack equations,'' ``what is a virtual clock,'' ``when do you use multicycle vs false path,'' and ``draw the launch/capture waveform.'' If you can produce the equations and the diagram from this chapter on a whiteboard cold, you are ahead of 80\% of new grads.
+\end{itemize}
+\end{pdnote}
+
+\begin{checkpoint}
+You can now (a) name the Big 5 SDC commands and what each one anchors, (b) write the setup and hold slack equations and substitute numbers without looking them up, (c) explain why skew helps setup but hurts hold, and (d) spot the four common SDC mistakes in a code review. \mnemonic{Clock, in, out, jitter, exception. Setup arrives early; hold stays late.}
+\end{checkpoint}

@@ -1,0 +1,301 @@
+\documentclass[12pt]{exam}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyvrb}
+
+\renewcommand{\thepartno}{\alph{partno}}
+\renewcommand{\partlabel}{\thepartno.}
+\renewcommand{\questionlabel}{\thequestion.}
+
+\pagestyle{headandfoot}
+\header{Name \rule[-2pt]{6.5cm}{0.4pt}}{}{SID \rule[-2pt]{6cm}{0.4pt}}
+\footer{Spring 2026}{\thepage}{CS/EE 147 Practice Exam 2}
+\headrule
+
+\newcommand{\Ans}{\underline{Answer:}\ }
+\newcommand{\smallbox}{\framebox[5cm]{\rule{0pt}{1.1cm}}}
+\newcommand{\tfbox}{\framebox[1.7cm]{\rule{0pt}{1.7cm}}}
+\newcommand{\widebox}[1][9.5cm]{\framebox[#1]{\rule{0pt}{1.1cm}}}
+\newcommand{\paragraphbox}[1]{\framebox[\linewidth]{\rule{0pt}{#1}}}
+\newcommand{\mc}{$\bigcirc$\ }
+
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+% =====================================================================
+%  TITLE PAGE
+% =====================================================================
+\begin{center}
+  {\Large\bfseries CS/EE 147}\\[2pt]
+  {\Large\bfseries GPU Architecture and Parallel Programming}\\[18pt]
+  {\large\bfseries Spring 2026}\\[14pt]
+  {\large\bfseries Practice Exam 2}\\[14pt]
+  {\large\bfseries Time Allowed: 80 Minutes}
+\end{center}
+
+\vspace{10pt}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\begin{tabular}{|>{\centering\arraybackslash}m{4cm}|>{\centering\arraybackslash}m{4cm}|>{\centering\arraybackslash}m{4cm}|}
+\hline
+\textbf{Question} & \textbf{Points Possible} & \textbf{Points Scored} \\ \hline
+1            & 4  & \\ \hline
+2            & 4  & \\ \hline
+3            & 4  & \\ \hline
+4            & 13 & \\ \hline
+5            & 12 & \\ \hline
+6--9 (MC)    & 12 & \\ \hline
+10--15 (T/F) & 12 & \\ \hline
+16           & 6  & \\ \hline
+17           & 12 & \\ \hline
+18           & 4  & \\ \hline
+Total        & 83 & \\ \hline
+\end{tabular}
+\end{center}
+
+\vspace{14pt}
+
+\begin{itemize}[leftmargin=2.2em,itemsep=4pt]
+  \item Closed book, closed internet
+  \item Allowed 1 page letter-size cheatsheet, front and back
+  \item Calculators allowed, but likely not necessary
+  \item Covers Lectures 8--14: Unified Memory, Matrix Multiply, Memory Coalescing, Histogram, Multi-GPU, GPU Sharing (slides 1--25), Dynamic Parallelism
+\end{itemize}
+
+\newpage
+
+\begin{questions}
+
+% ---------------- Q1 ----------------
+\question \textbf{[4 points] Tiled SGEMM Launch}\\
+You launch a tiled matrix-multiply kernel on a $1024 \times 1024$ output matrix with
+\texttt{TILE\_WIDTH = 32}.
+\begin{parts}
+  \part {}[2 points] How many warps are in each block?\\[8pt]
+        \Ans \smallbox
+  \part {}[2 points] How many blocks are in the grid?\\[8pt]
+        \Ans \smallbox
+\end{parts}
+
+\vspace{6pt}
+% ---------------- Q2 ----------------
+\question \textbf{[4 points]} Below is the loop body of an interleaved-partition histogram
+kernel. What should \texttt{stride} be initialized to so that all threads in the grid jointly
+cover the input with a coalesced access pattern?
+
+\begin{Verbatim}[xleftmargin=2em]
+__global__ void histo_kernel(unsigned char *buf, long size,
+                             unsigned int *histo) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = ????
+    while (i < size) {
+        int pos = buf[i] - 'a';
+        if (pos >= 0 && pos < 26)
+            atomicAdd(&histo[pos/4], 1);
+        i += stride;
+    }
+}
+\end{Verbatim}
+
+\vspace{4pt}
+\texttt{int stride = }\,\widebox
+
+\vspace{8pt}
+% ---------------- Q3 ----------------
+\question \textbf{[4 points]} A teammate proposes that in the kernel above, having every block
+maintain a \texttt{\_\_shared\_\_} private histogram and merging into the global histogram at
+the end will significantly improve performance. Briefly explain \emph{why} this typically
+helps.\\[10pt]
+\Ans \paragraphbox{2.6cm}
+
+\vspace{8pt}
+% ---------------- Q4 ----------------
+\question \textbf{[13 points] Unified Memory}\\
+You write the following kernel and host program on a \textbf{Pascal-class} GPU (CUDA 8+):
+
+\begin{Verbatim}[xleftmargin=1em]
+__global__ void mykernel(char *data) {
+    data[1] = 'g';
+}
+
+void foo() {
+    char *data;
+    cudaMallocManaged(&data, 2);
+    mykernel<<<1,1>>>(data);
+    // no synchronize here
+    data[0] = 'c';
+    cudaFree(data);
+}
+\end{Verbatim}
+
+\begin{parts}
+  \part {}[3 points] On Pascal+, what happens when the CPU executes \texttt{data[0] = 'c'} while
+        the kernel may still be running?\\[8pt]
+        \Ans \paragraphbox{1.8cm}
+  \part {}[3 points] What would have happened on a pre-Pascal device (e.g., Kepler) running the
+        same code?\\[8pt]
+        \Ans \paragraphbox{1.8cm}
+  \part {}[3 points] You then increase the allocation to 64 GB on a 16 GB Pascal GPU. Will the
+        \texttt{cudaMallocManaged} call succeed? Briefly justify.\\[8pt]
+        \Ans \paragraphbox{1.8cm}
+  \part {}[4 points] Name the API used to give the runtime a hint that data will be
+        \textbf{read-mostly}, and describe what the runtime does as a result.\\[8pt]
+        \Ans \paragraphbox{2.4cm}
+\end{parts}
+
+\newpage
+% ---------------- Q5 ----------------
+\question \textbf{[12 points] Tiled SGEMM Analysis}\\
+Consider a square matrix multiply with \texttt{Width = 1024}.
+
+\begin{parts}
+  \part {}[3 points] For \texttt{TILE\_WIDTH = 16}, how many global memory loads does each
+        \emph{thread block} perform per phase?\\[8pt]
+        \Ans \smallbox
+  \part {}[3 points] For \texttt{TILE\_WIDTH = 16}, how many phases (outer-loop iterations) does
+        each block execute?\\[8pt]
+        \Ans \smallbox
+  \part {}[3 points] For \texttt{TILE\_WIDTH = 32}, how many bytes of shared memory does each
+        block consume?\\[8pt]
+        \Ans \smallbox
+  \part {}[3 points] On an SM with 48 KB of shared memory, how many \texttt{TILE\_WIDTH = 32}
+        blocks can be co-resident based on the shared-memory limit alone?\\[8pt]
+        \Ans \smallbox
+\end{parts}
+
+\newpage
+% ---------------- MC ----------------
+\textbf{Multiple Choice. \textnormal{Please completely fill in the circle} $\bigcirc$
+\textnormal{for your answer.} [12 points total]}
+
+\vspace{6pt}
+% Q6
+\question {}[3 points] Which CUDA API call \emph{actually moves data} between processors in a
+Unified Memory program (i.e., does not merely hint at future behavior)?
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc \texttt{cudaMemAdvise(..., cudaMemAdviseSetReadMostly, ...)}
+  \item \mc \texttt{cudaMemAdvise(..., cudaMemAdviseSetPreferredLocation, ...)}
+  \item \mc \texttt{cudaMemAdvise(..., cudaMemAdviseSetAccessedBy, ...)}
+  \item \mc \texttt{cudaMemPrefetchAsync(...)}
+\end{itemize}
+
+% Q7
+\question {}[3 points] An access pattern \texttt{A[expr]} in a CUDA kernel is best classified as
+\textbf{coalesced} when:
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc \texttt{expr} is a multiple of \texttt{threadIdx.x}
+  \item \mc \texttt{expr} = (something independent of \texttt{threadIdx.x}) + \texttt{threadIdx.x}
+  \item \mc \texttt{expr} = \texttt{threadIdx.y * Width + threadIdx.x * Width}
+  \item \mc \texttt{expr} = a function of \texttt{blockIdx.x} only
+\end{itemize}
+
+% Q8
+\question {}[3 points] On a Kepler GPU using Hyper-Q with \textbf{32 hardware work queues}, two
+processes share the GPU via MPS, and each process issues 5 streams. What is the most likely
+performance effect for this configuration?
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc Full 32-way concurrency, no false dependencies
+  \item \mc False dependencies/serialization due to more streams per client than channels
+  \item \mc MPS automatically rebalances work across GPUs to avoid contention
+  \item \mc Kernels from different processes always serialize, regardless of MPS
+\end{itemize}
+
+% Q9
+\question {}[3 points] In a Dynamic Parallelism kernel, if every thread in a 256-thread block
+executes the line \texttt{child<<<1,1>>>(...)} without any guard, how many child kernel
+invocations are spawned by that block?
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc 1
+  \item \mc 32 (one per warp)
+  \item \mc 256
+  \item \mc 0 — only the host can launch kernels
+\end{itemize}
+
+\newpage
+% ---------------- T/F ----------------
+\textbf{True or False. \textnormal{For the following questions, fill the answer box with (T)
+True or (F) False.} [12 points total]}
+
+\vspace{10pt}
+\renewcommand{\arraystretch}{1.3}
+\noindent
+\begin{tabular}{@{}p{0.40\linewidth}c@{\hspace{0.5cm}}p{0.40\linewidth}c@{}}
+10.~\texttt{atomicAdd} returns the new value (after the add). & \tfbox
+ & 13.~\texttt{cudaDeviceSynchronize()} called inside a device kernel implies
+   \texttt{\_\_syncthreads()} as well. & \tfbox \\[1.6cm]
+11.~Memory coalescing rules apply to shared-memory accesses the same way they do to global
+memory. & \tfbox
+ & 14.~On a dual-IOH server, peer-to-peer (P2P) copy between two GPUs attached to different IOHs
+   can still complete correctly. & \tfbox \\[1.6cm]
+12.~In the tiled SGEMM kernel, the two \texttt{\_\_syncthreads()} calls per phase can be safely
+removed for large enough block sizes. & \tfbox
+ & 15.~\texttt{cudaMemAdviseSetAccessedBy} causes the data to immediately move to the indicated
+   device. & \tfbox \\[1.2cm]
+\end{tabular}
+
+\vspace{16pt}
+\setcounter{question}{15}
+% ---------------- Q16 ----------------
+\question {}[6 points] You write a tiled matrix-multiply with \texttt{TILE\_WIDTH = 16} for a
+\textbf{non-square} input: $M$ is $j \times k$, $N$ is $k \times l$, $P$ is $j \times l$, with
+$j = 1000$, $k = 800$, $l = 1500$.
+\begin{parts}
+  \part {}[2 points] What are the x and y dimensions of your grid?\\[8pt]
+        \Ans \smallbox
+  \part {}[2 points] Write the boundary condition a thread must check before loading its element
+        of the \textbf{M tile} (use variables \texttt{Row, p, TILE\_WIDTH, tx, j, k}).\\[8pt]
+        \Ans \widebox[12cm]
+  \part {}[2 points] Write the boundary condition a thread must check before \textbf{writing}
+        its \texttt{P} element (use \texttt{Row, Col, j, l}).\\[8pt]
+        \Ans \widebox[12cm]
+\end{parts}
+
+\newpage
+% ---------------- Q17 ----------------
+\question {}[12 points] \textbf{Dynamic Parallelism trace.}\\
+Consider the following device-side code:
+
+\begin{Verbatim}[xleftmargin=1em]
+__global__ void parent(int *out) {
+    int tid = threadIdx.x;             // PC = A
+    if (tid < 4) {                     // block of 32 threads
+        child<<<1, 8>>>(out, tid);     // PC = B
+    }
+    cudaDeviceSynchronize();           // PC = C
+    out[tid] += 1;                     // PC = D
+}
+\end{Verbatim}
+
+\begin{parts}
+  \part {}[3 points] How many \emph{child grids} are spawned by this block? Briefly justify.\\[8pt]
+        \Ans \paragraphbox{2.0cm}
+  \part {}[3 points] At PC = C, exactly which launches have finished from the perspective of
+        thread \texttt{tid = 5}, which never executed the launch line?\\[8pt]
+        \Ans \paragraphbox{2.0cm}
+  \part {}[3 points] At PC = D, can thread \texttt{tid = 5} safely read \texttt{out[k]} written
+        by a child launched by thread 0? Why or why not?\\[8pt]
+        \Ans \paragraphbox{2.0cm}
+  \part {}[3 points] If you replaced \texttt{cudaDeviceSynchronize()} with \texttt{\_\_syncthreads()},
+        would the program still be correct? Briefly justify.\\[8pt]
+        \Ans \paragraphbox{2.0cm}
+\end{parts}
+
+\vspace{14pt}
+% ---------------- Q18 ----------------
+\question {}[4 points] In a histogram kernel, two threads in the \emph{same} block simultaneously
+attempt \texttt{atomicAdd(\&histo\_private[3], 1)} where \texttt{histo\_private} lives in shared
+memory and currently holds 7. After both atomics complete, what is the value of
+\texttt{histo\_private[3]}, and what values did the two threads receive as return values?\\[10pt]
+\Ans \paragraphbox{2.6cm}
+
+\end{questions}
+
+\end{document}

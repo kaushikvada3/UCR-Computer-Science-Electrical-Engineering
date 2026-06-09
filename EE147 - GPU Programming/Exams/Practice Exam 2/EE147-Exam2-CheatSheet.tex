@@ -1,0 +1,306 @@
+% EE147 Exam 2 cheat sheet. Kaushik Vada. One sheet, front and back.
+\documentclass[10pt]{extarticle}
+\usepackage[landscape,letterpaper,margin=0.28in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[T1]{fontenc}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1pt}
+\setlength{\columnsep}{8pt}
+\setlength{\columnseprule}{0.3pt}
+\pagestyle{empty}
+\setlist{nosep,leftmargin=8pt}
+
+\definecolor{hdr}{rgb}{0.12,0.25,0.55}
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{kw}{rgb}{0,0,0.55}
+
+\newcommand{\sect}[1]{\vspace{3pt}\par\colorbox{hdr}{\textcolor{white}{\textbf{\small #1}}}\par\vspace{2pt}}
+\newcommand{\sub}[1]{\vspace{2pt}\par\textbf{\footnotesize\textcolor{hdr}{#1}}\par}
+
+\lstset{
+  basicstyle=\fontsize{7.5}{8.6}\selectfont\ttfamily,
+  backgroundcolor=\color{codebg},
+  keywordstyle=\color{kw}\bfseries,
+  commentstyle=\color{gray},
+  language=C++, breaklines=true,
+  aboveskip=1.5pt, belowskip=1.5pt,
+  frame=none, xleftmargin=2pt,
+  morekeywords={__global__,__device__,__shared__,__syncthreads,cudaMallocManaged,
+  cudaMemPrefetchAsync,cudaMemAdvise,atomicAdd,cudaDeviceSynchronize,
+  cudaMemcpyAsync,cudaMemcpyPeerAsync,cudaSetDevice,cudaDeviceEnablePeerAccess,
+  cudaDeviceCanAccessPeer,blockIdx,threadIdx,blockDim,gridDim,cudaMalloc,cudaFree,cudaMemcpy}
+}
+
+\begin{document}
+\footnotesize
+
+\begin{center}
+\textbf{EE147 Exam 2 Cheat Sheet (Lectures 8 to 14)} \textbullet{} Kaushik Vada
+\end{center}
+\vspace{-4pt}
+
+\begin{multicols*}{4}
+
+\sect{L8: Unified Memory}
+\sub{Core idea}
+One pointer via \texttt{cudaMallocManaged(\&p,N)} usable from CPU and GPU; runtime migrates data. Replaces both \texttt{malloc} and \texttt{cudaMalloc}. UM is for \textbf{programmability}, not speed; tuned manual \texttt{cudaMemcpy} usually wins.
+
+\sub{Two regimes (memorize)}
+\textbf{Pre-Pascal (Kepler/Maxwell):} whole allocation migrates en masse at kernel launch; \texttt{cudaDeviceSynchronize()} brings it back. No oversubscription, no concurrent CPU/GPU access (CPU touch during kernel = \textbf{segfault}), no on-demand paging.\\
+\textbf{Pascal+:} true demand paging. GPU touches non-resident page $\Rightarrow$ page fault $\Rightarrow$ driver migrates that page $\Rightarrow$ access replays. Allows oversubscription ($>$GPU mem), concurrent CPU/GPU access, system-wide atomics. Many faults = slow.
+
+\sub{Pattern}
+\begin{lstlisting}
+char *d; cudaMallocManaged(&d,N);
+fread(d,1,N,fp);
+qsort<<<...>>>(d,N,1,cmp);
+cudaDeviceSynchronize(); // before CPU use
+use_data(d); cudaFree(d);
+\end{lstlisting}
+
+\sub{Tuning APIs (Pascal+)}
+\texttt{cudaMemPrefetchAsync(p,len,dev,stream)} \textbf{moves} data ahead of time (\texttt{dev} may be \texttt{cudaCpuDeviceId}).\\
+\texttt{cudaMemAdvise(p,n,hint,dev)} hints \textbf{never move data}:
+\begin{itemize}
+\item \texttt{SetReadMostly}: local read-only copy per processor; a write collapses all copies.
+\item \texttt{SetPreferredLocation}: suggests home; P2P map if possible, else migrate on fault.
+\item \texttt{SetAccessedBy}: direct P2P mapping for that processor, no faults, no movement.
+\end{itemize}
+\texttt{atomicAdd\_system}: atomic across CPU + all GPUs (Pascal+; direct on NVLink, SW-assisted on PCIe).
+
+\sub{UM shines for}
+Deep copies (struct w/ pointers), linked lists, C++ classes (overload new/delete), sparse/unpredictable access.
+
+\sect{L9: MatMul \& Tiling}
+\sub{Basic kernel}
+\begin{lstlisting}
+int Row=blockIdx.y*blockDim.y+threadIdx.y;
+int Col=blockIdx.x*blockDim.x+threadIdx.x;
+if(Row<W && Col<W){ float Pv=0;
+  for(int k=0;k<W;++k)
+    Pv+=M[Row*W+k]*N[k*W+Col];
+  P[Row*W+Col]=Pv; }
+\end{lstlisting}
+2 global loads per 2 FLOPs: ratio 1, memory bound.
+
+\sub{Tiling, 6 steps}
+1) identify shared tile 2) cooperative load to \texttt{\_\_shared\_\_} 3) \texttt{\_\_syncthreads()} 4) consume from shared 5) \texttt{\_\_syncthreads()} 6) next tile.
+
+\sub{Tiled SGEMM}
+\begin{lstlisting}
+__shared__ float Mds[T][T], Nds[T][T];
+int bx=blockIdx.x, by=blockIdx.y;
+int tx=threadIdx.x, ty=threadIdx.y;
+int Row=by*T+ty, Col=bx*T+tx;
+float Pv=0;
+for(int p=0;p<W/T;++p){
+  Mds[ty][tx]=M[Row*W + p*T+tx];
+  Nds[ty][tx]=N[(p*T+ty)*W + Col];
+  __syncthreads();
+  for(int k=0;k<T;++k)
+    Pv+=Mds[ty][k]*Nds[k][tx];
+  __syncthreads();
+}
+P[Row*W+Col]=Pv;
+\end{lstlisting}
+
+\sub{Tile size math (exam favorite)}
+\textbf{T=16:} 256 thr/blk; per phase 512 loads, 8192 mul/add $\Rightarrow$ \textbf{16 FLOPs/load}. Shared = $2{\cdot}16^2{\cdot}4$B = \textbf{2KB} $\Rightarrow$ 8 blocks in 16KB SM.\\
+\textbf{T=32:} 1024 thr/blk; 2048 loads, 65536 ops $\Rightarrow$ \textbf{32 FLOPs/load}. Shared = \textbf{8KB} $\Rightarrow$ only 2 blocks/SM.\\
+General: FLOPs per global load $= T$. Shared/blk $= 2T^2{\cdot}4$ bytes.
+
+\sub{Boundary tests (3 distinct!)}
+Load M: \texttt{Row<H \&\& p*T+tx<W} else store 0.\\
+Load N: \texttt{p*T+ty<H \&\& Col<W} else store 0.\\
+Write P: \texttt{Row<H \&\& Col<W}.\\
+Zeros make mul-add a no-op; threads with no valid P still help load tiles.
+
+\sect{L10: Memory Coalescing}
+\sub{DRAM mechanics}
+Cell = capacitor + transistor; random access slow. \textbf{Burst:} one row read fills buffer, streamed in N transfers at interface speed (DDR2/3 core = 1/4 or 1/8 interface speed; buffer 8x interface width). \textbf{Banks} overlap to hide dead time. HBM2/3 = stacked dies + TSVs (A100 1555 GB/s, H100 3 TB/s).
+
+\sub{The rule}
+Coalesced iff index $=$ \texttt{A[(expr indep of threadIdx.x) + threadIdx.x]}; consecutive threads hit consecutive addresses in one burst section.
+
+\sub{MatMul example}
+Row-major: \texttt{M[i][j]=M[i*W+j]}.\\
+\texttt{N[k*W+Col]}, \texttt{Col=bx*T+tx}: consecutive in tx $\Rightarrow$ \textbf{coalesced}.\\
+\texttt{M[Row*W+k]}: address varies with ty not tx; column-walk patterns like \texttt{A[tid*W]} are \textbf{not} coalesced.\\
+\textbf{Tiling fixes coalescing:} load tile coalesced into shared, then read shared freely (no coalescing rules in shared).
+
+\sect{L11: Histogram / Atomics}
+\sub{Partitioning}
+\textbf{Sectioned} (contiguous chunk per thread): adjacent threads far apart $\Rightarrow$ NOT coalesced. \textbf{Interleaved} (stride = total threads): adjacent threads adjacent memory $\Rightarrow$ coalesced. Use interleaved on GPU.
+
+\sub{Data race}
+\texttt{Old=Mem[x]; New=Old+1; Mem[x]=New} with 2 threads from 0 ends as \textbf{1 or 2}. Need atomic RMW: hardware serializes per address.
+
+\sub{Atomics}
+\texttt{int atomicAdd(int*,int)} returns \textbf{OLD} value. Variants: Sub, Min, Max, Inc, Dec, Exch, CAS, And, Or, Xor. Scopes: \texttt{\_system} (CPU+GPUs), default (device), \texttt{\_block}.
+
+\sub{Interleaved kernel}
+\begin{lstlisting}
+int i=threadIdx.x+blockIdx.x*blockDim.x;
+int stride=blockDim.x*gridDim.x;
+while(i<size){
+  int pos=buf[i]-'a';
+  if(pos>=0 && pos<26)
+    atomicAdd(&histo[pos/4],1);
+  i+=stride; }
+\end{lstlisting}
+
+\sub{Atomic cost}
+Each RMW = read latency + write latency, location locked meanwhile. Contended bin: throughput $\approx 1/\text{latency} \ll$ bandwidth. \textbf{DRAM atomic $\sim$1000+ cyc; L2 $\sim$1/10 of that; shared mem very short, $\sim$100x faster than DRAM.}
+
+\sub{Privatization}
+Per-block private histogram in shared; merge once at end:
+\begin{lstlisting}
+__shared__ unsigned histo_p[7];
+if(threadIdx.x<7) histo_p[threadIdx.x]=0;
+__syncthreads();
+while(i<size){
+  atomicAdd(&histo_p[(buf[i]-'a')/4],1);
+  i+=stride; }
+__syncthreads();
+if(threadIdx.x<7)
+  atomicAdd(&histo[threadIdx.x],
+            histo_p[threadIdx.x]);
+\end{lstlisting}
+Requires op \textbf{associative + commutative} and copy fits in shared. Too big? Partial privatization (hot bins only).
+
+\sect{L12: Multi-GPU}
+\sub{Device management}
+CUDA calls target the \emph{current} device; \texttt{cudaSetDevice(i)} switches. Switching while async work is in flight is fine, both GPUs run concurrently:
+\begin{lstlisting}
+cudaSetDevice(0); k<<<...>>>();
+cudaSetDevice(1); k<<<...>>>(); //0 still runs
+\end{lstlisting}
+
+\sub{P2P}
+\begin{lstlisting}
+cudaDeviceCanAccessPeer(&can,dX,dY);
+cudaDeviceEnablePeerAccess(peer,0);
+cudaMemcpyPeerAsync(dst,dDev,src,sDev,n,s);
+\end{lstlisting}
+With P2P: shortest PCIe path, no host staging. Without: routed through host.\\
+\textbf{Numbers (PCIe gen2):} P2P $\sim$6.6 GB/s simplex, $\sim$12 duplex (vs 5 via host); gen3 doubles. 4 GPUs via switches $\sim$15 GB/s aggregate.
+
+\sub{Halo exchange (1D decomp)}
+Stage 1: all send right, recv left. Stage 2: all send left, recv right. Concurrent copies, no link contention.
+
+\sub{NUMA}
+Dual-IOH: remote D2H crosses QPI, extra hop. \textbf{Local $\sim$6.3 GB/s vs remote $\sim$4.3 GB/s.} Dual-IOH \textbf{blocks P2P across IOHs} (falls back to host staging). Pin threads near GPU: \texttt{numactl}, \texttt{GOMP\_CPU\_AFFINITY}.
+
+\sect{L13: GPU Sharing, MPS}
+\sub{Problem + idea}
+Strong-scaling MPI: more ranks = less GPU work each; each process has its own context and the GPU \textbf{serializes contexts} (switch overhead, no overlap). \textbf{MPS} = one shared context via a server process; kernels/copies from different processes can overlap.
+
+\sub{Requirements}
+Linux only; UVA; Tesla CC $\geq$ 3.5; CUDA 5.5+. Exclusive mode applies to the MPS \emph{server}, not clients.
+
+\sub{Hyper-Q / concurrency}
+Concurrent kernels since Fermi (CC 2.0) on different streams if resources allow: Fermi 16, Kepler 32. \textbf{Kepler Hyper-Q:} 32 HW work queues, one per stream, kills false inter-stream dependencies. Under MPS each client gets 2 queues per channel, 32 total. Streams/client $\leq$ channels: fine. Streams/client $>$ channels: \textbf{false dependency, serialization}.
+
+\sub{Setup (no code changes)}
+\begin{lstlisting}
+export CUDA_VISIBLE_DEVICES=0
+nvidia-smi -i 0 -c EXCLUSIVE_PROCESS
+nvidia-cuda-mps-control -d
+\end{lstlisting}
+Daemon spawns \texttt{nvidia-cuda-mps-server}; later processes route CUDA work through it. MPS does \textbf{not} spread work across GPUs (app handles affinity). Profile: \texttt{nvprof --profile-all-processes -o f\_\%p}.
+
+\sect{L14: Dynamic Parallelism}
+\sub{Core idea}
+Kepler+ (CC 3.5+): a kernel can launch child kernels with normal \texttt{<<<g,b>>>} syntax. Unlocks: device-side library calls (cuBLAS), data-dependent parallelism (irregular bounds \texttt{for j=1..x[i]}), recursion, adaptive mesh refinement, batched nested parallelism (CPU freed).
+
+\sub{Rules (memorize)}
+\begin{itemize}
+\item \textbf{Launch is per-thread}: 2 threads at the launch line $\Rightarrow$ 2 child grids.
+\item \textbf{Sync is per-block}: device \texttt{cudaDeviceSynchronize()} waits for launches by \emph{any} thread in the block.
+\item \texttt{cudaDeviceSynchronize()} does \textbf{NOT} imply \texttt{\_\_syncthreads()}; add it if you need a block barrier after.
+\item All device-side launches and copies are \textbf{async}; no sync launch.
+\item Streams/events are per-block, cannot pass to children. Constants set from host; textures/surfaces host-bound; ECC errors at host.
+\end{itemize}
+
+\sub{Pattern}
+\begin{lstlisting}
+__global__ void dyn(float *d){
+  int t=threadIdx.x;
+  if(t%2) buf[t/2]=d[t]+d[t+1];
+  __syncthreads();
+  if(t==0){
+    child<<<128,256>>>(buf);
+    cudaDeviceSynchronize(); }
+  __syncthreads(); // still required!
+  cudaMemcpyAsync(d,buf,1024);
+  cudaDeviceSynchronize();
+}
+\end{lstlisting}
+Library call: one thread calls \texttt{cublasDgemm} + \texttt{cudaDeviceSynchronize()}, then \texttt{\_\_syncthreads()} so all threads see the result.
+
+\sect{Carryover from Midterm 1}
+Warp = \textbf{32 threads}. Warps/block $= \lceil \text{blockDim}/32 \rceil$.\\
+2D grid for $W{\times}H$ image, block $B_x{\times}B_y$: grid $= (\lceil W/B_x\rceil, \lceil H/B_y\rceil)$; ceiling div: \texttt{(n+b-1)/b}.\\
+Divergent warps: boundary blocks where the \texttt{if(Row<H\&\&Col<W)} test splits a warp.\\
+Coalescing check: is the index \texttt{base + threadIdx.x}?
+
+\sect{Quick numbers \& trivia}
+\begin{itemize}
+\item atomic returns \textbf{old} value.
+\item \texttt{cudaMemAdvise} = hints, no movement; \texttt{cudaMemPrefetchAsync} = moves.
+\item Atomic latency: DRAM $\gg$ L2 ($\sim$10x faster) $\gg$ shared ($\sim$100x faster).
+\item Tiled SGEMM: FLOPs/load $=T$; shared/blk $=8T^2$ bytes (2 float tiles).
+\item P2P gen2: 6.6 simplex / 12 duplex GB/s; host path 5.
+\item NUMA: 6.3 local vs 4.3 remote GB/s D2H.
+\item Hyper-Q: 32 queues; MPS client: 2 per channel.
+\item DP needs CC 3.5+; MPS needs CC 3.5+, Linux, UVA.
+\item Pre-Pascal UM: CPU touch during kernel segfaults; Pascal+ page-faults.
+\end{itemize}
+
+\sect{Worked example: launch math}
+$1000{\times}1000$ image, $16{\times}16$ blocks:\\
+Grid $= \lceil 1000/16\rceil^2 = 63{\times}63 = 3969$ blocks.\\
+Threads $= 3969{\cdot}256 = 1{,}016{,}064$ launched ($16{,}064$ idle past bounds).\\
+Warps/block $= 256/32 = 8$; total warps $= 31{,}752$.\\
+Divergence: a $16{\times}16$ block has warps spanning 2 rows of 16. Edge blocks (right col, bottom row) have warps where \texttt{if(Row<H\&\&Col<W)} splits inside the warp $\Rightarrow$ divergent; interior blocks have none.
+
+\sub{Tiled occupancy check}
+T=32, 48KB shared/SM, 2048 thr/SM max: shared allows $48/8=6$ blocks but thread limit allows $2048/1024=2$ $\Rightarrow$ \textbf{2 blocks/SM} (thread bound). Always take the min over all limits (threads, shared, registers, blocks).
+
+\sect{API quick reference}
+\begin{lstlisting}
+kernel<<<grid,block,shmemB,stream>>>(...);
+dim3 g(gx,gy), b(bx,by);
+cudaMalloc(&p,N); cudaFree(p);
+cudaMemcpy(dst,src,N,cudaMemcpyHostToDevice);
+cudaMemcpyAsync(d,s,N,kind,stream);
+cudaStreamCreate(&s); cudaStreamDestroy(s);
+cudaMallocManaged(&p,N);
+cudaMemPrefetchAsync(p,N,dev,stream);
+cudaMemAdvise(p,N,hint,dev);
+cudaSetDevice(i); cudaGetDeviceCount(&n);
+cudaDeviceCanAccessPeer(&ok,a,b);
+cudaDeviceEnablePeerAccess(peer,0);
+cudaMemcpyPeerAsync(d,dDev,s,sDev,N,st);
+cudaDeviceSynchronize();
+old = atomicAdd(&x,v);
+\end{lstlisting}
+
+\sect{Which optimization when}
+\begin{itemize}
+\item Redundant global reads across threads $\Rightarrow$ \textbf{tiling} in shared memory.
+\item Strided / scattered warp access $\Rightarrow$ restructure for \textbf{coalescing} (or stage through shared).
+\item Many threads update few locations $\Rightarrow$ \textbf{atomics + privatization}.
+\item Data too big for one GPU or need more FLOPs $\Rightarrow$ \textbf{multi-GPU + P2P} halo exchange.
+\item Many small processes underusing GPU $\Rightarrow$ \textbf{MPS}.
+\item Work amount unknown until runtime $\Rightarrow$ \textbf{dynamic parallelism}.
+\item Complex pointer structures, prototyping $\Rightarrow$ \textbf{unified memory} (+prefetch/advise to claw back perf).
+\end{itemize}
+
+\end{multicols*}
+\end{document}

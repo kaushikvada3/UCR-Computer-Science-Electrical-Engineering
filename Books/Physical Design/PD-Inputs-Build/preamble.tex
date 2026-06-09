@@ -1,0 +1,134 @@
+% ============================================================
+% PD-Inputs Deep Reference — shared preamble
+% Single source of truth for packages, colors, tcolorbox envs.
+% Chapters MUST use only the envs defined here. No ad-hoc colors.
+% ============================================================
+
+\documentclass[11pt,openany]{book}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{csquotes}
+\usepackage{hyperref}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{
+  arrows.meta, positioning, calc, fit, shapes.geometric, shapes.misc,
+  shadows, backgrounds, decorations.pathreplacing, decorations.markings,
+  patterns, matrix, chains, automata
+}
+
+\hypersetup{
+  colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black,
+  citecolor=blue!50!black, pdfborder={0 0 0}
+}
+
+% ---------- Semantic color mapping (do not reuse for other purposes) ----------
+\definecolor{cTLDR}{HTML}{6A3D9A}      % purple  — chapter payload
+\definecolor{cKEY}{HTML}{1F77B4}       % blue    — single most important sentence
+\definecolor{cPAUSE}{HTML}{17BECF}     % cyan    — mid-chapter recap
+\definecolor{cHOOK}{HTML}{F2C200}      % yellow  — memory hook / mnemonic
+\definecolor{cGUT}{HTML}{6F7378}       % gray    — gut check (retrieval)
+\definecolor{cCHECK}{HTML}{2CA02C}     % green   — checkpoint
+\definecolor{cPIT}{HTML}{D62728}       % red     — watch out
+\definecolor{cPD}{HTML}{E67E22}        % orange  — why X cares
+\definecolor{cSIDE}{HTML}{2F2F2F}      % black   — optional depth
+
+% ---------- tcolorbox envs ----------
+\newtcolorbox{tldr}[1][TL;DR]{
+  enhanced, breakable, colback=cTLDR!6, colframe=cTLDR,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  left=4pt, right=4pt, top=4pt, bottom=4pt,
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cTLDR, sharp corners},
+  arc=2pt
+}
+
+\newtcolorbox{keyidea}[1][Key Idea]{
+  enhanced, breakable, colback=cKEY!8, colframe=cKEY,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cKEY, sharp corners}, arc=2pt
+}
+
+\newtcolorbox{pausebox}[1][Pause]{
+  enhanced, breakable, colback=cPAUSE!8, colframe=cPAUSE,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cPAUSE, sharp corners}, arc=2pt
+}
+
+\newtcolorbox{hook}[1][Memory hook]{
+  enhanced, breakable, colback=cHOOK!12, colframe=cHOOK!80!black,
+  coltitle=black, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cHOOK, sharp corners}, arc=2pt
+}
+
+\newtcolorbox{gut}[1][Gut check]{
+  enhanced, breakable, colback=cGUT!8, colframe=cGUT,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cGUT, sharp corners}, arc=2pt
+}
+
+\newtcolorbox{checkpoint}[1][Checkpoint]{
+  enhanced, breakable, colback=cCHECK!8, colframe=cCHECK,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cCHECK, sharp corners}, arc=2pt
+}
+
+\newtcolorbox{pitfall}[1][Watch Out]{
+  enhanced, breakable, colback=cPIT!8, colframe=cPIT,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cPIT, sharp corners}, arc=2pt
+}
+
+\newtcolorbox{pdnote}[1][Why PD Cares]{
+  enhanced, breakable, colback=cPD!10, colframe=cPD,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cPD, sharp corners}, arc=2pt
+}
+
+\newtcolorbox{sidebar}[1][Sidebar: optional depth, skip if tired]{
+  enhanced, breakable, colback=cSIDE!4, colframe=cSIDE,
+  coltitle=white, fonttitle=\bfseries, title={#1},
+  attach boxed title to top left={xshift=8pt, yshift=-8pt},
+  boxed title style={colback=cSIDE, sharp corners}, arc=2pt
+}
+
+% ---------- Convenience macros ----------
+\newcommand{\gutans}[1]{\par\smallskip{\small\color{cGUT}\textit{#1}}}
+\newcommand{\mnemonic}[1]{\textbf{Say it in 2 seconds:} \textbf{\textit{#1}}}
+\newcommand{\move}[1]{\paragraph{Move #1.}}
+
+% Listings style for SDC / Liberty / LEF / DEF / Verilog snippets
+\lstdefinestyle{eda}{
+  basicstyle=\ttfamily\small, breaklines=true, frame=single,
+  framerule=0.4pt, rulecolor=\color{black!40},
+  backgroundcolor=\color{black!3}, columns=fullflexible,
+  keywordstyle=\color{cKEY}\bfseries,
+  commentstyle=\color{cCHECK!60!black}\itshape,
+  stringstyle=\color{cPIT!70!black},
+  numbers=left, numberstyle=\tiny\color{black!50}, numbersep=6pt
+}
+\lstset{style=eda}
+
+\title{\textbf{Physical Design Inputs}\\[0.5em]\large A Deep Reference}
+\author{Compiled for Kaushik Vada}
+\date{\today}

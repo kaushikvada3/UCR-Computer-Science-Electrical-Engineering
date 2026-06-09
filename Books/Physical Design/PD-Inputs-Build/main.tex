@@ -1,0 +1,179 @@
+\input{preamble.tex}
+
+\begin{document}
+
+\frontmatter
+\maketitle
+
+\chapter*{How to Read This Book}
+\addcontentsline{toc}{chapter}{How to Read This Book}
+
+This book is a reference, not a transcript. Each chapter takes one Physical Design input artifact and goes deeper than the source lecture, with worked numbers, diagrams, and tight chunking. Read it the same way you would read a textbook chapter you actually intend to remember.
+
+\bigskip
+\noindent\textbf{The callout boxes are a language. Learn them once.}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{TL;DR (purple)} opens every chapter with the payload in 3 to 4 bullets. From Chapter 8 onward, the first bullet is a callback to the prior chapter so the spaced repetition stays warm.
+  \item \textbf{Memory hook (yellow)} gives you a vivid, sensory analogy. The brain remembers weird better than tidy.
+  \item \textbf{Gut check (gray)} asks a question. \textbf{Cover the gray answer with your hand and try to recall first.} The recall attempt is the point, not the answer.
+  \item \textbf{Pause (cyan)} is a mid-chapter recap. If you can repeat the Pause back to yourself, keep reading. If not, scroll back.
+  \item \textbf{Key Idea (blue)} is the single most important sentence of the chapter. Underline it mentally.
+  \item \textbf{Watch Out (red)} is a common mistake. These are the things interviewers ask about.
+  \item \textbf{Why PD Cares (orange)} translates the chapter into three lenses: Arm PD internship, generic foundry-flow PD engineer, and VLSI interview prep.
+  \item \textbf{Sidebar (black)} is optional depth. Skip if tired. Come back when curious.
+  \item \textbf{Checkpoint (green)} closes the chapter with a 2-second mnemonic. If you can say the mnemonic aloud, the chapter is yours.
+\end{itemize}
+
+\bigskip
+\noindent\textbf{Rule for when something is not clicking.} Scroll back to the most recent Pause or Memory hook and re-read from there. The book is built so that retreating one box is always enough to recover momentum.
+
+\bigskip
+\noindent\textbf{Rule for the Interview-ready 90-second answer at the back.} Cover it. Recite your own answer out loud. Then uncover and compare. This is the testing effect; it is the cheapest retention boost available.
+
+\tableofcontents
+
+\mainmatter
+
+% =====================================================================
+% Body chapters (one per PD input artifact)
+% =====================================================================
+\input{chapters/ch07-pd-inputs-overview.tex}
+\input{chapters/ch08-netlist.tex}
+\input{chapters/ch09-timing-library.tex}
+\input{chapters/ch10-lef.tex}
+\input{chapters/ch11-sdc-constraints.tex}
+\input{chapters/ch12-tech-file.tex}
+\input{chapters/ch13-def.tex}
+\input{chapters/ch08-cts-spec.tex}
+\input{chapters/ch09-parasitic-files.tex}
+\input{chapters/ch10-what-changes.tex}
+
+% =====================================================================
+% BACK MATTER
+% =====================================================================
+
+\chapter{Common Mistakes}
+
+A numbered list, intentionally short. Every one of these is something a PD intern (or interviewer) has actually seen.
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Loading the wrong .lib corner} and wondering why the design closes timing at the typical corner but blows up at SS. The .lib loaded is not the corner you think.
+  \item \textbf{Cell name mismatch} between synthesized netlist and the .lib (cell renamed across library versions, or wrong library swapped in). PD throws missing-reference errors before floorplan even starts.
+  \item \textbf{Forgetting to define a generated clock}, so STA reports timing on a phantom unconstrained clock and the slack looks fine when it is silently meaningless.
+  \item \textbf{Using \texttt{set\_false\_path} as a hammer} to make a violating endpoint go away. The path is still real in silicon; you just stopped checking it.
+  \item \textbf{Pin geometry off the routing grid} in cell LEF. The placer is happy. The router cannot connect.
+  \item \textbf{Confusing tech file with tech-LEF.} They overlap. They are not identical. Tools differ in which they consume.
+  \item \textbf{Comparing DEF coordinates raw} without honoring \texttt{UNITS DISTANCE MICRONS}. A coordinate of 12500 is 12.5\,\textmu m at scale 1000 and 6.25\,\textmu m at scale 2000.
+  \item \textbf{Skipping the MMMC scenarios at intermediate PD stages} and only running full MMMC at signoff. Late surprises are the most expensive surprises.
+  \item \textbf{Treating LEF and DEF as the same thing.} LEF is library (abstract cell views). DEF is design (this design's instances and their placement).
+  \item \textbf{Editing the netlist by hand} late in the flow to ``fix'' something. Synthesis owns the netlist. Hand-edits diverge from RTL and create ECO chaos at signoff.
+\end{enumerate}
+
+% =====================================================================
+\chapter{Interview-Ready 90-Second Answer}
+
+\textbf{The setup.} An interviewer says: \textit{``Walk me through the inputs a Physical Design tool needs to start a job, and what each one contributes.''} You have ninety seconds. Cover the italicized block below with your hand. Recite your version out loud. Then uncover and compare.
+
+\bigskip
+\begin{quote}\itshape
+A PD tool needs nine inputs. Three are static descriptions of the parts (\textbf{netlist}, \textbf{.lib}, \textbf{LEF}), three are constraints on what the result must satisfy (\textbf{SDC}, \textbf{tech file}, \textbf{CTS spec}), and three are state that gets written and re-read across the flow (\textbf{DEF}, \textbf{ITF/mapping}, \textbf{SPEF}). The \textbf{netlist} is the gate-level graph: cell instances, nets, and top-level ports. The \textbf{.lib} stores cell behavior as \textbf{NLDM lookup tables} indexed by input slew and output load, bilinearly interpolated at runtime, and at advanced nodes it stores \textbf{CCS} time-varying current waveforms so Miller capacitance and receiver-pin nonlinearity aren't averaged away. The \textbf{LEF} (cell LEF plus tech-LEF) is the physical abstraction so the placer and router never have to open GDS. The \textbf{SDC} is the Tcl timing contract: clocks, IO delays, uncertainty, false paths, multicycles. The \textbf{technology file} is the foundry rulebook for layer widths, spacings, vias, and multi-patterning colors. The \textbf{CTS spec} (CCOPT spec for Innovus) is the declarative description of how the clock network gets built: skew targets, NDR rules, useful-skew limits, and skew groups. The \textbf{DEF} is the physical state, emitted at every checkpoint; the DEF grows roughly 30 MB post-floorplan, 80 MB post-place, 120 MB post-CTS once CCOPT inserts roughly 5\% more instances as clock buffers, and 350 MB post-route for a 1M-instance block. \textbf{ITF} plus the \textbf{mapping file} feed the extractor, which emits \textbf{SPEF} (one per RC corner) describing every wire's actual R and C. STA then reads the SPEF, builds Elmore or CCS-aware delays, and reports slack against the SDC. Across MMMC the .lib and SPEF counts multiply: five cell families times three voltages times three temperatures times six corners times four modes lands at over a thousand views, which is why a real signoff run is a coffee break, not a click. The shape of the whole picture: netlist tells you what to build, SDC plus CTS spec tell you how fast and how clean the clock must be, .lib plus LEF plus tech file tell you what is physically and electrically legal, DEF records where everything landed, and ITF plus SPEF say what each routed wire actually does. That is the PD pipeline in ninety seconds.
+\end{quote}
+
+% =====================================================================
+\chapter{Cumulative Recall Sheet}
+
+Every chapter compressed to its Key Idea and mnemonic. One page. Use it as your spaced-repetition surface. If you can read this page and rebuild the rest of the book from it, the book has done its job.
+
+\bigskip
+
+\begin{tabular}{@{}p{0.06\linewidth} p{0.66\linewidth} p{0.22\linewidth}@{}}
+\toprule
+\textbf{Ch.} & \textbf{Key Idea} & \textbf{Mnemonic} \\
+\midrule
+1 & PD is not one tool eating one file. It is a pipeline of engines (synthesis hand-off, floorplan, placement, CTS, route, signoff) where each engine demands a specific input no other input can substitute for. Lose one, lose that engine. & NSL-LTD \\
+\addlinespace
+2 & A netlist is a graph of cell instances connected by nets, with top-level ports as the only opening to the outside world. Everything PD does (placement, routing, timing) operates on this graph. & INP \\
+\addlinespace
+3 & A timing library is a characterized lookup of cell behavior across PVT corners. NLDM boils each cell's delay into a 2D table indexed by input slew and output load; the tool bilinearly interpolates between grid points. & Slew in, load out \\
+\addlinespace
+4 & The LEF is the contract between the cell library and the placer/router. It promises footprint, pin layers, and blockages so the tool can resolve placement and routing without ever opening the GDS. & SIZE, SITE, PIN, OBS \\
+\addlinespace
+5 & The SDC is the single source of truth that converts a netlist into a timed promise. Every downstream tool (synthesis, STA, PnR, signoff) measures success against the same clocks, IO delays, uncertainties, and exceptions. & Setup early, hold late \\
+\addlinespace
+6 & The technology file is the foundry rulebook that names every physical layer, fixes its geometric and electrical parameters, and tells the PD tool exactly which shapes it is allowed to draw. & LIVR-C \\
+\addlinespace
+7 & A DEF file is a textual snapshot of the design's physical state at one point in the PD flow. LEF describes cells in the abstract; DEF describes this design's instances in concrete coordinates. & DRCPN \\
+\addlinespace
+8 & The CTS spec is the only place in the flow where you express clock-network intent declaratively; everything else (placement, route, signoff) just reacts to the tree CCOPT builds from it. & Spec skew, shield spine, borrow slack \\
+\addlinespace
+9 & Parasitic files are a three-stage pipeline: ITF describes the process to the extractor, the mapping file binds LEF/DEF layer names to ITF indices, and SPEF records what every wire actually does electrically (R, C, coupling) per RC corner for STA. & ITF cooks, map joins, SPEF tells \\
+\addlinespace
+10 & MMMC view count is the product of every characterization axis, not the sum. Adding one new voltage point does not add one view; it multiplies the entire existing matrix by a new factor. & MADG \\
+\bottomrule
+\end{tabular}
+
+% =====================================================================
+\chapter{Practice Problems}
+
+Mixed difficulty. Mixed type. Mixed chapter. The order is \textbf{intentionally interleaved}; do not skip around to cluster by topic. Interleaved retrieval beats blocked practice roughly two to one on retention (Rohrer and Taylor).
+
+\section*{Problem 1 (Ch.~5 numerical, setup slack)}
+Given clock period $T = 2\,\text{ns}$, combinational delay $D = 1.6\,\text{ns}$, clock skew $= -0.05\,\text{ns}$, setup time of capture flop $T_s = 0.12\,\text{ns}$, and clock uncertainty $U = 0.10\,\text{ns}$. Compute setup slack. Then with $D_{\min} = 0.15\,\text{ns}$ and $T_h = 0.04\,\text{ns}$, compute hold slack. Which check fails?
+
+\section*{Problem 2 (Ch.~1 conceptual, missing input triage)}
+A PD bring-up script fails on the message \texttt{ERROR: cannot resolve cell NAND2\_X1}. List the input files where the root cause could live, and for each, state the one debugging command you would run first.
+
+\section*{Problem 3 (Ch.~3 numerical, NLDM bilinear interpolation)}
+Given a $3\times3$ NLDM \texttt{cell\_fall} table with input slews $\{30, 80, 200\}$ ps and output loads $\{4, 12, 25\}$ fF, with delay values:
+\[
+\begin{array}{c|ccc}
+ & 4\,\text{fF} & 12\,\text{fF} & 25\,\text{fF} \\
+\hline
+30 & 35 & 60 & 95 \\
+80 & 55 & 85 & 130 \\
+200 & 110 & 160 & 220 \\
+\end{array}
+\quad \text{(ps)}
+\]
+Compute fall delay for slew $= 60$ ps and load $= 18$ fF. Show all four corner samples and both interpolation passes.
+
+\section*{Problem 4 (Ch.~4 + Ch.~6, grid-and-pitch arithmetic)}
+A tech-LEF declares M2 with \texttt{DIRECTION VERTICAL PITCH 0.14} and track offset 0. A cell-LEF gives PIN A as \texttt{RECT 0.10 0.40 0.13 0.80} on M2. Does pin A land on a routing track? If not, what is the smallest shift in the cell's x-origin that fixes it?
+
+\section*{Problem 5 (Ch.~7 numerical, DEF coordinate scale)}
+A DEF header reads \texttt{UNITS DISTANCE MICRONS 2000}. A routed wire segment runs from \texttt{(48000 36000)} to \texttt{(48000 60000)} on M3. Give the wire length in microns and the routing direction. Then if the header changes to \texttt{UNITS DISTANCE MICRONS 1000}, give the new length.
+
+\section*{Problem 6 (Ch.~5 conceptual, SDC misuse)}
+A junior engineer hits a violating path and adds \texttt{set\_false\_path -from FFA/CK -to FFB/D}. The timing summary turns green. Name three things that can still go wrong in silicon. Name the correct alternative SDC construct for each of: (a) the path is real but only matters every other cycle, (b) the receive flop is on a different clock domain that is truly asynchronous, (c) the launch and capture are on the same clock but the path is by design a half-cycle.
+
+\section*{Problem 7 (Ch.~8 numerical, useful skew)}
+A path runs from FFA to FFB at clock period $T = 1.0\,\text{ns}$. Pre-CTS, you have setup slack $= +50\,\text{ps}$ and hold slack $= +80\,\text{ps}$ on this path. The downstream path FFB to FFC has setup slack $= -30\,\text{ps}$ (failing) and hold slack $= +120\,\text{ps}$. You push useful skew of $+40\,\text{ps}$ onto FFB's clock. Compute the new setup and hold slacks on BOTH the FFA-to-FFB and FFB-to-FFC paths. Did the trade work?
+
+\section*{Problem 8 (Ch.~9 numerical, Elmore delay from SPEF)}
+A net has a 3-node RC tree: driver R$_d$ = 50\,\textohm{} to node A, then R$_1$ = 20\,\textohm{} from A to sink B with C$_A$ = 5\,fF at A and C$_B$ = 8\,fF at B. Compute the Elmore delay at sink B. Then if the SPEF is re-extracted at the C\textsubscript{worst} corner with all capacitances scaled by 1.25, give the new Elmore delay. Which corner would you use for setup vs hold signoff?
+
+\section*{Problem 9 (Ch.~10 conceptual, MMMC explosion)}
+Your block currently loads 540 .lib views (5 cell families $\times$ 3 voltages $\times$ 3 temperatures $\times$ 6 corners $\times$ 2 modes). Marketing now wants you to support a new low-power mode and a new high-voltage operating point. Without changing anything else, how many .lib views will you load? What's the percentage increase, and which axis dominates the cost?
+
+\section*{Problem 10 (Ch.~2 + Ch.~3 + Ch.~5 + Ch.~9 STRETCH)}
+You inherit a block that closes timing at the typical corner but fails setup at SS by 80\,ps on a single endpoint. The endpoint is on a clock-domain crossing into an asynchronous FIFO. Walk through the triage. Specifically: which input file (netlist, .lib, SDC, LEF, SPEF, or CTS spec) would you inspect first, and why? Under what circumstance is the right answer to (a) fix the SDC, (b) re-place the launch and capture flops, (c) request a hold-fix-only ECO at SS, (d) declare a false path, (e) re-extract SPEF at a different RC corner, (f) tighten the CCOPT useful-skew limit on the FIFO clock? For each, name the input file you modify.
+
+% =====================================================================
+\chapter*{Companion Videos}
+\addcontentsline{toc}{chapter}{Companion Videos}
+
+\begin{itemize}[leftmargin=*]
+  \item Ch.~1: \url{https://youtu.be/fAiTlfTz8KY}
+  \item Ch.~2: \url{https://youtu.be/5e-oOvP0Y-U}
+  \item Ch.~3: \url{https://youtu.be/mCaT4wOp4iM}
+  \item Ch.~4: \url{https://youtu.be/ajOYs4nQyQY}
+  \item Ch.~5: \url{https://youtu.be/Lg0mZPUJQ9M}
+  \item Ch.~6: \url{https://youtu.be/lMfreoc89H0}
+  \item Ch.~7: \url{https://youtu.be/pnFJ-ADkxX8}
+\end{itemize}
+
+\vfill
+\noindent\hfill\textbf{\textit{Kaushik.}}
+
+\end{document}

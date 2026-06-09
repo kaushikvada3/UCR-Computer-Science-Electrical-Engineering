@@ -1,0 +1,307 @@
+\documentclass[12pt]{exam}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyvrb}
+
+% ---- subpart labels:  a.  b.  c.  (instead of the default (a)) ----
+\renewcommand{\thepartno}{\alph{partno}}
+\renewcommand{\partlabel}{\thepartno.}
+\renewcommand{\questionlabel}{\thequestion.}
+
+% ---- running header (Name / SID) and footer, on every page ----
+\pagestyle{headandfoot}
+\header{Name \rule[-2pt]{6.5cm}{0.4pt}}{}{SID \rule[-2pt]{6cm}{0.4pt}}
+\footer{Spring 2026}{\thepage}{CS/EE 147 Midterm}
+\headrule
+
+% ---- answer-box helpers ----
+\newcommand{\Ans}{\underline{Answer:}\ }
+\newcommand{\smallbox}{\framebox[5cm]{\rule{0pt}{1.1cm}}}
+\newcommand{\tfbox}{\framebox[1.7cm]{\rule{0pt}{1.7cm}}}
+\newcommand{\widebox}[1][9.5cm]{\framebox[#1]{\rule{0pt}{1.1cm}}}
+\newcommand{\paragraphbox}[1]{\framebox[\linewidth]{\rule{0pt}{#1}}}
+\newcommand{\mc}{$\bigcirc$\ }   % blank multiple-choice bubble
+
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+% =====================================================================
+%  TITLE PAGE
+% =====================================================================
+\begin{center}
+  {\Large\bfseries CS/EE 147}\\[2pt]
+  {\Large\bfseries GPU Architecture and Parallel Programming}\\[18pt]
+  {\large\bfseries Spring 2024}\\[14pt]
+  {\large\bfseries Midterm}\\[14pt]
+  {\large\bfseries Time Allowed: 80 Minutes}
+\end{center}
+
+\vspace{10pt}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.45}
+\begin{tabular}{|>{\centering\arraybackslash}m{4cm}|>{\centering\arraybackslash}m{4cm}|>{\centering\arraybackslash}m{4cm}|}
+\hline
+\textbf{Question} & \textbf{Points Possible} & \textbf{Points Scored} \\ \hline
+1            & 4  & \\ \hline
+2            & 4  & \\ \hline
+3            & 4  & \\ \hline
+4            & 13 & \\ \hline
+5            & 12 & \\ \hline
+6--9 (MC)    & 12 & \\ \hline
+10--17 (T/F) & 12 & \\ \hline
+18           & 8  & \\ \hline
+19           & 12 & \\ \hline
+20           & 4  & \\ \hline
+Total        & 85 & \\ \hline
+\end{tabular}
+\end{center}
+
+\vspace{14pt}
+
+\begin{itemize}[leftmargin=2.2em,itemsep=4pt]
+  \item Closed book, closed internet
+  \item Allowed 1 page letter-size cheatsheet, front and back
+  \item Calculators allowed, but likely not necessary
+\end{itemize}
+
+\newpage
+
+% =====================================================================
+%  QUESTIONS
+% =====================================================================
+\begin{questions}
+
+% ---------------- Q1 ----------------
+\question \textbf{[4 points] CUDA Kernel Launch}\\
+You want to launch a kernel function, \texttt{kernel()}, with 32 blocks of 256 threads per
+block. Please write your answer in the provided box.
+\begin{parts}
+  \part {}[2 points] How many warps are in each block?\\[10pt]
+        \Ans \smallbox
+  \part {}[2 points] How many total threads are in your kernel?\\[10pt]
+        \Ans \smallbox
+\end{parts}
+
+\vspace{8pt}
+% ---------------- Q2 ----------------
+\question \textbf{[4 points]} Assume that we want to extend the basic vector addition code so
+that \textbf{each thread} computes \textbf{eight consecutive input elements}. (For example,
+thread 0 computes index 0--7, thread 1 computes index 8--15, etc.) Assume that variable
+\texttt{i} should be initialized with the index for the first element to be processed by a
+thread. What should \texttt{i} be initialized to?
+
+\begin{Verbatim}[xleftmargin=2em]
+__global__ void vecAddKernel(float* A, float* B, float* C, int n) {
+    int i = ????
+    for(int j = 0; j < 8; j++)
+        if( (i+j) < n ) C[i+j] = A[i+j] + B[i+j];
+    ...
+}
+\end{Verbatim}
+
+\vspace{4pt}
+\texttt{int i = }\,\widebox
+
+\vspace{8pt}
+% ---------------- Q3 ----------------
+\question \textbf{[4 points]} Can the above vector add program be made faster using shared
+memory? Explain why or why not.\\[10pt]
+\Ans \paragraphbox{2.6cm}
+
+\vspace{8pt}
+% ---------------- Q4 ----------------
+\question \textbf{[13 points] Reduction}\\
+For a Reduction kernel that operates on a total of 10000 elements using a block size of 256
+threads, answer the following: (Assume each block calculates a \texttt{partialSum[]} as in
+Assignment 2)
+\begin{parts}
+  \part {}[3 point] How many steps will the reduction kernel take?\\[10pt]
+        \Ans \smallbox
+  \part {}[3 points] For a na\"ive reduction implementation, how many steps are divergent?\\[10pt]
+        \Ans \smallbox
+  \part {}[3 points] For an optimized reduction implementation, how many steps are divergent?\\[10pt]
+        \Ans \smallbox
+  \part {}[4 points] For the kernel mentioned above, the warp distribution statistics look as
+        follows --\\[4pt]
+        W0: 0, W1: 20, W2: 20, W3: 0, W4: 20, W5: 0, W6: 0, W7: 0, W8: 20, W9: 0, W10: 0,
+        W11: 0, W12: 0, W13: 0, W14: 0, W15: 0, W16: 20, W17: 0, W18: 0, W19: 0, W20: 0,
+        W21: 0, W22: 0, W23: 0, W24: 0, W25: 0, W26: 0, W27: 0, W28: 0, W29: 0, W30: 0,
+        W31: 0, W32: 300\\[4pt]
+        Why are W1, W2, W4, W8, and W16 all equal to 20?\\[10pt]
+        \Ans \paragraphbox{3.4cm}
+\end{parts}
+
+\newpage
+% ---------------- Q5 ----------------
+\question \textbf{[12 points] CUDA Streams.}\\
+Consider the following code snippet of a CUDA Streams implementation of Vector Add.
+
+\begin{Verbatim}[xleftmargin=1em]
+for (int i=0; i<n; i+=SegSize*2) {
+(A)  cudaMemcpyAsync(d_A0, h_A+i, SegSize*sizeof(float),..., stream0);
+(B)  cudaMemcpyAsync(d_B0, h_B+i, SegSize*sizeof(float),..., stream0);
+(C)  vecAdd<<<SegSize/256, 256, 0, stream0>>>(d_A0, d_B0,...);
+(D)  cudaMemcpyAsync(h_C+i, d_C0, SegSize*sizeof(float),..., stream0);
+
+(E)  cudaMemcpyAsync(d_A1, h_A+i+SegSize, SegSize*sizeof(float),..., stream1);
+(F)  cudaMemcpyAsync(d_B1, h_B+i+SegSize, SegSize*sizeof(float),..., stream1);
+(G)  vecAdd<<<SegSize/256, 256, 0, stream1>>>(d_A1, d_B1,...);
+(H)  cudaMemcpyAsync(d_C1, h_C+i+SegSize, SegSize*sizeof(float),..., stream1);
+}
+\end{Verbatim}
+
+\begin{parts}
+  \part {}[4 points] Which two instructions would experience overlapped execution? Fill in the
+        boxes below \textbf{with the letter} associated with the two instructions that overlap.\\[10pt]
+        \underline{Answer 1:}\ \framebox[4cm]{\rule{0pt}{1.1cm}}\hfill
+        \underline{Answer 2:}\ \framebox[4cm]{\rule{0pt}{1.1cm}}
+  \part {}[5 points] If you are allowed to \textbf{move only one instruction} up or down in this
+        order to maximize pipelining in this case, which instruction would be moved below which
+        other instruction?\\[10pt]
+        \underline{Instr:}\ \framebox[4cm]{\rule{0pt}{1.1cm}}\hfill
+        \underline{Below:}\ \framebox[4cm]{\rule{0pt}{1.1cm}}
+  \part {}[3 points] If \textbf{SegSize = 256} and n=8192, how many vecAdd kernels will be
+        launched during this program?\\[10pt]
+        \Ans \smallbox
+\end{parts}
+
+\newpage
+% ---------------- MC: Q6-Q9 ----------------
+\textbf{Multiple Choice. \textnormal{Please completely fill in the circle} $\bigcirc$
+\textnormal{for your answer.} [12 points total]}
+
+\vspace{6pt}
+% ---------------- Q6 ----------------
+\question {}[3 points] If a CUDA device's SM (streaming multiprocessor) can take up to 2048
+threads and up to 32 thread blocks. Which of the following 2D block configurations would
+result in the greatest number of threads in each SM with the minimum number of blocks?
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc 64x64
+  \item \mc 32x32
+  \item \mc 16x16
+  \item \mc 8x8
+\end{itemize}
+
+% ---------------- Q7 ----------------
+\question {}[3 points] How many streams do you need to fully utilize all of the kernel and copy
+engines on the GPU?
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc 1
+  \item \mc 2
+  \item \mc 3
+  \item \mc 4
+\end{itemize}
+
+% ---------------- Q8 ----------------
+\question {}[3 points] As data is transferred from host to device using \texttt{cudaMemCopy} it
+touches various types of hardware components (memories, buses, on-chip components, etc.). Order
+the following hardware components in the order of being used during a \texttt{cudaMemCopy} H2D
+operation.
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc Pinned Memory -> Host Memory -> DMA Engine -> Global Memory
+  \item \mc Host Memory -> DMA Engine -> Pinned Memory -> Global Memory
+  \item \mc Host Memory -> Pinned Memory -> DMA Engine -> Global Memory
+  \item \mc Pinned Memory -> DMA Engine -> Host Memory -> Global Memory
+  \item \mc None of the above
+\end{itemize}
+
+% ---------------- Q9 ----------------
+\question {}[3 points] Which of the following memory types has the fastest access speed?
+\begin{itemize}[leftmargin=2.5em,itemsep=4pt,label={}]
+  \item \mc L2 Cache
+  \item \mc L1 Cache
+  \item \mc Register
+  \item \mc Global Memory
+  \item \mc Shared Memory
+\end{itemize}
+
+\newpage
+% ---------------- T/F: Q10-Q15 ----------------
+\textbf{True or False. \textnormal{For the following questions, fill the answer box with (T)
+True or (F) False.} [16 points total]}
+
+\vspace{10pt}
+\renewcommand{\arraystretch}{1.3}
+\noindent
+\begin{tabular}{@{}p{0.40\linewidth}c@{\hspace{0.5cm}}p{0.40\linewidth}c@{}}
+10.~\texttt{\_\_device\_\_} functions are only callable from the host & \tfbox
+ & 13.~A SIMT core has four independent schedulers & \tfbox \\[1.4cm]
+11.~cudamemcpy is a synchronous process. & \tfbox
+ & 14.~All cudamemcpy (host to device) copies from pinned memory & \tfbox \\[1.4cm]
+12.~All blocks in a grid can be executed independent to each other in any order & \tfbox
+ & 15.~The maximum number of threads and blocks that can reside in an SM is fixed for each GPU vendor. & \tfbox \\[1.0cm]
+\end{tabular}
+
+\vspace{16pt}
+\setcounter{question}{15}
+% ---------------- Q16 ----------------
+\question {}[6 points] You need to write a 2D kernel that operates on an image of size 500x800
+(height (y-axis) x width(x-axis)). Assume your thread block size is 16x16.
+\begin{parts}
+  \part {}[2 points] What is the x-dimension of your grid size?\\[10pt]
+        \Ans \smallbox
+  \part {}[2 points] What is the y-dimension of your grid size?\\[10pt]
+        \Ans \smallbox
+  \part {}[4 point] How many warps will be divergent in this scenario?\\[10pt]
+        \Ans \smallbox
+\end{parts}
+
+\newpage
+% ---------------- Q17 ----------------
+\question {}[12 points] Active mask. Assume a warp size of 8, and the following pseudo-code will
+be executed. Fill in the active mask at each of the following basic block locations. Hint: the
+active mask for a warp size of 8 when all threads are active will be 11111111.
+
+\begin{Verbatim}[xleftmargin=2em]
+int N = 6;
+__global__ function()
+{
+ int index = threadIdx.x; //PC = A
+
+ if(index < N)
+ {
+   //PC = B
+   if(index != 0)
+   { //PC = C
+     . . .
+   }
+   else
+   { //PC = D
+     . . .
+   }
+   //PC = E
+ }
+ else
+ { //PC = F
+   . . .
+ }
+ __syncthreads(); //PC = G
+}
+\end{Verbatim}
+
+\vspace{8pt}
+\begin{tabular}{@{}l@{\hspace{1cm}}l@{}}
+\underline{Answer} (PC = B):\ \framebox[4.2cm]{\rule{0pt}{0.85cm}} &
+\underline{Answer} (PC = C):\ \framebox[4.2cm]{\rule{0pt}{0.85cm}} \\[12pt]
+\underline{Answer} (PC = D):\ \framebox[4.2cm]{\rule{0pt}{0.85cm}} &
+\underline{Answer} (PC = F):\ \framebox[4.2cm]{\rule{0pt}{0.85cm}} \\
+\end{tabular}
+
+\vspace{16pt}
+% ---------------- Q18 ----------------
+\question {}[4 points] Assume that a kernel is launched with 100 thread blocks, each with 512
+threads. If a variable, s\_var, is declared as a shared memory variable, how many versions of
+s\_var will be created throughout the lifetime of the execution of the kernel?\\[10pt]
+\Ans \smallbox
+
+\end{questions}
+
+\end{document}

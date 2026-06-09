@@ -1,0 +1,199 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.9in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+
+\definecolor{anscolor}{rgb}{0.0,0.4,0.0}
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  language=C++,
+  breaklines=true,
+  morekeywords={__global__,__shared__,__syncthreads,cudaDeviceSynchronize,
+    cudaMallocManaged,atomicAdd,cudaMemAdvise,cudaMemPrefetchAsync}
+}
+
+\newcommand{\ans}[1]{\par\noindent\textcolor{anscolor}{\textbf{Answer:}} #1\par}
+\newcommand{\why}[1]{\par\noindent\textcolor{anscolor}{\textbf{Why:}} #1\par\vspace{4pt}}
+
+\title{\vspace{-1.5em}\textbf{EE147 Practice Exam 2 — Answer Key with Reasoning}}
+\author{Kaushik Vada}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\section*{Q1. Tiled SGEMM Launch (4 pts)}
+$1024 \times 1024$ output, \texttt{TILE\_WIDTH = 32}, so block = $32 \times 32 = 1024$ threads.
+\begin{description}
+  \item[a)] \ans{32 warps per block.}
+        \why{1024 threads / 32 threads-per-warp = 32 warps.}
+  \item[b)] \ans{1024 blocks in the grid.}
+        \why{Grid is $\lceil 1024/32 \rceil \times \lceil 1024/32 \rceil = 32 \times 32 = 1024$.}
+\end{description}
+
+\section*{Q2. Histogram stride (4 pts)}
+\ans{\texttt{int stride = blockDim.x * gridDim.x;}}
+\why{This is the total number of threads in the grid. With each thread starting at
+\texttt{threadIdx.x + blockIdx.x*blockDim.x} and stepping by the grid size, adjacent threads
+hit adjacent input bytes in each iteration — \textbf{interleaved} (coalesced) partitioning.
+A sectioned scheme (\texttt{stride = 1}, length = total/threads) would not be coalesced.}
+
+\section*{Q3. Why shared-memory privatization helps (4 pts)}
+\ans{Global atomics on a hot bin serialize through long-latency DRAM/L2 accesses
+($\sim$1000+ cycles each), so heavy contention drops throughput to roughly
+$1/\text{latency}$. Privatization gives each block its own private histogram in shared
+memory. Shared-memory atomics have much shorter latency and only contend with threads in the
+same block. After the block builds its private bins, it merges into the global histogram with
+one atomic per bin, drastically reducing total contention and serialization. Typical speedups
+are $>$10$\times$.}
+
+\section*{Q4. Unified Memory (13 pts)}
+\begin{description}
+  \item[a)] \textbf{Pascal+ behavior on concurrent CPU/GPU access.}
+        \ans{The CPU access page-faults; the runtime migrates the page back to the CPU on
+        demand and the write succeeds. No segmentation fault.}
+        \why{Pascal+ supports concurrent CPU/GPU access to managed memory via demand paging.}
+  \item[b)] \textbf{Pre-Pascal behavior.}
+        \ans{Fatal segmentation fault on the CPU side. The CPU cannot touch managed memory
+        while the kernel is running; you must call \texttt{cudaDeviceSynchronize()} first.}
+        \why{Pre-Pascal UM moves managed data en-masse at kernel launch, and the CPU mapping
+        is removed until the kernel returns and the runtime resolves.}
+  \item[c)] \textbf{64 GB allocation on 16 GB Pascal GPU.}
+        \ans{Yes, it succeeds (with appropriate \texttt{size\_t}). Pascal+ supports
+        oversubscription — pages are migrated to GPU on demand and evicted as needed. It would
+        \emph{fail} on Kepler/Maxwell.}
+  \item[d)] \textbf{Read-mostly hint.}
+        \ans{\texttt{cudaMemAdvise(ptr, count, cudaMemAdviseSetReadMostly, device);}}
+        \why{The runtime keeps a local read-only copy on each processor that touches it
+        (read duplication). A write by any processor collapses all copies into one, after which
+        subsequent reads fault and re-duplicate. The \texttt{device} argument is ignored for
+        this hint.}
+\end{description}
+
+\section*{Q5. Tiled SGEMM Analysis (12 pts)}
+\begin{description}
+  \item[a)] Block = $16 \times 16 = 256$ threads. Each thread loads 1 M and 1 N element.
+        \ans{$2 \cdot 256 = \mathbf{512}$ global loads per block per phase.}
+  \item[b)] Phases = $\text{Width} / \text{TILE\_WIDTH} = 1024 / 16 = $ \ans{\textbf{64 phases.}}
+  \item[c)] Two tile arrays, each $32 \times 32$ floats $= 4096$ bytes. Total
+        \ans{$\mathbf{8192}$ bytes = 8 KB per block.}
+        \why{$2 \cdot 32 \cdot 32 \cdot 4 = 8192$.}
+  \item[d)] $\lfloor 48{,}000 / 8192 \rfloor = $ \ans{\textbf{5 blocks}} co-resident based on the
+        shared-memory limit alone (real occupancy may be further constrained by register usage
+        and the threads-per-SM cap).
+\end{description}
+
+\section*{Q6. MC --- which API actually moves data? (3 pts)}
+\ans{\texttt{cudaMemPrefetchAsync(...)}.}
+\why{The three \texttt{cudaMemAdvise} variants are hints — they do not by themselves move data.
+Only \texttt{cudaMemPrefetchAsync} actively migrates pages to the indicated destination.}
+
+\section*{Q7. MC --- coalesced access pattern (3 pts)}
+\ans{\texttt{expr = (something independent of threadIdx.x) + threadIdx.x}.}
+\why{For all threads in a warp to hit consecutive addresses (same burst section), the address
+must change by exactly 1 as \texttt{threadIdx.x} changes by 1. The other forms either don't
+involve \texttt{threadIdx.x}, are degenerate, or scale by stride.}
+
+\section*{Q8. MC --- MPS with 5 streams per process (3 pts)}
+\ans{False dependencies/serialization due to more streams per client than channels.}
+\why{An MPS client gets 2 work queues per channel — with 5 streams squeezed in, the extra
+streams share queues and incur false serialization. MPS does not auto-distribute across GPUs.
+Kernels from different processes \emph{do} overlap under MPS — that's the whole point — so
+the ``always serialize'' option is wrong.}
+
+\section*{Q9. MC --- DP launches per block (3 pts)}
+\ans{256.}
+\why{Device-side launches are \textbf{per-thread}: every thread that executes the launch line
+spawns a child grid. To launch once per block, guard with \texttt{if (threadIdx.x == 0)}.}
+
+\section*{Q10--Q15 True / False (12 pts)}
+\begin{description}
+  \item[Q10.] ``\texttt{atomicAdd} returns the new value.''
+        \ans{\textbf{F}} --- it returns the \emph{old} value (the read before the add).
+  \item[Q11.] ``Coalescing rules apply to shared memory the same way as global memory.''
+        \ans{\textbf{F}} --- shared memory has its own access model based on banks/bank
+        conflicts, not DRAM burst sections.
+  \item[Q12.] ``The two \texttt{\_\_syncthreads()} in tiled SGEMM can be removed for large
+        block sizes.''
+        \ans{\textbf{F}} --- both barriers are required regardless of block size. The first
+        ensures the tile is fully loaded; the second ensures it's fully consumed before the
+        next phase overwrites it.
+  \item[Q13.] ``Device-side \texttt{cudaDeviceSynchronize()} implies \texttt{\_\_syncthreads()}.''
+        \ans{\textbf{F}} --- they're independent. The lecture explicitly states
+        \texttt{cudaDeviceSynchronize()} does \emph{not} act as a block-wide thread barrier.
+  \item[Q14.] ``P2P copy between GPUs on different IOHs still completes correctly.''
+        \ans{\textbf{T}} --- the copy works, but it gets staged through host memory because
+        QPI between IOHs isn't compatible with PCIe P2P. Slower, but correct.
+  \item[Q15.] ``\texttt{cudaMemAdviseSetAccessedBy} immediately moves data.''
+        \ans{\textbf{F}} --- it sets up a (P2P) mapping so the indicated processor can access
+        without faulting, but data does not move and its location is unchanged.
+\end{description}
+
+\section*{Q16. Boundary handling for rectangular matmul (6 pts)}
+$M$ is $j \times k$, $N$ is $k \times l$, output $P$ is $j \times l$. With $j=1000$, $k=800$,
+$l=1500$, \texttt{TILE\_WIDTH = 16}.
+\begin{description}
+  \item[a)] $\text{gridDim.x} = \lceil l / 16 \rceil = \lceil 1500/16 \rceil =
+        \mathbf{94}$. \\
+        $\text{gridDim.y} = \lceil j / 16 \rceil = \lceil 1000/16 \rceil = \mathbf{63}$.
+        \ans{\textbf{x = 94, y = 63}.}
+  \item[b)] Boundary for loading the M tile (rows from $M$ are bounded by $j$, columns by $k$):
+        \ans{\texttt{(Row < j) \&\& (p * TILE\_WIDTH + tx < k)}}
+        If false, write 0 into shared memory instead of loading.
+  \item[c)] Boundary for writing the output P (bounded by $j$ rows, $l$ columns):
+        \ans{\texttt{(Row < j) \&\& (Col < l)}}
+\end{description}
+
+\section*{Q17. Dynamic Parallelism trace (12 pts)}
+\begin{description}
+  \item[a)] \ans{\textbf{4 child grids.}}
+        \why{Launches are per-thread; only threads with \texttt{tid < 4} hit the launch line, so
+        threads 0, 1, 2, 3 each spawn one child grid.}
+  \item[b)] \ans{\textbf{All 4 child grids have completed at PC = C}, regardless of which thread
+        you're asking about.}
+        \why{\texttt{cudaDeviceSynchronize()} on the device is per-block: it waits for every
+        launch made by any thread in the block. Thread 5 didn't launch anything, but it still
+        sees all 4 children finished after this sync.}
+  \item[c)] \ans{\textbf{Yes, with one caveat about visibility.}}
+        \why{By PC = D, every child grid launched by every thread has finished due to the
+        device-sync. Their writes to global memory are completed. However, since
+        \texttt{cudaDeviceSynchronize()} does \emph{not} imply \texttt{\_\_syncthreads()}, the
+        textbook-safe pattern adds a \texttt{\_\_syncthreads()} after the device-sync if you
+        want all threads in the block to see consistent state before reading. Without that
+        extra barrier, ordering relative to other threads' control flow isn't guaranteed,
+        though the child writes themselves have landed.}
+  \item[d)] \ans{\textbf{No.}}
+        \why{\texttt{\_\_syncthreads()} is a thread-block barrier — it doesn't wait for any
+        running child kernels. The parent would race ahead and read \texttt{out[tid]} before
+        the children's writes are guaranteed to be visible. You need the device sync for that.}
+\end{description}
+
+\section*{Q18. Shared-memory atomic semantics (4 pts)}
+\texttt{histo\_private[3]} starts at 7. Two threads do \texttt{atomicAdd(\&histo\_private[3], 1)}
+in some order; the hardware serializes them.
+\ans{Final value of \texttt{histo\_private[3]} = \textbf{9}. One thread receives \textbf{7} as
+the return (the \emph{old} value), and the other receives \textbf{8}. Which thread sees which
+depends on hardware scheduling — you cannot tell from the source.}
+
+\hrulefill
+
+\section*{Reflection notes after grading yourself}
+\begin{itemize}
+  \item If you missed Q4: rebuild the UM mental model (Pascal+ vs pre-Pascal, hints vs prefetch).
+  \item If you missed Q5: re-derive the FLOP/load ratio and shared-memory footprint for the
+        tile sizes — likely to appear in multiple places.
+  \item If you missed Q17: read the DP rules in the study guide again. Launch per-thread,
+        sync per-block, and \texttt{cudaDeviceSynchronize() $\neq$ \_\_syncthreads()} is the
+        single most testable fact about DP.
+  \item If you missed any T/F: those are pure memorization. They're worth re-drilling with the
+        flashcard deck the morning of the exam.
+\end{itemize}
+
+\end{document}

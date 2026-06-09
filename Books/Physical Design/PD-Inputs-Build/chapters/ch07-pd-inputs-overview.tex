@@ -1,0 +1,179 @@
+\chapter{Physical Design Inputs: The Big Picture}
+
+\begin{tldr}
+\begin{itemize}[leftmargin=1.2em]
+  \item A Physical Design (PD) job is fed by \textbf{six artifact families}: a gate-level \textbf{netlist}, an \textbf{SDC} constraints file, a \textbf{LEF} (Library Exchange Format), one or more \textbf{.lib} timing views, a \textbf{Technology file} (often with an ITF parasitic file plus mapping), and a \textbf{DEF} (Design Exchange Format) for floorplan and ports.
+  \item Each input encodes a different question. Drop one and a different stage of the flow goes blind: synthesis hand-off, floorplanning, timing, parasitic extraction, or DRC all rely on a specific artifact.
+  \item Modern advanced-node designs do not consume one .lib. They consume \textbf{dozens of .lib views across PVT corners and modes} (MMMC). The same is true for LEFs and parasitic tech views at multiple metal stacks.
+  \item This chapter is the map. Chapters 8 onward zoom into each artifact one at a time.
+\end{itemize}
+\end{tldr}
+
+\section*{An interview question you cannot dodge}
+
+\begin{hook}[Hook]
+A fresher walks into an Arm PD interview. First question: ``Tell me every file you would expect on your disk before you can run a single \texttt{floorplan} command.'' Silence in the room. The candidate names two files. The interviewer waits. Six were expected. Why six, and not one giant database?
+\end{hook}
+
+The instinct is to imagine one master file. In reality, six separate artifacts get handed to PD because each one is \textbf{authored by a different team and consumed by a different engine}. The netlist is a synthesis output. The .lib is a foundry signoff deliverable. The LEF is a library characterization output. The SDC is written by the architect or front-end lead. The tech file is foundry IP. The DEF is something PD itself iterates on. \textbf{Six origins, six update cadences, six file formats.}
+
+\begin{keyidea}
+Physical design is not a single tool ingesting a single file. It is a \textbf{pipeline of engines} (synthesis hand-off, floorplan, placement, CTS, route, signoff) where each engine demands a specific input that no other input can substitute for. Lose one, lose that engine.
+\end{keyidea}
+
+\section{The six inputs at a glance}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  artifact/.style={draw, rounded corners=3pt, minimum width=2.0cm, minimum height=0.8cm, align=center, fill=cTLDR!8, thick},
+  tool/.style={draw, rectangle, minimum width=3.2cm, minimum height=1.4cm, align=center, fill=cKEY!12, very thick, drop shadow},
+  arr/.style={-{Latex[length=2mm]}, thick, draw=cSIDE!70}
+]
+\node[tool] (pd) at (5,0) {\textbf{PD Tool}\\(Innovus / ICC2 /\\Genus floorplan)};
+
+\node[artifact] (nl)  at (0,2.4)  {Netlist\\(\texttt{.v})};
+\node[artifact] (sdc) at (0,0.8)  {SDC\\(\texttt{.sdc})};
+\node[artifact] (lef) at (0,-0.8) {LEF\\(\texttt{.lef})};
+\node[artifact] (lib) at (10,2.4) {.lib\\(timing)};
+\node[artifact] (tf)  at (10,0.8) {Tech File\\(+ ITF, map)};
+\node[artifact] (def) at (10,-0.8){DEF\\(floorplan)};
+
+\draw[arr] (nl)  -- (pd);
+\draw[arr] (sdc) -- (pd);
+\draw[arr] (lef) -- (pd);
+\draw[arr] (lib) -- (pd);
+\draw[arr] (tf)  -- (pd);
+\draw[arr] (def) -- (pd);
+
+\node[draw=cCHECK, thick, rounded corners=2pt, fill=cCHECK!8, below=0.6cm of pd, align=center, minimum width=5cm]
+  (out) {Placed, routed, signoff-clean GDSII};
+\draw[arr, very thick, draw=cCHECK!70] (pd) -- (out);
+\end{tikzpicture}
+\caption{The six PD input artifacts feeding a single PD tool invocation. Authored upstream, consumed downstream, all required before signoff.}
+\label{fig:pd-inputs-flow}
+\end{figure}
+
+\begin{hook}
+Think of the PD tool as a \textbf{surgeon in an operating theater who refuses to cut until six specific trays of instruments are laid out by name}. Hand the surgeon five trays and they walk out. The sixth missing tray is not a warning, it is a hard stop.
+\end{hook}
+
+\subsection{What each artifact actually encodes}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[font=\small]
+\matrix (m) [
+  matrix of nodes,
+  nodes={draw, anchor=center, text width=2.4cm, align=center, minimum height=0.95cm, inner sep=3pt},
+  row 1/.style={nodes={fill=cKEY, text=white, font=\bfseries}},
+  column 1/.style={nodes={fill=cTLDR!15, font=\bfseries}},
+  row sep=-\pgflinewidth, column sep=-\pgflinewidth,
+] {
+  Artifact & Encodes        & Author       & Consumed at \\
+  Netlist  & Connectivity   & Synthesis    & All stages \\
+  SDC      & Timing intent  & Architect    & STA, CTS, opt \\
+  LEF      & Cell footprint & Lib team     & Floorplan, place, route \\
+  .lib     & Cell timing    & Foundry char & Timing, opt, CTS \\
+  Tech File& Metal stack \& DRC & Foundry  & Route, extraction \\
+  DEF      & Floorplan, IO  & PD itself    & Place, route, ECO \\
+};
+\end{tikzpicture}
+\caption{Each input answers a question no other input answers. The author column is why no single file could replace the set.}
+\label{fig:pd-inputs-table}
+\end{figure}
+
+\begin{gut}
+If you delete the LEF but keep the .lib, what is the very first PD command that breaks?
+\gutans{Anything that needs to place a cell on the floorplan. The .lib knows the cell's \emph{timing}, but it does not know the cell's \emph{shape}. Placement needs width, height, pin locations, all of which live in the LEF. Timing analysis on an unplaced design might still run, but you cannot draw a single rectangle.}
+\end{gut}
+
+\section{Walking the six, one at a time}
+
+\move{1} \textbf{Netlist.} A gate-level Verilog file enumerating every instance and every wire. This is the only file that says ``instance \texttt{u\_alu/add\_42} is a \texttt{NAND2\_X2} whose A pin connects to net \texttt{n1764}.'' Without it, the PD tool has no design to place.
+
+\move{2} \textbf{SDC.} The Synopsys Design Constraints file. It carries clock definitions (period, uncertainty, skew, latency), I/O delays, false paths, multicycle paths, max-transition, max-cap, and other DRV limits. The architect says ``this block must close at 1.2~GHz with 80~ps uncertainty.'' That sentence becomes an SDC line.
+
+\move{3} \textbf{LEF.} A physical abstract of every standard cell and macro. Cell name, shape, size, orientation, pin name, pin layer, pin geometry, obstruction layers. The PD tool reads this once at setup and uses it for every legalization, every routing track decision.
+
+\move{4} \textbf{.lib (Liberty).} The timing view. For every input pin of every cell, at every PVT corner, it lists propagation delays, output transitions, input capacitance, and constraint arcs (setup, hold, recovery, removal) as 2D lookup tables indexed by input slew and output load. Without .lib, the tool literally cannot compute a single arrival time.
+
+\move{5} \textbf{Technology file (+ ITF + mapping).} Foundry IP. Resistance and capacitance per metal layer, minimum width, minimum spacing, via rules, layer colors for multi-patterning, plus the ITF (Interconnect Technology Format) parasitic deck and a mapping file that ties ITF layer names to tech-file layer names. Without correct mapping, extraction returns garbage RC, and timing signoff diverges from silicon.
+
+\move{6} \textbf{DEF.} The Design Exchange Format file holds the physical state of the block itself: die size, core area, IO port locations, macro placements, blockages, sometimes power grid. Early in the flow DEF is sparse (just floorplan). Late in the flow it is dense (every cell location, every route). DEF is the artifact PD writes back out.
+
+\begin{pausebox}
+Pause. You now know the six artifacts, the question each one answers, and the engine that needs it. The rest of this book unpacks one artifact per chapter. If you can recite ``netlist, SDC, LEF, .lib, tech, DEF'' and name one engine that breaks without each, you are at the level the interviewer is testing for.
+\end{pausebox}
+
+\section{A back-of-envelope on input volume}
+
+Beginners imagine ``the .lib'' as one file. On a real 7~nm SoC block, the count is not one. Walk through it with substituted values, then generalize.
+
+\move{1} Assume 5 process corners (SS, FF, TT, SF, FS). Assume 3 voltage points (nominal, low, over-drive). Assume 3 temperatures (-40~C, 25~C, 125~C). That is $5 \times 3 \times 3 = 45$ PVT permutations.
+
+\move{2} Not every permutation is exercised; foundry signoff typically calls out a subset, say \textbf{12 corners}.
+
+\move{3} The design uses 3 standard-cell libraries (regular Vt, high Vt, low Vt) plus 4 memory compilers. That is 7 cell families. $12 \times 7 = \mathbf{84}$ .lib files for this block.
+
+\move{4} Generalize: the count of .lib views consumed is approximately
+\[
+N_{\mathrm{lib}} \;\approx\; N_{\mathrm{corners}} \times N_{\mathrm{families}}.
+\]
+
+\move{5} Now repeat the same math for LEF (one per library, sometimes per metal stack option) and parasitic tech files (one per RC corner, typically \textbf{cWorst, cBest, rcWorst, rcBest, typical}, so 5). The block consumes \textbf{dozens of files just to set up MMMC}.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=11cm, height=6cm,
+  ybar, bar width=14pt,
+  ymin=0, ymax=100,
+  ylabel={Files consumed},
+  symbolic x coords={Netlist, SDC, LEF, .lib, TechFile, DEF},
+  xtick=data, x tick label style={font=\small},
+  nodes near coords, nodes near coords style={font=\scriptsize},
+  enlarge x limits=0.12,
+  grid=major, grid style={black!10},
+]
+\addplot[fill=cKEY!50, draw=cKEY] coordinates {
+  (Netlist,1) (SDC,4) (LEF,7) (.lib,84) (TechFile,5) (DEF,2)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Approximate file counts a single 7~nm SoC block consumes during PD setup. The .lib bar dominates because timing must be re-evaluated at every PVT and every cell-family combination.}
+\label{fig:file-count}
+\end{figure}
+
+\begin{gut}
+On a 7~nm design with 12 corners and 7 cell families, your bring-up script complains it cannot find \texttt{ss\_0p72v\_125c\_rvt.lib}. Which engine will fail first when you try to run anyway?
+\gutans{The first stage that needs that specific worst-case slow corner for hold or max-cap analysis, typically CTS or post-route timing. The placer can often limp along on a single corner, but multi-corner optimization and signoff will refuse.}
+\end{gut}
+
+\section{Why the inputs are split, not merged}
+
+\begin{sidebar}
+A reasonable question: if all six artifacts feed one tool, why not merge them? The answer is \textbf{ownership and update cadence}. The foundry ships tech files once per process node revision (years). Cell libraries refresh on a quarterly basis. The architect rewrites SDC weekly during convergence. The netlist regenerates every nightly synthesis run. DEF flips on every floorplan iteration, sometimes hourly. A merged file would force the slowest-cadence team to gate the fastest-cadence team. The file boundary is a \textbf{social contract}, not a technical limit.
+
+There is a second reason: format standards are owned by different bodies. LEF and DEF are Cadence-originated, .lib is Synopsys-originated, SDC is also Synopsys, the tech file is foundry-proprietary. The split survives because nobody can unify the standards bodies.
+\end{sidebar}
+
+\begin{pitfall}
+The most common fresher mistake: assuming \texttt{.lib} and \texttt{LEF} are the same thing because both contain ``cell'' information. They are not. \textbf{.lib is timing only, LEF is geometry only.} A cell appears in both files under the same name, but the two views never overlap in content. If you cannot answer ``which file has the pin capacitance'' (\texttt{.lib}) versus ``which file has the pin location'' (\texttt{LEF}), the interviewer will know.
+\end{pitfall}
+
+\begin{pdnote}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Arm PD intern lens.} Day one, you will be handed a block bring-up script that sources a netlist, an SDC, a LEF list, a .lib list, and a tech file. You will be expected to know which environment variable points to which file and which one to grep first when bring-up fails.
+  \item \textbf{Foundry-flow PD engineer lens.} Production flows version-pin every input. A .lib refresh from the foundry triggers a full MMMC re-characterization. The flow's job is to detect input drift before signoff, not after.
+  \item \textbf{VLSI interview lens.} The interviewer is not testing memorization. They are testing whether you understand that timing, geometry, intent, and parasitics are \textbf{orthogonal concerns} and that the file split mirrors the concern split. Answer in that frame and you stand out.
+\end{itemize}
+\end{pdnote}
+
+\begin{checkpoint}
+You can now name the six PD inputs, the question each answers, the engine that breaks without each, and the rough multiplier that makes a single .lib reference into 84 actual files. The rest of the book is one chapter per artifact.
+
+\mnemonic{NSL-LTD: Netlist, SDC, LEF, Lib, Tech, DEF}
+\end{checkpoint}
